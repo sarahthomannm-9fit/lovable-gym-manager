@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   BarChart, 
   Bar, 
@@ -14,55 +15,73 @@ import {
   Line,
   PieChart,
   Pie,
-  Cell
+  Cell,
+  AreaChart,
+  Area
 } from "recharts";
-import { FileText, Download, TrendingUp, Users, DollarSign, BarChart3, PieChart as PieChartIcon, Activity } from "lucide-react";
+import { FileText, Download, TrendingUp, Users, DollarSign, BarChart3, PieChart as PieChartIcon, Activity, CreditCard, AlertCircle, Target } from "lucide-react";
 
 export function Reports() {
   const [activeSection, setActiveSection] = useState("financial");
 
-  // Dados simulados para os gráficos
+  // Dados simulados expandidos para relatórios mais avançados
   const monthlyRevenue = [
-    { month: "Set", revenue: 8500 },
-    { month: "Out", revenue: 9200 },
-    { month: "Nov", revenue: 10800 },
-    { month: "Dez", revenue: 12450 },
-    { month: "Jan", revenue: 11900 },
+    { month: "Ago", revenue: 7800, expenses: 3200, profit: 4600, students: 42 },
+    { month: "Set", revenue: 8500, expenses: 3400, profit: 5100, students: 45 },
+    { month: "Out", revenue: 9200, expenses: 3600, profit: 5600, students: 47 },
+    { month: "Nov", revenue: 10800, expenses: 4200, profit: 6600, students: 52 },
+    { month: "Dez", revenue: 12450, expenses: 4800, profit: 7650, students: 58 },
+    { month: "Jan", revenue: 11900, expenses: 4500, profit: 7400, students: 56 },
   ];
 
-  const studentFrequency = [
-    { name: "João Silva", frequency: 85 },
-    { name: "Maria Santos", frequency: 92 },
-    { name: "Pedro Costa", frequency: 78 },
-    { name: "Ana Paula", frequency: 88 },
-    { name: "Carlos Oliveira", frequency: 95 },
+  const paymentMethods = [
+    { name: "PIX", value: 45, amount: 5610, color: "#10B981" },
+    { name: "Cartão", value: 35, amount: 4365, color: "#3B82F6" },
+    { name: "Dinheiro", value: 15, amount: 1785, color: "#F59E0B" },
+    { name: "Transferência", value: 5, amount: 595, color: "#8B5CF6" },
   ];
 
-  const classTypes = [
-    { name: "Musculação", value: 45, color: "#3B82F6" },
-    { name: "Funcional", value: 30, color: "#10B981" },
-    { name: "HIIT", value: 15, color: "#F59E0B" },
-    { name: "Cardio", value: 10, color: "#EF4444" },
+  const studentRetention = [
+    { month: "Ago", retention: 92, churn: 8, newStudents: 5 },
+    { month: "Set", retention: 88, churn: 12, newStudents: 8 },
+    { month: "Out", retention: 95, churn: 5, newStudents: 7 },
+    { month: "Nov", retention: 91, churn: 9, newStudents: 12 },
+    { month: "Dez", retention: 89, churn: 11, newStudents: 15 },
+    { month: "Jan", retention: 93, churn: 7, newStudents: 3 },
   ];
 
-  const performanceData = [
-    { month: "Set", avgWeight: 72.5, avgBodyFat: 18.2 },
-    { month: "Out", avgWeight: 73.1, avgBodyFat: 17.8 },
-    { month: "Nov", avgWeight: 73.8, avgBodyFat: 17.4 },
-    { month: "Dez", avgWeight: 74.2, avgBodyFat: 17.0 },
-    { month: "Jan", avgWeight: 74.6, avgBodyFat: 16.8 },
+  const overduePayments = [
+    { student: "Carlos Oliveira", amount: 280, daysOverdue: 5, plan: "Mensal" },
+    { student: "Fernanda Lima", amount: 840, daysOverdue: 12, plan: "Trimestral" },
+    { student: "Ricardo Santos", amount: 280, daysOverdue: 3, plan: "Mensal" },
   ];
+
+  const revenueProjection = [
+    { month: "Fev", projected: 12800, conservative: 11200, optimistic: 14400 },
+    { month: "Mar", projected: 13500, conservative: 12100, optimistic: 15200 },
+    { month: "Abr", projected: 14200, conservative: 12800, optimistic: 16100 },
+    { month: "Mai", projected: 15000, conservative: 13500, optimistic: 17200 },
+    { month: "Jun", projected: 15800, conservative: 14200, optimistic: 18100 },
+  ];
+
+  const profitabilityAnalysis = {
+    averageLTV: 2840, // Lifetime Value médio
+    acquisitionCost: 150, // Custo de aquisição por aluno
+    monthlyChurn: 8.5, // Taxa de churn mensal
+    profitMargin: 62, // Margem de lucro %
+  };
 
   const sections = [
     { id: "financial", name: "Financeiro", icon: DollarSign },
     { id: "students", name: "Alunos", icon: Users },
     { id: "classes", name: "Aulas", icon: BarChart3 },
     { id: "performance", name: "Performance", icon: Activity },
+    { id: "advanced", name: "Análises", icon: Target },
   ];
 
   const renderFinancialSection = () => (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card className="bg-gradient-to-r from-green-50 to-green-100">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-green-700">
@@ -78,45 +97,250 @@ export function Reports() {
         <Card className="bg-gradient-to-r from-blue-50 to-blue-100">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-blue-700">
-              Receita Média por Aluno
+              Lucro Líquido
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-800">R$ 265</div>
-            <p className="text-xs text-blue-600 mt-1">+5% vs mês anterior</p>
+            <div className="text-2xl font-bold text-blue-800">R$ 7.650</div>
+            <p className="text-xs text-blue-600 mt-1">Margem: 61.4%</p>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-r from-purple-50 to-purple-100">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-purple-700">
-              Taxa de Conversão
+              Inadimplência
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-800">87%</div>
-            <p className="text-xs text-purple-600 mt-1">+3% vs mês anterior</p>
+            <div className="text-2xl font-bold text-purple-800">R$ 1.400</div>
+            <p className="text-xs text-purple-600 mt-1">3 alunos em atraso</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-r from-yellow-50 to-yellow-100">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-yellow-700">
+              Ticket Médio
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-800">R$ 222</div>
+            <p className="text-xs text-yellow-600 mt-1">Por aluno/mês</p>
           </CardContent>
         </Card>
       </div>
 
+      {/* Alertas Financeiros */}
+      {overduePayments.length > 0 && (
+        <Card className="border-red-200 bg-red-50">
+          <CardHeader>
+            <CardTitle className="flex items-center text-red-800">
+              <AlertCircle className="w-5 h-5 mr-2" />
+              Pagamentos em Atraso
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {overduePayments.map((payment, index) => (
+                <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg">
+                  <div>
+                    <span className="font-medium">{payment.student}</span>
+                    <p className="text-sm text-gray-600">{payment.plan} - {payment.daysOverdue} dias</p>
+                  </div>
+                  <span className="font-bold text-red-600">R$ {payment.amount}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Evolução Financeira</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={monthlyRevenue}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="month" stroke="#666" />
+                <YAxis stroke="#666" />
+                <Tooltip 
+                  formatter={(value, name) => [
+                    `R$ ${value}`, 
+                    name === 'revenue' ? 'Receita' : 
+                    name === 'expenses' ? 'Gastos' : 'Lucro'
+                  ]}
+                  contentStyle={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}
+                />
+                <Area type="monotone" dataKey="revenue" stackId="1" stroke="#10B981" fill="#10B981" fillOpacity={0.6} />
+                <Area type="monotone" dataKey="expenses" stackId="2" stroke="#EF4444" fill="#EF4444" fillOpacity={0.6} />
+                <Area type="monotone" dataKey="profit" stackId="3" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.6} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Formas de Pagamento</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={paymentMethods}
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={80}
+                  dataKey="value"
+                  label={({ name, value }) => `${name}: ${value}%`}
+                  labelLine={false}
+                >
+                  {paymentMethods.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value, name, props) => [`${value}%`, `R$ ${props.payload.amount}`]} />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+
+  const renderAdvancedSection = () => (
+    <div className="space-y-6">
+      {/* Métricas de Rentabilidade */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <Card className="bg-gradient-to-r from-green-50 to-green-100">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-green-700">
+              LTV Médio
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-800">R$ {profitabilityAnalysis.averageLTV}</div>
+            <p className="text-xs text-green-600 mt-1">Lifetime Value</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-r from-blue-50 to-blue-100">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-blue-700">
+              CAC
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-800">R$ {profitabilityAnalysis.acquisitionCost}</div>
+            <p className="text-xs text-blue-600 mt-1">Custo aquisição</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-r from-purple-50 to-purple-100">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-purple-700">
+              Taxa de Churn
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-800">{profitabilityAnalysis.monthlyChurn}%</div>
+            <p className="text-xs text-purple-600 mt-1">Mensal</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-r from-yellow-50 to-yellow-100">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-yellow-700">
+              Margem de Lucro
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-800">{profitabilityAnalysis.profitMargin}%</div>
+            <p className="text-xs text-yellow-600 mt-1">Média mensal</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Projeção de Receita</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={revenueProjection}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="month" stroke="#666" />
+                <YAxis stroke="#666" />
+                <Tooltip 
+                  formatter={(value) => [`R$ ${value}`, 'Valor']}
+                  contentStyle={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}
+                />
+                <Line type="monotone" dataKey="conservative" stroke="#EF4444" strokeWidth={2} name="Conservador" strokeDasharray="5 5" />
+                <Line type="monotone" dataKey="projected" stroke="#3B82F6" strokeWidth={3} name="Projetado" />
+                <Line type="monotone" dataKey="optimistic" stroke="#10B981" strokeWidth={2} name="Otimista" strokeDasharray="5 5" />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Retenção vs Churn</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={studentRetention}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="month" stroke="#666" />
+                <YAxis stroke="#666" />
+                <Tooltip 
+                  formatter={(value, name) => [
+                    `${value}${name === 'newStudents' ? ' alunos' : '%'}`, 
+                    name === 'retention' ? 'Retenção' : 
+                    name === 'churn' ? 'Churn' : 'Novos Alunos'
+                  ]}
+                  contentStyle={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}
+                />
+                <Bar dataKey="retention" fill="#10B981" name="Retenção %" />
+                <Bar dataKey="churn" fill="#EF4444" name="Churn %" />
+                <Bar dataKey="newStudents" fill="#3B82F6" name="Novos Alunos" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Análise ROI */}
       <Card>
         <CardHeader>
-          <CardTitle>Evolução do Faturamento</CardTitle>
+          <CardTitle>Análise de ROI por Canal de Aquisição</CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={monthlyRevenue}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="month" stroke="#666" />
-              <YAxis stroke="#666" />
-              <Tooltip 
-                formatter={(value) => [`R$ ${value}`, 'Faturamento']}
-                contentStyle={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}
-              />
-              <Bar dataKey="revenue" fill="#10B981" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="p-4 bg-green-50 rounded-lg">
+              <h4 className="font-semibold text-green-800 mb-2">Indicação</h4>
+              <div className="text-2xl font-bold text-green-700">350%</div>
+              <p className="text-sm text-green-600">ROI mais alto</p>
+              <p className="text-xs text-gray-600 mt-1">Custo: R$ 50 | LTV: R$ 2.250</p>
+            </div>
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <h4 className="font-semibold text-blue-800 mb-2">Redes Sociais</h4>
+              <div className="text-2xl font-bold text-blue-700">280%</div>
+              <p className="text-sm text-blue-600">Bom retorno</p>
+              <p className="text-xs text-gray-600 mt-1">Custo: R$ 180 | LTV: R$ 2.840</p>
+            </div>
+            <div className="p-4 bg-yellow-50 rounded-lg">
+              <h4 className="font-semibold text-yellow-800 mb-2">Publicidade</h4>
+              <div className="text-2xl font-bold text-yellow-700">190%</div>
+              <p className="text-sm text-yellow-600">Moderado</p>
+              <p className="text-xs text-gray-600 mt-1">Custo: R$ 320 | LTV: R$ 2.840</p>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
@@ -161,26 +385,6 @@ export function Reports() {
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Frequência por Aluno</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={studentFrequency} layout="horizontal">
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis type="number" domain={[0, 100]} stroke="#666" />
-              <YAxis dataKey="name" type="category" width={100} stroke="#666" />
-              <Tooltip 
-                formatter={(value) => [`${value}%`, 'Frequência']}
-                contentStyle={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}
-              />
-              <Bar dataKey="frequency" fill="#3B82F6" radius={[0, 4, 4, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
     </div>
   );
 
@@ -223,32 +427,6 @@ export function Reports() {
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Distribuição por Tipo de Aula</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={400}>
-            <PieChart>
-              <Pie
-                data={classTypes}
-                cx="50%"
-                cy="50%"
-                outerRadius={120}
-                dataKey="value"
-                label={({ name, value }) => `${name}: ${value}%`}
-                labelLine={false}
-              >
-                {classTypes.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value) => [`${value}%`, 'Percentual']} />
-            </PieChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
     </div>
   );
 
@@ -291,40 +469,6 @@ export function Reports() {
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Evolução Física Média dos Alunos</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={400}>
-            <LineChart data={performanceData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="month" stroke="#666" />
-              <YAxis stroke="#666" />
-              <Tooltip 
-                contentStyle={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="avgWeight" 
-                stroke="#3B82F6" 
-                strokeWidth={3}
-                name="Peso Médio (kg)"
-                dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="avgBodyFat" 
-                stroke="#10B981" 
-                strokeWidth={3}
-                name="% Gordura Média"
-                dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
     </div>
   );
 
@@ -338,6 +482,8 @@ export function Reports() {
         return renderClassesSection();
       case "performance":
         return renderPerformanceSection();
+      case "advanced":
+        return renderAdvancedSection();
       default:
         return renderFinancialSection();
     }

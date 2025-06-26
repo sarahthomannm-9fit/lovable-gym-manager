@@ -1,34 +1,40 @@
 
-import { useState } from "react";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Dashboard } from "@/components/Dashboard";
-import { Students } from "@/components/Students";
 import { Classes } from "@/components/Classes";
-import { Payments } from "@/components/Payments";
+import { Students } from "@/components/Students";
 import { Performance } from "@/components/Performance";
-import { Feedback } from "@/components/Feedback";
 import { Reports } from "@/components/Reports";
+import { Documents } from "@/components/Documents";
+import { Communication } from "@/components/Communication";
+import { Payments } from "@/components/Payments";
+import { Feedback } from "@/components/Feedback";
+import { useState } from "react";
 
-const Index = () => {
-  const [activeTab, setActiveTab] = useState("dashboard");
+export default function Index() {
+  const [activeView, setActiveView] = useState("dashboard");
 
   const renderContent = () => {
-    switch (activeTab) {
+    switch (activeView) {
       case "dashboard":
         return <Dashboard />;
-      case "students":
-        return <Students />;
       case "classes":
         return <Classes />;
-      case "payments":
-        return <Payments />;
+      case "students":
+        return <Students />;
       case "performance":
         return <Performance />;
-      case "feedback":
-        return <Feedback />;
       case "reports":
         return <Reports />;
+      case "documents":
+        return <Documents />;
+      case "communication":
+        return <Communication />;
+      case "payments":
+        return <Payments />;
+      case "feedback":
+        return <Feedback />;
       default:
         return <Dashboard />;
     }
@@ -36,16 +42,15 @@ const Index = () => {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-gradient-to-br from-blue-50 to-green-50">
-        <AppSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-        <main className="flex-1 p-6">
-          <div className="max-w-7xl mx-auto">
-            {renderContent()}
+      <div className="min-h-screen flex w-full bg-gray-50">
+        <AppSidebar activeView={activeView} onViewChange={setActiveView} />
+        <main className="flex-1 p-6 overflow-auto">
+          <div className="flex items-center mb-6">
+            <SidebarTrigger className="mr-4" />
           </div>
+          {renderContent()}
         </main>
       </div>
     </SidebarProvider>
   );
-};
-
-export default Index;
+}
