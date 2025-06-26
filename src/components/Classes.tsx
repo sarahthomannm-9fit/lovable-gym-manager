@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { MultiDayScheduler } from "./MultiDayScheduler";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,8 +11,10 @@ import { Input } from "@/components/ui/input";
 import { Calendar, Clock, Plus, User, Grid, List } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+type ViewType = "daily" | "packages";
+
 export function Classes() {
-  const [view, setView] = useState<"daily" | "packages">("daily");
+  const [view, setView] = useState<ViewType>("daily");
 
   const [classes, setClasses] = useState([
     {
