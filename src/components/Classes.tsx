@@ -1,5 +1,5 @@
-
 import { useState } from "react";
+import { MultiDayScheduler } from "./MultiDayScheduler";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,10 +7,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Calendar, Clock, Plus, User } from "lucide-react";
+import { Calendar, Clock, Plus, User, Grid, List } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export function Classes() {
+  const [view, setView] = useState<"daily" | "packages">("daily");
+
   const [classes, setClasses] = useState([
     {
       id: 1,
@@ -107,84 +109,38 @@ export function Classes() {
     return acc;
   }, {} as Record<string, typeof classes>);
 
+  if (view === "packages") {
+    return <MultiDayScheduler />;
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
-            Aulas Agendadas
+            Controle de Aulas
           </h1>
-          <p className="text-gray-600 mt-1">Gerencie seus agendamentos</p>
+          <p className="text-gray-600 mt-1">Gerencie aulas individuais e pacotes mensais</p>
         </div>
         
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button className="bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600">
-              <Plus className="w-4 h-4 mr-2" />
-              Nova Aula
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Agendar Nova Aula</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="student">Aluno</Label>
-                <Select value={newClass.student} onValueChange={(value) => setNewClass({...newClass, student: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o aluno" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="João Silva">João Silva</SelectItem>
-                    <SelectItem value="Maria Santos">Maria Santos</SelectItem>
-                    <SelectItem value="Pedro Costa">Pedro Costa</SelectItem>
-                    <SelectItem value="Ana Paula">Ana Paula</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="date">Data</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={newClass.date}
-                  onChange={(e) => setNewClass({...newClass, date: e.target.value})}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="time">Horário</Label>
-                <Input
-                  id="time"
-                  type="time"
-                  value={newClass.time}
-                  onChange={(e) => setNewClass({...newClass, time: e.target.value})}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="type">Tipo de Treino</Label>
-                <Select value={newClass.type} onValueChange={(value) => setNewClass({...newClass, type: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Musculação">Musculação</SelectItem>
-                    <SelectItem value="Funcional">Funcional</SelectItem>
-                    <SelectItem value="HIIT">HIIT</SelectItem>
-                    <SelectItem value="Cardio">Cardio</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <Button onClick={handleAddClass} className="w-full bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600">
-                Agendar Aula
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <div className="flex space-x-2">
+          <Button
+            variant={view === "daily" ? "default" : "outline"}
+            onClick={() => setView("daily")}
+            className="flex items-center space-x-2"
+          >
+            <List className="w-4 h-4" />
+            <span>Aulas Diárias</span>
+          </Button>
+          <Button
+            variant={view === "packages" ? "default" : "outline"}
+            onClick={() => setView("packages")}
+            className="flex items-center space-x-2"
+          >
+            <Grid className="w-4 h-4" />
+            <span>Pacotes Mensais</span>
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-6">
