@@ -111,10 +111,86 @@ export function Classes() {
     return acc;
   }, {} as Record<string, typeof classes>);
 
-  // Fix the conditional rendering to use proper comparison
-  if (view === "packages") {
-    return <MultiDayScheduler />;
-  }
+  // Render different components based on view type
+  const renderContent = () => {
+    switch (view) {
+      case "packages":
+        return <MultiDayScheduler />;
+      case "daily":
+      default:
+        return (
+          <div className="space-y-6">
+            {Object.entries(groupedClasses)
+              .sort(([a], [b]) => new Date(a).getTime() - new Date(b).getTime())
+              .map(([date, dayClasses]) => (
+                <div key={date}>
+                  <div className="flex items-center space-x-2 mb-4">
+                    <Calendar className="w-5 h-5 text-blue-600" />
+                    <h2 className="text-xl font-semibold text-gray-800">
+                      {new Date(date + 'T00:00:00').toLocaleDateString('pt-BR', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </h2>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {dayClasses
+                      .sort((a, b) => a.time.localeCompare(b.time))
+                      .map((classItem) => (
+                        <Card key={classItem.id} className="hover:shadow-lg transition-shadow duration-200">
+                          <CardHeader className="pb-3">
+                            <div className="flex items-center justify-between">
+                              <CardTitle className="text-lg font-semibold flex items-center">
+                                <Clock className="w-4 h-4 mr-2 text-blue-600" />
+                                {classItem.time}
+                              </CardTitle>
+                              <Badge className={getStatusColor(classItem.status)}>
+                                {classItem.status}
+                              </Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-2">
+                              <div className="flex items-center space-x-2">
+                                <User className="w-4 h-4 text-gray-500" />
+                                <span className="font-medium">{classItem.student}</span>
+                              </div>
+                              <p className="text-sm text-gray-600">
+                                <strong>Tipo:</strong> {classItem.type}
+                              </p>
+                            </div>
+                            
+                            <div className="flex space-x-2 mt-4">
+                              {classItem.status === "Agendada" && (
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  className="text-green-600 border-green-600 hover:bg-green-50"
+                                >
+                                  Confirmar
+                                </Button>
+                              )}
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                className="text-red-600 border-red-600 hover:bg-red-50"
+                              >
+                                Cancelar
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                  </div>
+                </div>
+              ))}
+          </div>
+        );
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -146,75 +222,7 @@ export function Classes() {
         </div>
       </div>
 
-      <div className="space-y-6">
-        {Object.entries(groupedClasses)
-          .sort(([a], [b]) => new Date(a).getTime() - new Date(b).getTime())
-          .map(([date, dayClasses]) => (
-            <div key={date}>
-              <div className="flex items-center space-x-2 mb-4">
-                <Calendar className="w-5 h-5 text-blue-600" />
-                <h2 className="text-xl font-semibold text-gray-800">
-                  {new Date(date + 'T00:00:00').toLocaleDateString('pt-BR', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}
-                </h2>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {dayClasses
-                  .sort((a, b) => a.time.localeCompare(b.time))
-                  .map((classItem) => (
-                    <Card key={classItem.id} className="hover:shadow-lg transition-shadow duration-200">
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg font-semibold flex items-center">
-                            <Clock className="w-4 h-4 mr-2 text-blue-600" />
-                            {classItem.time}
-                          </CardTitle>
-                          <Badge className={getStatusColor(classItem.status)}>
-                            {classItem.status}
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <User className="w-4 h-4 text-gray-500" />
-                            <span className="font-medium">{classItem.student}</span>
-                          </div>
-                          <p className="text-sm text-gray-600">
-                            <strong>Tipo:</strong> {classItem.type}
-                          </p>
-                        </div>
-                        
-                        <div className="flex space-x-2 mt-4">
-                          {classItem.status === "Agendada" && (
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              className="text-green-600 border-green-600 hover:bg-green-50"
-                            >
-                              Confirmar
-                            </Button>
-                          )}
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            className="text-red-600 border-red-600 hover:bg-red-50"
-                          >
-                            Cancelar
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-              </div>
-            </div>
-          ))}
-      </div>
+      {renderContent()}
     </div>
   );
 }
