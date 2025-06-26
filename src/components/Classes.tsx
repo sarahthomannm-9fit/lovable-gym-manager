@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { MultiDayScheduler } from "./MultiDayScheduler";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -112,6 +111,7 @@ export function Classes() {
     return acc;
   }, {} as Record<string, typeof classes>);
 
+  // Fix the conditional rendering to use proper comparison
   if (view === "packages") {
     return <MultiDayScheduler />;
   }
