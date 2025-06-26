@@ -1,21 +1,33 @@
+
 import { useState } from "react";
 import { MultiDayScheduler } from "./MultiDayScheduler";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DailyClassView } from "./DailyClassView";
+import { AddClassDialog } from "./AddClassDialog";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Calendar, Clock, Plus, User, Grid, List } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Grid, List } from "lucide-react";
 
 type ViewType = "daily" | "packages";
+
+interface ClassItem {
+  id: number;
+  student: string;
+  date: string;
+  time: string;
+  type: string;
+  status: string;
+}
+
+interface NewClass {
+  student: string;
+  date: string;
+  time: string;
+  type: string;
+}
 
 export function Classes() {
   const [view, setView] = useState<ViewType>("daily");
 
-  const [classes, setClasses] = useState([
+  const [classes, setClasses] = useState<ClassItem[]>([
     {
       id: 1,
       student: "João Silva",
@@ -50,68 +62,28 @@ export function Classes() {
     }
   ]);
 
-  const [newClass, setNewClass] = useState({
-    student: "",
-    date: "",
-    time: "",
-    type: ""
-  });
-
-  const { toast } = useToast();
-
-  const handleAddClass = () => {
-    if (!newClass.student || !newClass.date || !newClass.time || !newClass.type) {
-      toast({
-        title: "Erro",
-        description: "Preencha todos os campos",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const classItem = {
+  const handleAddClass = (newClass: NewClass) => {
+    const classItem: ClassItem = {
       id: classes.length + 1,
       ...newClass,
       status: "Agendada"
     };
 
     setClasses([...classes, classItem]);
-    setNewClass({
-      student: "",
-      date: "",
-      time: "",
-      type: ""
-    });
-
-    toast({
-      title: "Sucesso",
-      description: "Aula agendada com sucesso!",
-    });
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Confirmada":
-        return "bg-green-100 text-green-800";
-      case "Agendada":
-        return "bg-blue-100 text-blue-800";
-      case "Cancelada":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
+  const handleConfirmClass = (id: number) => {
+    setClasses(classes.map(c => 
+      c.id === id ? { ...c, status: "Confirmada" } : c
+    ));
   };
 
-  const groupedClasses = classes.reduce((acc, classItem) => {
-    const date = classItem.date;
-    if (!acc[date]) {
-      acc[date] = [];
-    }
-    acc[date].push(classItem);
-    return acc;
-  }, {} as Record<string, typeof classes>);
+  const handleCancelClass = (id: number) => {
+    setClasses(classes.map(c => 
+      c.id === id ? { ...c, status: "Cancelada" } : c
+    ));
+  };
 
-  // Render different components based on view type
   const renderContent = () => {
     switch (view) {
       case "packages":
@@ -119,75 +91,11 @@ export function Classes() {
       case "daily":
       default:
         return (
-          <div className="space-y-6">
-            {Object.entries(groupedClasses)
-              .sort(([a], [b]) => new Date(a).getTime() - new Date(b).getTime())
-              .map(([date, dayClasses]) => (
-                <div key={date}>
-                  <div className="flex items-center space-x-2 mb-4">
-                    <Calendar className="w-5 h-5 text-blue-600" />
-                    <h2 className="text-xl font-semibold text-gray-800">
-                      {new Date(date + 'T00:00:00').toLocaleDateString('pt-BR', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
-                    </h2>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {dayClasses
-                      .sort((a, b) => a.time.localeCompare(b.time))
-                      .map((classItem) => (
-                        <Card key={classItem.id} className="hover:shadow-lg transition-shadow duration-200">
-                          <CardHeader className="pb-3">
-                            <div className="flex items-center justify-between">
-                              <CardTitle className="text-lg font-semibold flex items-center">
-                                <Clock className="w-4 h-4 mr-2 text-blue-600" />
-                                {classItem.time}
-                              </CardTitle>
-                              <Badge className={getStatusColor(classItem.status)}>
-                                {classItem.status}
-                              </Badge>
-                            </div>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="space-y-2">
-                              <div className="flex items-center space-x-2">
-                                <User className="w-4 h-4 text-gray-500" />
-                                <span className="font-medium">{classItem.student}</span>
-                              </div>
-                              <p className="text-sm text-gray-600">
-                                <strong>Tipo:</strong> {classItem.type}
-                              </p>
-                            </div>
-                            
-                            <div className="flex space-x-2 mt-4">
-                              {classItem.status === "Agendada" && (
-                                <Button 
-                                  size="sm" 
-                                  variant="outline"
-                                  className="text-green-600 border-green-600 hover:bg-green-50"
-                                >
-                                  Confirmar
-                                </Button>
-                              )}
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                className="text-red-600 border-red-600 hover:bg-red-50"
-                              >
-                                Cancelar
-                              </Button>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                  </div>
-                </div>
-              ))}
-          </div>
+          <DailyClassView 
+            classes={classes}
+            onConfirmClass={handleConfirmClass}
+            onCancelClass={handleCancelClass}
+          />
         );
     }
   };
@@ -203,6 +111,7 @@ export function Classes() {
         </div>
         
         <div className="flex space-x-2">
+          <AddClassDialog onAddClass={handleAddClass} />
           <Button
             variant={view === "daily" ? "default" : "outline"}
             onClick={() => setView("daily")}
