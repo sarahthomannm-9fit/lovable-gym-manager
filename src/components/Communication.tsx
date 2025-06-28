@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -92,8 +91,13 @@ export function Communication() {
     }
   ]);
 
-  const [newMessage, setNewMessage] = useState({
-    type: 'chat' as const,
+  const [newMessage, setNewMessage] = useState<{
+    type: 'chat' | 'email' | 'notification';
+    to: string;
+    subject: string;
+    content: string;
+  }>({
+    type: 'chat',
     to: '',
     subject: '',
     content: ''
@@ -202,7 +206,7 @@ export function Communication() {
             <div className="space-y-4">
               <div>
                 <Label htmlFor="type">Tipo de Mensagem</Label>
-                <Select value={newMessage.type} onValueChange={(value: 'chat' | 'email' | 'notification') => setNewMessage({...newMessage, type: value})}>
+                <Select value={newMessage.type} onValueChange={(value: string) => setNewMessage({...newMessage, type: value as 'chat' | 'email' | 'notification'})}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
