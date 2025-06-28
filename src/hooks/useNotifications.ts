@@ -3,32 +3,7 @@ import { useState } from "react";
 import { Notification } from "@/types/communication";
 
 export function useNotifications() {
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: 1,
-      title: 'Pagamento Recebido',
-      message: 'Pagamento de João Silva - R$ 300,00',
-      type: 'success',
-      timestamp: '2024-01-23T14:20:00',
-      read: false
-    },
-    {
-      id: 2,
-      title: 'Aula Cancelada',
-      message: 'Maria Santos cancelou a aula de hoje',
-      type: 'warning',
-      timestamp: '2024-01-23T12:45:00',
-      read: true
-    },
-    {
-      id: 3,
-      title: 'Nova Avaliação',
-      message: 'Pedro Costa solicitou uma reavaliação física',
-      type: 'info',
-      timestamp: '2024-01-23T09:30:00',
-      read: false
-    }
-  ]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
   const markNotificationAsRead = (id: number) => {
     setNotifications(notifications.map(notif => 
@@ -36,8 +11,19 @@ export function useNotifications() {
     ));
   };
 
+  const addNotification = (notification: Omit<Notification, 'id' | 'timestamp'>) => {
+    const newNotification: Notification = {
+      id: notifications.length + 1,
+      timestamp: new Date().toISOString(),
+      ...notification
+    };
+    setNotifications([...notifications, newNotification]);
+    return newNotification;
+  };
+
   return {
     notifications,
-    markNotificationAsRead
+    markNotificationAsRead,
+    addNotification
   };
 }

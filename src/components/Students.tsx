@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Plus, Search, User, Phone, Mail, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { StudentProfile } from "./StudentProfile";
@@ -18,55 +19,23 @@ interface Student {
   plan: string;
   status: string;
   startDate: string;
+  paymentMethod?: string;
+  emergencyContact?: string;
+  medicalInfo?: string;
 }
 
 export function Students() {
-  const [students, setStudents] = useState<Student[]>([
-    {
-      id: 1,
-      name: "João Silva",
-      email: "joao@email.com", 
-      phone: "(11) 99999-9999",
-      plan: "Mensal",
-      status: "Ativo",
-      startDate: "2024-01-15"
-    },
-    {
-      id: 2,
-      name: "Maria Santos",
-      email: "maria@email.com",
-      phone: "(11) 98888-8888",
-      plan: "Trimestral",
-      status: "Ativo",
-      startDate: "2023-12-01"
-    },
-    {
-      id: 3,
-      name: "Pedro Costa",
-      email: "pedro@email.com",
-      phone: "(11) 97777-7777",
-      plan: "Mensal",
-      status: "Inativo",
-      startDate: "2024-02-20"
-    },
-    {
-      id: 4,
-      name: "Ana Paula",
-      email: "ana@email.com",
-      phone: "(11) 96666-6666",
-      plan: "Semestral",
-      status: "Ativo",
-      startDate: "2024-03-10"
-    }
-  ]);
-
+  const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [newStudent, setNewStudent] = useState({
     name: "",
     email: "",
     phone: "",
-    plan: ""
+    plan: "",
+    paymentMethod: "",
+    emergencyContact: "",
+    medicalInfo: ""
   });
 
   const { toast } = useToast();
@@ -75,7 +44,7 @@ export function Students() {
     if (!newStudent.name || !newStudent.email || !newStudent.phone || !newStudent.plan) {
       toast({
         title: "Erro",
-        description: "Preencha todos os campos",
+        description: "Preencha todos os campos obrigatórios",
         variant: "destructive",
       });
       return;
@@ -93,7 +62,10 @@ export function Students() {
       name: "",
       email: "",
       phone: "",
-      plan: ""
+      plan: "",
+      paymentMethod: "",
+      emergencyContact: "",
+      medicalInfo: ""
     });
 
     toast({
@@ -146,13 +118,13 @@ export function Students() {
               Novo Aluno
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-lg max-h-96 overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Cadastrar Novo Aluno</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="name">Nome Completo</Label>
+                <Label htmlFor="name">Nome Completo *</Label>
                 <Input
                   id="name"
                   value={newStudent.name}
@@ -162,7 +134,7 @@ export function Students() {
               </div>
               
               <div>
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email *</Label>
                 <Input
                   id="email"
                   type="email"
@@ -173,7 +145,7 @@ export function Students() {
               </div>
               
               <div>
-                <Label htmlFor="phone">Telefone</Label>
+                <Label htmlFor="phone">Telefone *</Label>
                 <Input
                   id="phone"
                   value={newStudent.phone}
@@ -183,7 +155,7 @@ export function Students() {
               </div>
               
               <div>
-                <Label htmlFor="plan">Plano</Label>
+                <Label htmlFor="plan">Plano *</Label>
                 <Select value={newStudent.plan} onValueChange={(value) => setNewStudent({...newStudent, plan: value})}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o plano" />
@@ -195,6 +167,41 @@ export function Students() {
                     <SelectItem value="Anual">Anual</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="paymentMethod">Forma de Pagamento</Label>
+                <Select value={newStudent.paymentMethod} onValueChange={(value) => setNewStudent({...newStudent, paymentMethod: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a forma de pagamento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PIX">PIX</SelectItem>
+                    <SelectItem value="Cartão">Cartão de Crédito</SelectItem>
+                    <SelectItem value="Boleto">Boleto</SelectItem>
+                    <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="emergencyContact">Contato de Emergência</Label>
+                <Input
+                  id="emergencyContact"
+                  value={newStudent.emergencyContact}
+                  onChange={(e) => setNewStudent({...newStudent, emergencyContact: e.target.value})}
+                  placeholder="Nome e telefone"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="medicalInfo">Informações Médicas</Label>
+                <Textarea
+                  id="medicalInfo"
+                  value={newStudent.medicalInfo}
+                  onChange={(e) => setNewStudent({...newStudent, medicalInfo: e.target.value})}
+                  placeholder="Restrições, lesões, medicamentos..."
+                />
               </div>
               
               <Button onClick={handleAddStudent} className="w-full bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600">
@@ -216,60 +223,73 @@ export function Students() {
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredStudents.map((student) => (
-          <Card key={student.id} className="hover:shadow-lg transition-shadow duration-200">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-semibold flex items-center">
-                  <User className="w-5 h-5 mr-2 text-blue-600" />
-                  {student.name}
-                </CardTitle>
-                <Badge className={getStatusColor(student.status)}>
-                  {student.status}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
-                  <Mail className="w-4 h-4" />
-                  <span>{student.email}</span>
+      {students.length === 0 ? (
+        <Card className="text-center py-12">
+          <CardContent>
+            <User className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum aluno cadastrado</h3>
+            <p className="text-gray-600 mb-4">Comece cadastrando seu primeiro aluno</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {students.filter(student =>
+            student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            student.email.toLowerCase().includes(searchTerm.toLowerCase())
+          ).map((student) => (
+            <Card key={student.id} className="hover:shadow-lg transition-shadow duration-200">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg font-semibold flex items-center">
+                    <User className="w-5 h-5 mr-2 text-blue-600" />
+                    {student.name}
+                  </CardTitle>
+                  <Badge className={student.status === "Ativo" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+                    {student.status}
+                  </Badge>
                 </div>
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
-                  <Phone className="w-4 h-4" />
-                  <span>{student.phone}</span>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2 text-sm text-gray-600">
+                    <Mail className="w-4 h-4" />
+                    <span>{student.email}</span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-sm text-gray-600">
+                    <Phone className="w-4 h-4" />
+                    <span>{student.phone}</span>
+                  </div>
+                  <div className="text-sm">
+                    <strong>Plano:</strong> {student.plan}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    Início: {new Date(student.startDate + 'T00:00:00').toLocaleDateString('pt-BR')}
+                  </div>
                 </div>
-                <div className="text-sm">
-                  <strong>Plano:</strong> {student.plan}
+                
+                <div className="flex space-x-2 mt-4">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                    onClick={() => setSelectedStudent(student)}
+                  >
+                    <Eye className="w-3 h-3 mr-1" />
+                    Ver Perfil
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    className="text-green-600 border-green-600 hover:bg-green-50"
+                  >
+                    Editar
+                  </Button>
                 </div>
-                <div className="text-sm text-gray-500">
-                  Início: {new Date(student.startDate + 'T00:00:00').toLocaleDateString('pt-BR')}
-                </div>
-              </div>
-              
-              <div className="flex space-x-2 mt-4">
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  className="text-blue-600 border-blue-600 hover:bg-blue-50"
-                  onClick={() => setSelectedStudent(student)}
-                >
-                  <Eye className="w-3 h-3 mr-1" />
-                  Ver Perfil
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  className="text-green-600 border-green-600 hover:bg-green-50"
-                >
-                  Editar
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
