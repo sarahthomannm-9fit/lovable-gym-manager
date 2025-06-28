@@ -2,17 +2,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MessageCircle, Mail, Bell } from "lucide-react";
-
-interface Message {
-  id: number;
-  type: 'chat' | 'email' | 'notification';
-  from: string;
-  to: string;
-  subject?: string;
-  content: string;
-  timestamp: string;
-  status: 'sent' | 'delivered' | 'read';
-}
+import { Message } from "@/types/communication";
 
 interface MessageListProps {
   messages: Message[];

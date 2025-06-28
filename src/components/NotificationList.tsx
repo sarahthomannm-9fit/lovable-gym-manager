@@ -2,15 +2,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Bell } from "lucide-react";
-
-interface Notification {
-  id: number;
-  title: string;
-  message: string;
-  type: 'info' | 'warning' | 'success' | 'error';
-  timestamp: string;
-  read: boolean;
-}
+import { Notification } from "@/types/communication";
 
 interface NotificationListProps {
   notifications: Notification[];

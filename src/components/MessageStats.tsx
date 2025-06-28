@@ -1,16 +1,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-interface Message {
-  id: number;
-  type: 'chat' | 'email' | 'notification';
-  from: string;
-  to: string;
-  subject?: string;
-  content: string;
-  timestamp: string;
-  status: 'sent' | 'delivered' | 'read';
-}
+import { Message } from "@/types/communication";
 
 interface MessageStatsProps {
   messages: Message[];

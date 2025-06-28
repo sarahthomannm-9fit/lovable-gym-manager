@@ -8,17 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-interface Message {
-  id: number;
-  type: 'chat' | 'email' | 'notification';
-  from: string;
-  to: string;
-  subject?: string;
-  content: string;
-  timestamp: string;
-  status: 'sent' | 'delivered' | 'read';
-}
+import { Message } from "@/types/communication";
 
 interface MessageFormProps {
   onSendMessage: (message: Omit<Message, 'id' | 'from' | 'timestamp' | 'status'>) => void;
