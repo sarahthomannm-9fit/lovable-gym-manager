@@ -2,7 +2,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
-import { ArrowLeft, TrendingUp, Weight, Ruler, Calendar } from "lucide-react";
+import { ArrowLeft, TrendingUp, Weight, Ruler, Calendar, MessageCircle, FileText } from "lucide-react";
+import { useStudents } from "@/hooks/useStudents";
 
 interface StudentProfileProps {
   student: {
@@ -12,33 +13,58 @@ interface StudentProfileProps {
     phone: string;
     plan: string;
     status: string;
+    startDate: string;
+    paymentMethod?: string;
+    emergencyContact?: string;
+    medicalInfo?: string;
   };
   onBack: () => void;
 }
 
 export function StudentProfile({ student, onBack }: StudentProfileProps) {
-  // Dados simulados de evolução do aluno
-  const performanceData = [
-    { date: "Jan", weight: 75.2, bodyFat: 18.5, muscle: 42.1 },
-    { date: "Fev", weight: 74.8, bodyFat: 17.8, muscle: 42.8 },
-    { date: "Mar", weight: 74.2, bodyFat: 17.2, muscle: 43.5 },
-    { date: "Abr", weight: 73.8, bodyFat: 16.8, muscle: 44.1 },
-    { date: "Mai", weight: 73.5, bodyFat: 16.2, muscle: 44.8 },
+  const { getStudentById } = useStudents();
+  const fullStudent = getStudentById(student.id);
+  
+  // Usar dados de performance do hook ou dados padrão
+  const performanceData = fullStudent?.performanceData ? 
+    fullStudent.performanceData.dates.map((date, index) => ({
+      date,
+      weight: fullStudent.performanceData!.weight[index],
+      bodyFat: fullStudent.performanceData!.bodyFat[index],
+      muscle: fullStudent.performanceData!.muscle[index]
+    })) : [
+      { date: "Jan", weight: 75.2, bodyFat: 18.5, muscle: 42.1 },
+      { date: "Fev", weight: 74.8, bodyFat: 17.8, muscle: 42.8 },
+      { date: "Mar", weight: 74.2, bodyFat: 17.2, muscle: 43.5 },
+      { date: "Abr", weight: 73.8, bodyFat: 16.8, muscle: 44.1 },
+      { date: "Mai", weight: 73.5, bodyFat: 16.2, muscle: 44.8 },
+    ];
+
+  const workoutData = fullStudent?.performanceData?.workoutData || [
+    { exercise: "Supino", weight: 80, reps: 12, sets: 3 },
+    { exercise: "Agachamento", weight: 120, reps: 10, sets: 4 },
+    { exercise: "Levantamento", weight: 100, reps: 8, sets: 3 },
+    { exercise: "Desenvolvimento", weight: 60, reps: 12, sets: 3 },
   ];
 
-  const workoutData = [
-    { exercise: "Supino", weight: 80, reps: 12 },
-    { exercise: "Agachamento", weight: 120, reps: 10 },
-    { exercise: "Levantamento", weight: 100, reps: 8 },
-    { exercise: "Desenvolvimento", weight: 60, reps: 12 },
-  ];
+  const frequency = fullStudent?.performanceData?.frequency || 95;
+  const currentWeight = performanceData[performanceData.length - 1]?.weight || 0;
+  const currentBodyFat = performanceData[performanceData.length - 1]?.bodyFat || 0;
+  const currentMuscle = performanceData[performanceData.length - 1]?.muscle || 0;
+  
+  const weightDiff = performanceData.length > 1 ? 
+    (currentWeight - performanceData[0].weight).toFixed(1) : "0";
+  const bodyFatDiff = performanceData.length > 1 ? 
+    (currentBodyFat - performanceData[0].bodyFat).toFixed(1) : "0";
+  const muscleDiff = performanceData.length > 1 ? 
+    (currentMuscle - performanceData[0].muscle).toFixed(1) : "0";
 
   const frequencyData = [
     { month: "Jan", frequency: 85 },
     { month: "Fev", frequency: 92 },
     { month: "Mar", frequency: 78 },
     { month: "Abr", frequency: 88 },
-    { month: "Mai", frequency: 95 },
+    { month: "Mai", frequency: frequency },
   ];
 
   return (
@@ -52,13 +78,62 @@ export function StudentProfile({ student, onBack }: StudentProfileProps) {
           <ArrowLeft className="w-4 h-4" />
           <span>Voltar</span>
         </Button>
-        <div>
+        <div className="flex-1">
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
             {student.name}
           </h1>
           <p className="text-gray-600">{student.email} • {student.plan}</p>
         </div>
+        <div className="flex space-x-2">
+          <Button variant="outline" className="text-blue-600 border-blue-600">
+            <MessageCircle className="w-4 h-4 mr-2" />
+            Mensagem
+          </Button>
+          <Button variant="outline" className="text-green-600 border-green-600">
+            <FileText className="w-4 h-4 mr-2" />
+            Relatório
+          </Button>
+        </div>
       </div>
+
+      {/* Informações Pessoais */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Informações Pessoais</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm text-gray-600">Telefone</p>
+              <p className="font-medium">{student.phone}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Plano</p>
+              <p className="font-medium">{student.plan}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Início</p>
+              <p className="font-medium">{new Date(student.startDate + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Forma de Pagamento</p>
+              <p className="font-medium">{student.paymentMethod || 'Não informado'}</p>
+            </div>
+            {student.emergencyContact && (
+              <div>
+                <p className="text-sm text-gray-600">Contato de Emergência</p>
+                <p className="font-medium">{student.emergencyContact}</p>
+              </div>
+            )}
+            {student.medicalInfo && (
+              <div>
+                <p className="text-sm text-gray-600">Informações Médicas</p>
+                <p className="font-medium">{student.medicalInfo}</p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Cards de resumo */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -70,8 +145,10 @@ export function StudentProfile({ student, onBack }: StudentProfileProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-800">73.5 kg</div>
-            <p className="text-xs text-blue-600 mt-1">-1.7kg desde Jan</p>
+            <div className="text-2xl font-bold text-blue-800">{currentWeight} kg</div>
+            <p className="text-xs text-blue-600 mt-1">
+              {parseFloat(weightDiff) >= 0 ? '+' : ''}{weightDiff}kg desde Jan
+            </p>
           </CardContent>
         </Card>
 
@@ -83,8 +160,10 @@ export function StudentProfile({ student, onBack }: StudentProfileProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-800">16.2%</div>
-            <p className="text-xs text-green-600 mt-1">-2.3% desde Jan</p>
+            <div className="text-2xl font-bold text-green-800">{currentBodyFat}%</div>
+            <p className="text-xs text-green-600 mt-1">
+              {parseFloat(bodyFatDiff) >= 0 ? '+' : ''}{bodyFatDiff}% desde Jan
+            </p>
           </CardContent>
         </Card>
 
@@ -96,8 +175,10 @@ export function StudentProfile({ student, onBack }: StudentProfileProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-800">44.8 kg</div>
-            <p className="text-xs text-purple-600 mt-1">+2.7kg desde Jan</p>
+            <div className="text-2xl font-bold text-purple-800">{currentMuscle} kg</div>
+            <p className="text-xs text-purple-600 mt-1">
+              {parseFloat(muscleDiff) >= 0 ? '+' : ''}{muscleDiff}kg desde Jan
+            </p>
           </CardContent>
         </Card>
 
@@ -109,7 +190,7 @@ export function StudentProfile({ student, onBack }: StudentProfileProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-800">95%</div>
+            <div className="text-2xl font-bold text-yellow-800">{frequency}%</div>
             <p className="text-xs text-yellow-600 mt-1">Maio 2024</p>
           </CardContent>
         </Card>
@@ -148,7 +229,13 @@ export function StudentProfile({ student, onBack }: StudentProfileProps) {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="exercise" stroke="#666" />
                 <YAxis stroke="#666" />
-                <Tooltip contentStyle={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }} />
+                <Tooltip 
+                  formatter={(value, name) => [
+                    name === 'weight' ? `${value}kg` : value,
+                    name === 'weight' ? 'Peso' : name === 'reps' ? 'Repetições' : 'Séries'
+                  ]}
+                  contentStyle={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }} 
+                />
                 <Bar dataKey="weight" fill="#3B82F6" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
