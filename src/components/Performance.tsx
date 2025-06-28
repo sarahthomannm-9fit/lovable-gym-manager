@@ -1,14 +1,17 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AlertTriangle, Weight, TrendingUp, Target, Ruler } from "lucide-react";
+import { PerformanceMetrics } from "./performance/PerformanceMetrics";
+import { AddRecordDialog } from "./performance/AddRecordDialog";
+import { PerformanceCharts } from "./performance/PerformanceCharts";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, TrendingUp, Weight, Ruler, Target, Award, AlertTriangle } from "lucide-react";
+import { Plus, TrendingUp as TrendingUpIcon, Weight as WeightIcon, Ruler as RulerIcon, Target as TargetIcon, Award, AlertTriangle as AlertTriangleIcon } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from "recharts";
 import { useToast } from "@/hooks/use-toast";
 
@@ -103,41 +106,8 @@ export function Performance() {
 
   const { toast } = useToast();
 
-  const handleAddRecord = () => {
-    if (!newRecord.student || !newRecord.weight) {
-      toast({
-        title: "Erro",
-        description: "Preencha pelo menos o aluno e o peso",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const record: PerformanceRecord = {
-      id: records.length + 1,
-      ...newRecord,
-      date: new Date().toISOString().split('T')[0],
-      weight: parseFloat(newRecord.weight),
-      bodyFat: newRecord.bodyFat ? parseFloat(newRecord.bodyFat) : 0,
-      muscleMass: newRecord.muscleMass ? parseFloat(newRecord.muscleMass) : 0
-    };
-
-    setRecords([...records, record]);
-    setNewRecord({
-      student: "",
-      weight: "",
-      bodyFat: "",
-      muscleMass: "",
-      measurements: "",
-      loads: "",
-      goals: "",
-      notes: ""
-    });
-
-    toast({
-      title: "Sucesso",
-      description: "Registro de desempenho salvo com sucesso!",
-    });
+  const handleAddRecord = (record: any) => {
+    setRecords(prev => [...prev, { ...record, id: prev.length + 1 }]);
   };
 
   // Funcões para análise de dados
@@ -238,115 +208,7 @@ export function Performance() {
           <p className="text-gray-600 mt-1">Dashboard completo de evolução e comparações</p>
         </div>
         
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button className="bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600">
-              <Plus className="w-4 h-4 mr-2" />
-              Nova Avaliação
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Registrar Avaliação Física</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 max-h-96 overflow-y-auto">
-              <div>
-                <Label htmlFor="student">Aluno</Label>
-                <Select value={newRecord.student} onValueChange={(value) => setNewRecord({...newRecord, student: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o aluno" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="João Silva">João Silva</SelectItem>
-                    <SelectItem value="Maria Santos">Maria Santos</SelectItem>
-                    <SelectItem value="Pedro Costa">Pedro Costa</SelectItem>
-                    <SelectItem value="Ana Paula">Ana Paula</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="weight">Peso (kg) *</Label>
-                <Input
-                  id="weight"
-                  type="number"
-                  step="0.1"
-                  value={newRecord.weight}
-                  onChange={(e) => setNewRecord({...newRecord, weight: e.target.value})}
-                  placeholder="70.5"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="bodyFat">% Gordura Corporal</Label>
-                <Input
-                  id="bodyFat"
-                  type="number"
-                  step="0.1"
-                  value={newRecord.bodyFat}
-                  onChange={(e) => setNewRecord({...newRecord, bodyFat: e.target.value})}
-                  placeholder="15.5"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="muscleMass">Massa Muscular (kg)</Label>
-                <Input
-                  id="muscleMass"
-                  type="number"
-                  step="0.1"
-                  value={newRecord.muscleMass}
-                  onChange={(e) => setNewRecord({...newRecord, muscleMass: e.target.value})}
-                  placeholder="45.2"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="measurements">Medidas (cm)</Label>
-                <Textarea
-                  id="measurements"
-                  value={newRecord.measurements}
-                  onChange={(e) => setNewRecord({...newRecord, measurements: e.target.value})}
-                  placeholder="Braço: 40cm, Cintura: 85cm, Coxa: 55cm"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="loads">Cargas (kg)</Label>
-                <Textarea
-                  id="loads"
-                  value={newRecord.loads}
-                  onChange={(e) => setNewRecord({...newRecord, loads: e.target.value})}
-                  placeholder="Supino: 80kg, Agachamento: 120kg"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="goals">Metas/Objetivos</Label>
-                <Textarea
-                  id="goals"
-                  value={newRecord.goals}
-                  onChange={(e) => setNewRecord({...newRecord, goals: e.target.value})}
-                  placeholder="Reduzir 2% de gordura corporal em 3 meses"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="notes">Observações</Label>
-                <Textarea
-                  id="notes"
-                  value={newRecord.notes}
-                  onChange={(e) => setNewRecord({...newRecord, notes: e.target.value})}
-                  placeholder="Observações adicionais sobre o aluno"
-                />
-              </div>
-              
-              <Button onClick={handleAddRecord} className="w-full bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600">
-                Salvar Avaliação
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <AddRecordDialog onAddRecord={handleAddRecord} />
       </div>
 
       <Tabs defaultValue="dashboard" className="space-y-6">
@@ -381,83 +243,23 @@ export function Performance() {
               </Card>
             )}
 
-            {/* Métricas Gerais */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <Card className="bg-gradient-to-r from-blue-50 to-blue-100">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-blue-700 flex items-center">
-                    <Weight className="w-4 h-4 mr-2" />
-                    Avaliações
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-blue-800">{records.length}</div>
-                  <p className="text-xs text-blue-600 mt-1">Total realizadas</p>
-                </CardContent>
-              </Card>
+            <PerformanceMetrics 
+              totalRecords={records.length}
+              averageProgress="+2.3kg"
+              goalSuccessRate={78}
+              bestPerformer="João Silva"
+            />
 
-              <Card className="bg-gradient-to-r from-green-50 to-green-100">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-green-700 flex items-center">
-                    <TrendingUp className="w-4 h-4 mr-2" />
-                    Média Progresso
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-green-800">+2.3kg</div>
-                  <p className="text-xs text-green-600 mt-1">Massa muscular</p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-r from-purple-50 to-purple-100">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-purple-700 flex items-center">
-                    <Target className="w-4 h-4 mr-2" />
-                    Metas Atingidas
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-purple-800">78%</div>
-                  <p className="text-xs text-purple-600 mt-1">Taxa de sucesso</p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-r from-yellow-50 to-yellow-100">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-yellow-700 flex items-center">
-                    <Award className="w-4 h-4 mr-2" />
-                    Melhor Resultado
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-yellow-800">João Silva</div>
-                  <p className="text-xs text-yellow-600 mt-1">-2.3% gordura</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Gráfico Radar de Performance */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Análise Multidimensional dos Alunos</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={400}>
-                  <RadarChart data={radarData}>
-                    <PolarGrid />
-                    <PolarAngleAxis dataKey="student" />
-                    <PolarRadiusAxis angle={90} domain={[0, 100]} />
-                    <Radar
-                      name="Performance"
-                      dataKey="metas"
-                      stroke="#3B82F6"
-                      fill="#3B82F6"
-                      fillOpacity={0.3}
-                    />
-                  </RadarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+            <PerformanceCharts 
+              radarData={radarData}
+              comparisonData={getStudentsComparison()}
+              evolutionData={Object.fromEntries(
+                [...new Set(records.map(r => r.student))].map(student => [
+                  student,
+                  getStudentEvolution(student)
+                ])
+              )}
+            />
           </div>
         </TabsContent>
 
@@ -569,7 +371,7 @@ export function Performance() {
                     <div className="space-y-4">
                       <div className="grid grid-cols-3 gap-4">
                         <div className="flex items-center space-x-2">
-                          <Weight className="w-4 h-4 text-blue-600" />
+                          <WeightIcon className="w-4 h-4 text-blue-600" />
                           <div>
                             <p className="text-sm text-gray-600">Peso</p>
                             <p className="font-semibold">{record.weight} kg</p>
@@ -578,7 +380,7 @@ export function Performance() {
                         
                         {record.bodyFat > 0 && (
                           <div className="flex items-center space-x-2">
-                            <TrendingUp className="w-4 h-4 text-green-600" />
+                            <TrendingUpIcon className="w-4 h-4 text-green-600" />
                             <div>
                               <p className="text-sm text-gray-600">% Gordura</p>
                               <p className="font-semibold">{record.bodyFat}%</p>
@@ -588,7 +390,7 @@ export function Performance() {
 
                         {record.muscleMass > 0 && (
                           <div className="flex items-center space-x-2">
-                            <Target className="w-4 h-4 text-purple-600" />
+                            <TargetIcon className="w-4 h-4 text-purple-600" />
                             <div>
                               <p className="text-sm text-gray-600">Músculo</p>
                               <p className="font-semibold">{record.muscleMass} kg</p>
@@ -600,7 +402,7 @@ export function Performance() {
                       {record.measurements && (
                         <div>
                           <div className="flex items-center space-x-2 mb-2">
-                            <Ruler className="w-4 h-4 text-purple-600" />
+                            <RulerIcon className="w-4 h-4 text-purple-600" />
                             <p className="text-sm text-gray-600 font-medium">Medidas</p>
                           </div>
                           <p className="text-sm text-gray-700">{record.measurements}</p>
@@ -617,7 +419,7 @@ export function Performance() {
                       {record.goals && (
                         <div>
                           <div className="flex items-center space-x-2 mb-2">
-                            <Target className="w-4 h-4 text-blue-600" />
+                            <TargetIcon className="w-4 h-4 text-blue-600" />
                             <p className="text-sm text-gray-600 font-medium">Metas</p>
                           </div>
                           <p className="text-sm text-gray-700">{record.goals}</p>

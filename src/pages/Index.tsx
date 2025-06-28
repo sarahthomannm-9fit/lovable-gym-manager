@@ -1,6 +1,4 @@
 
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/AppSidebar";
 import { Dashboard } from "@/components/Dashboard";
 import { Classes } from "@/components/Classes";
 import { Students } from "@/components/Students";
@@ -10,10 +8,26 @@ import { Documents } from "@/components/Documents";
 import { Communication } from "@/components/Communication";
 import { Payments } from "@/components/Payments";
 import { Feedback } from "@/components/Feedback";
+import { ResponsiveLayout } from "@/components/layout/ResponsiveLayout";
 import { useState } from "react";
 
 export default function Index() {
   const [activeView, setActiveView] = useState("dashboard");
+
+  const getViewConfig = (view: string) => {
+    const configs = {
+      dashboard: { title: "Dashboard", subtitle: "Visão geral do seu negócio" },
+      classes: { title: "Aulas", subtitle: "Gerencie suas aulas e horários" },
+      students: { title: "Alunos", subtitle: "Gerencie seus alunos" },
+      performance: { title: "Performance", subtitle: "Acompanhe o progresso dos alunos" },
+      reports: { title: "Relatórios", subtitle: "Analytics e insights" },
+      documents: { title: "Documentos", subtitle: "Gerencie documentos importantes" },
+      communication: { title: "Comunicação", subtitle: "Messages e notificações" },
+      payments: { title: "Pagamentos", subtitle: "Controle financeiro" },
+      feedback: { title: "Feedback", subtitle: "Avaliações dos alunos" },
+    };
+    return configs[view as keyof typeof configs] || { title: "Dashboard", subtitle: "Visão geral" };
+  };
 
   const renderContent = () => {
     switch (activeView) {
@@ -40,17 +54,16 @@ export default function Index() {
     }
   };
 
+  const viewConfig = getViewConfig(activeView);
+
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-gray-50">
-        <AppSidebar activeView={activeView} onViewChange={setActiveView} />
-        <main className="flex-1 p-6 overflow-auto">
-          <div className="flex items-center mb-6">
-            <SidebarTrigger className="mr-4" />
-          </div>
-          {renderContent()}
-        </main>
-      </div>
-    </SidebarProvider>
+    <ResponsiveLayout
+      activeView={activeView}
+      onViewChange={setActiveView}
+      title={viewConfig.title}
+      subtitle={viewConfig.subtitle}
+    >
+      {renderContent()}
+    </ResponsiveLayout>
   );
 }
