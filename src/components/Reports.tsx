@@ -160,55 +160,12 @@ export function Reports() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Projeção de Receita</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={revenueProjection}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="month" stroke="#666" />
-                <YAxis stroke="#666" />
-                <Tooltip 
-                  formatter={(value) => [`R$ ${value}`, 'Valor']}
-                  contentStyle={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}
-                />
-                <Line type="monotone" dataKey="conservative" stroke="#EF4444" strokeWidth={2} name="Conservador" strokeDasharray="5 5" />
-                <Line type="monotone" dataKey="projected" stroke="#3B82F6" strokeWidth={3} name="Projetado" />
-                <Line type="monotone" dataKey="optimistic" stroke="#10B981" strokeWidth={2} name="Otimista" strokeDasharray="5 5" />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Retenção vs Churn</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={studentRetention}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="month" stroke="#666" />
-                <YAxis stroke="#666" />
-                <Tooltip 
-                  formatter={(value, name) => [
-                    `${value}${name === 'newStudents' ? ' alunos' : '%'}`, 
-                    name === 'retention' ? 'Retenção' : 
-                    name === 'churn' ? 'Churn' : 'Novos Alunos'
-                  ]}
-                  contentStyle={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}
-                />
-                <Bar dataKey="retention" fill="#10B981" name="Retenção %" />
-                <Bar dataKey="churn" fill="#EF4444" name="Churn %" />
-                <Bar dataKey="newStudents" fill="#3B82F6" name="Novos Alunos" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
+      <ReportsCharts 
+        monthlyRevenue={monthlyRevenue}
+        paymentMethods={paymentMethods}
+        revenueProjection={revenueProjection}
+        studentRetention={studentRetention}
+      />
 
       {/* Análise ROI */}
       <Card>
