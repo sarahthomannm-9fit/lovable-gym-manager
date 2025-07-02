@@ -21,6 +21,10 @@ import {
   MessageCircle,
   CreditCard,
   MessageSquare,
+  Dumbbell,
+  UserCheck,
+  Settings,
+  Wrench,
 } from "lucide-react";
 
 interface AppSidebarProps {
@@ -39,6 +43,11 @@ export function AppSidebar({ activeView, onViewChange }: AppSidebarProps) {
           key: "dashboard",
         },
         {
+          title: "Check-in",
+          icon: UserCheck,
+          key: "checkin",
+        },
+        {
           title: "Aulas",
           icon: Calendar,
           key: "classes",
@@ -51,12 +60,32 @@ export function AppSidebar({ activeView, onViewChange }: AppSidebarProps) {
       ],
     },
     {
-      category: "Gestão",
+      category: "Treinos & Performance",
       items: [
+        {
+          title: "Treinos",
+          icon: Dumbbell,
+          key: "workouts",
+        },
         {
           title: "Performance",
           icon: TrendingUp,
           key: "performance",
+        },
+      ],
+    },
+    {
+      category: "Gestão",
+      items: [
+        {
+          title: "Planos",
+          icon: Settings,
+          key: "plans",
+        },
+        {
+          title: "Equipamentos",
+          icon: Wrench,
+          key: "equipment",
         },
         {
           title: "Documentos",
