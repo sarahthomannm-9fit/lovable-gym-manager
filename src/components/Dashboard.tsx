@@ -1,38 +1,52 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Calendar, DollarSign, TrendingUp } from "lucide-react";
+import { useGymData } from "@/contexts/GymDataContext";
 
 export function Dashboard() {
+  const { metrics, students, classes, payments } = useGymData();
+
   const stats = [
     {
       title: "Total de Alunos",
-      value: "47",
-      change: "+12%",
+      value: metrics.totalStudents.toString(),
+      change: metrics.activeStudents > 0 ? `${metrics.activeStudents} ativos` : "Sem alunos",
       icon: Users,
       color: "text-blue-600",
     },
     {
       title: "Aulas Este Mês",
-      value: "156",
-      change: "+8%",
+      value: metrics.totalClasses.toString(),
+      change: `${Math.round(metrics.classAttendanceRate)}% ocupação`,
       icon: Calendar,
       color: "text-green-600",
     },
     {
       title: "Faturamento",
-      value: "R$ 12.450",
-      change: "+23%",
+      value: `R$ ${metrics.monthlyRevenue.toLocaleString()}`,
+      change: metrics.overduePayments > 0 ? `R$ ${metrics.overduePayments.toLocaleString()} em atraso` : "Em dia",
       icon: DollarSign,
       color: "text-emerald-600",
     },
     {
       title: "Taxa de Frequência",
-      value: "87%",
-      change: "+5%",
+      value: `${Math.round(metrics.averageAttendance)}%`,
+      change: `${metrics.equipmentInMaintenance} equipamentos em manutenção`,
       icon: TrendingUp,
       color: "text-purple-600",
     },
   ];
+
+  // Próximas aulas baseadas nos dados reais
+  const upcomingClasses = classes
+    .filter(c => new Date(`${c.date} ${c.time}`) > new Date())
+    .sort((a, b) => new Date(`${a.date} ${a.time}`).getTime() - new Date(`${b.date} ${b.time}`).getTime())
+    .slice(0, 3);
+
+  // Pagamentos pendentes baseados nos dados reais
+  const overdueStudents = students
+    .filter(s => s.paymentStatus === 'overdue')
+    .slice(0, 3);
 
   return (
     <div className="space-y-6">
@@ -71,19 +85,27 @@ export function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {[
-                { name: "João Silva", time: "09:00", type: "Musculação" },
-                { name: "Maria Santos", time: "10:30", type: "Funcional" },
-                { name: "Pedro Costa", time: "14:00", type: "HIIT" },
-              ].map((aula, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium text-gray-900">{aula.name}</p>
-                    <p className="text-sm text-gray-600">{aula.type}</p>
+              {upcomingClasses.length > 0 ? (
+                upcomingClasses.map((aula) => (
+                  <div key={aula.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="font-medium text-gray-900">{aula.name}</p>
+                      <p className="text-sm text-gray-600">{aula.type}</p>
+                      <p className="text-xs text-gray-500">{aula.enrolled}/{aula.capacity} inscritos</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-medium text-blue-600">{aula.time}</span>
+                      <p className="text-xs text-gray-500">{new Date(aula.date).toLocaleDateString()}</p>
+                    </div>
                   </div>
-                  <span className="text-sm font-medium text-blue-600">{aula.time}</span>
+                ))
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <Calendar className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>Nenhuma aula agendada</p>
+                  <p className="text-sm">Adicione aulas para visualizá-las aqui</p>
                 </div>
-              ))}
+              )}
             </div>
           </CardContent>
         </Card>
@@ -94,19 +116,28 @@ export function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {[
-                { name: "Ana Paula", value: "R$ 200,00", days: "3 dias" },
-                { name: "Carlos Oliveira", value: "R$ 150,00", days: "7 dias" },
-                { name: "Lucia Ferreira", value: "R$ 300,00", days: "1 dia" },
-              ].map((payment, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-100">
-                  <div>
-                    <p className="font-medium text-gray-900">{payment.name}</p>
-                    <p className="text-sm text-red-600">Vence em {payment.days}</p>
+              {overdueStudents.length > 0 ? (
+                overdueStudents.map((student) => (
+                  <div key={student.id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-100">
+                    <div>
+                      <p className="font-medium text-gray-900">{student.name}</p>
+                      <p className="text-sm text-red-600">
+                        {student.daysOverdue ? `${student.daysOverdue} dias em atraso` : 'Pagamento pendente'}
+                      </p>
+                      <p className="text-xs text-gray-500">{student.plan}</p>
+                    </div>
+                    <span className="text-sm font-medium text-gray-900">
+                      R$ {student.monthlyPayment.toLocaleString()}
+                    </span>
                   </div>
-                  <span className="text-sm font-medium text-gray-900">{payment.value}</span>
+                ))
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <DollarSign className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>Todos os pagamentos em dia!</p>
+                  <p className="text-sm">Nenhum pagamento pendente encontrado</p>
                 </div>
-              ))}
+              )}
             </div>
           </CardContent>
         </Card>

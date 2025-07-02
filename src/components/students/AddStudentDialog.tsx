@@ -8,22 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-interface Student {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-  plan: string;
-  status: string;
-  startDate: string;
-  paymentMethod?: string;
-  emergencyContact?: string;
-  medicalInfo?: string;
-}
+import { Student } from "@/contexts/GymDataContext";
 
 interface AddStudentDialogProps {
-  onAddStudent: (student: Omit<Student, 'id' | 'status' | 'startDate'>) => void;
+  onAddStudent: (student: Omit<Student, 'id' | 'status' | 'registrationDate' | 'paymentStatus'>) => void;
 }
 
 export function AddStudentDialog({ onAddStudent }: AddStudentDialogProps) {
@@ -32,15 +20,15 @@ export function AddStudentDialog({ onAddStudent }: AddStudentDialogProps) {
     email: "",
     phone: "",
     plan: "",
-    paymentMethod: "",
+    monthlyPayment: "",
     emergencyContact: "",
-    medicalInfo: ""
+    medicalNotes: ""
   });
 
   const { toast } = useToast();
 
   const handleAddStudent = () => {
-    if (!newStudent.name || !newStudent.email || !newStudent.phone || !newStudent.plan) {
+    if (!newStudent.name || !newStudent.email || !newStudent.phone || !newStudent.plan || !newStudent.monthlyPayment) {
       toast({
         title: "Erro",
         description: "Preencha todos os campos obrigatórios",
@@ -49,15 +37,18 @@ export function AddStudentDialog({ onAddStudent }: AddStudentDialogProps) {
       return;
     }
 
-    onAddStudent(newStudent);
+    onAddStudent({
+      ...newStudent,
+      monthlyPayment: parseFloat(newStudent.monthlyPayment),
+    });
     setNewStudent({
       name: "",
       email: "",
       phone: "",
       plan: "",
-      paymentMethod: "",
+      monthlyPayment: "",
       emergencyContact: "",
-      medicalInfo: ""
+      medicalNotes: ""
     });
 
     toast({
@@ -126,18 +117,15 @@ export function AddStudentDialog({ onAddStudent }: AddStudentDialogProps) {
           </div>
 
           <div>
-            <Label htmlFor="paymentMethod">Forma de Pagamento</Label>
-            <Select value={newStudent.paymentMethod} onValueChange={(value) => setNewStudent({...newStudent, paymentMethod: value})}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a forma de pagamento" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="PIX">PIX</SelectItem>
-                <SelectItem value="Cartão">Cartão de Crédito</SelectItem>
-                <SelectItem value="Boleto">Boleto</SelectItem>
-                <SelectItem value="Dinheiro">Dinheiro</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label htmlFor="monthlyPayment">Mensalidade (R$) *</Label>
+            <Input
+              id="monthlyPayment"
+              type="number"
+              step="0.01"
+              value={newStudent.monthlyPayment}
+              onChange={(e) => setNewStudent({...newStudent, monthlyPayment: e.target.value})}
+              placeholder="0,00"
+            />
           </div>
 
           <div>
@@ -151,11 +139,11 @@ export function AddStudentDialog({ onAddStudent }: AddStudentDialogProps) {
           </div>
 
           <div>
-            <Label htmlFor="medicalInfo">Informações Médicas</Label>
+            <Label htmlFor="medicalNotes">Informações Médicas</Label>
             <Textarea
-              id="medicalInfo"
-              value={newStudent.medicalInfo}
-              onChange={(e) => setNewStudent({...newStudent, medicalInfo: e.target.value})}
+              id="medicalNotes"
+              value={newStudent.medicalNotes}
+              onChange={(e) => setNewStudent({...newStudent, medicalNotes: e.target.value})}
               placeholder="Restrições, lesões, medicamentos..."
             />
           </div>

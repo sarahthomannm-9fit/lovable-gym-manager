@@ -3,19 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { User, Phone, Mail, Eye } from "lucide-react";
-
-interface Student {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-  plan: string;
-  status: string;
-  startDate: string;
-  paymentMethod?: string;
-  emergencyContact?: string;
-  medicalInfo?: string;
-}
+import { Student } from "@/contexts/GymDataContext";
 
 interface StudentCardProps {
   student: Student;
@@ -31,8 +19,8 @@ export function StudentCard({ student, onViewProfile }: StudentCardProps) {
             <User className="w-5 h-5 mr-2 text-blue-600" />
             {student.name}
           </CardTitle>
-          <Badge className={student.status === "Ativo" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
-            {student.status}
+          <Badge className={student.status === "active" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+            {student.status === "active" ? "Ativo" : student.status === "inactive" ? "Inativo" : "Suspenso"}
           </Badge>
         </div>
       </CardHeader>
@@ -50,7 +38,20 @@ export function StudentCard({ student, onViewProfile }: StudentCardProps) {
             <strong>Plano:</strong> {student.plan}
           </div>
           <div className="text-sm text-gray-500">
-            Início: {new Date(student.startDate + 'T00:00:00').toLocaleDateString('pt-BR')}
+            Início: {new Date(student.registrationDate + 'T00:00:00').toLocaleDateString('pt-BR')}
+          </div>
+          <div className="text-sm text-gray-500">
+            Mensalidade: R$ {student.monthlyPayment.toLocaleString()}
+          </div>
+          <div className="text-sm">
+            <Badge className={
+              student.paymentStatus === 'up-to-date' ? "bg-green-100 text-green-800" : 
+              student.paymentStatus === 'overdue' ? "bg-red-100 text-red-800" : 
+              "bg-yellow-100 text-yellow-800"
+            }>
+              {student.paymentStatus === 'up-to-date' ? 'Em dia' : 
+               student.paymentStatus === 'overdue' ? 'Em atraso' : 'Pendente'}
+            </Badge>
           </div>
         </div>
         

@@ -4,18 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Search, User } from "lucide-react";
 import { StudentCard } from "./StudentCard";
 
-interface Student {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-  plan: string;
-  status: string;
-  startDate: string;
-  paymentMethod?: string;
-  emergencyContact?: string;
-  medicalInfo?: string;
-}
+import { Student } from "@/contexts/GymDataContext";
 
 interface StudentsListProps {
   students: Student[];
@@ -27,7 +16,8 @@ interface StudentsListProps {
 export function StudentsList({ students, searchTerm, onSearchChange, onViewProfile }: StudentsListProps) {
   const filteredStudents = students.filter(student =>
     student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.email.toLowerCase().includes(searchTerm.toLowerCase())
+    student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.phone.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (

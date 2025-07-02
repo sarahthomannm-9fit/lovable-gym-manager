@@ -3,15 +3,20 @@ import { useState } from "react";
 import { StudentProfile } from "./StudentProfile";
 import { AddStudentDialog } from "./students/AddStudentDialog";
 import { StudentsList } from "./students/StudentsList";
-import { useStudents } from "@/hooks/useStudents";
+import { useGymData } from "@/contexts/GymDataContext";
 
 export function Students() {
-  const { students, addStudent } = useStudents();
+  const { students, addStudent } = useGymData();
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
   const handleAddStudent = (studentData: any) => {
-    addStudent(studentData);
+    addStudent({
+      ...studentData,
+      registrationDate: new Date().toISOString().split('T')[0],
+      status: 'active' as const,
+      paymentStatus: 'up-to-date' as const
+    });
   };
 
   if (selectedStudent) {
