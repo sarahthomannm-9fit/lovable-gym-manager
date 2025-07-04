@@ -5,6 +5,7 @@ import { DailyClassView } from "./DailyClassView";
 import { AddClassDialog } from "./AddClassDialog";
 import { Button } from "@/components/ui/button";
 import { Grid, List } from "lucide-react";
+import { useGymData } from "@/contexts/GymDataContext";
 
 type ViewType = "daily" | "packages";
 
@@ -25,61 +26,42 @@ interface NewClass {
 }
 
 export function Classes() {
+  const { classes, addClass, students, metrics } = useGymData();
   const [view, setView] = useState<ViewType>("daily");
 
-  const [classes, setClasses] = useState<ClassItem[]>([
-    {
-      id: 1,
-      student: "João Silva",
-      date: "2024-01-15",
-      time: "09:00",
-      type: "Musculação",
-      status: "Confirmada"
-    },
-    {
-      id: 2,
-      student: "Maria Santos",
-      date: "2024-01-15",
-      time: "10:30",
-      type: "Funcional",
-      status: "Agendada"
-    },
-    {
-      id: 3,
-      student: "Pedro Costa",
-      date: "2024-01-15",
-      time: "14:00",
-      type: "HIIT",
-      status: "Cancelada"
-    },
-    {
-      id: 4,
-      student: "Ana Paula",
-      date: "2024-01-16",
-      time: "08:00",
-      type: "Musculação",
-      status: "Agendada"
-    }
-  ]);
+  // Convert context classes to local format
+  const [localClasses, setLocalClasses] = useState<ClassItem[]>([]);
 
   const handleAddClass = (newClass: NewClass) => {
+    // Add to context
+    addClass({
+      name: `${newClass.type} - ${newClass.student}`,
+      instructor: "Instrutor",
+      date: newClass.date,
+      time: newClass.time,
+      capacity: 1,
+      enrolled: 1,
+      type: newClass.type
+    });
+
+    // Add to local state for immediate UI update
     const classItem: ClassItem = {
-      id: classes.length + 1,
+      id: Date.now(),
       ...newClass,
       status: "Agendada"
     };
 
-    setClasses([...classes, classItem]);
+    setLocalClasses([...localClasses, classItem]);
   };
 
   const handleConfirmClass = (id: number) => {
-    setClasses(classes.map(c => 
+    setLocalClasses(localClasses.map(c => 
       c.id === id ? { ...c, status: "Confirmada" } : c
     ));
   };
 
   const handleCancelClass = (id: number) => {
-    setClasses(classes.map(c => 
+    setLocalClasses(localClasses.map(c => 
       c.id === id ? { ...c, status: "Cancelada" } : c
     ));
   };
@@ -92,7 +74,7 @@ export function Classes() {
       default:
         return (
           <DailyClassView 
-            classes={classes}
+            classes={localClasses}
             onConfirmClass={handleConfirmClass}
             onCancelClass={handleCancelClass}
           />

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -5,87 +6,26 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, Wrench, AlertTriangle, CheckCircle, Calendar } from "lucide-react";
 import { AddEquipmentDialog } from "./equipment/AddEquipmentDialog";
-
-interface Equipment {
-  id: string;
-  name: string;
-  category: string;
-  brand: string;
-  model: string;
-  serialNumber: string;
-  status: "active" | "maintenance" | "broken" | "retired";
-  lastMaintenance: Date;
-  nextMaintenance: Date;
-  purchaseDate: Date;
-  warrantyUntil?: Date;
-  location: string;
-  notes?: string;
-}
+import { useGymData } from "@/contexts/GymDataContext";
 
 export function Equipment() {
+  const { equipment, addEquipment, updateEquipment } = useGymData();
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [equipment, setEquipment] = useState<Equipment[]>([
-    {
-      id: "1",
-      name: "Esteira Profissional",
-      category: "Cardio",
-      brand: "TechnoGym",
-      model: "Run Race 1400",
-      serialNumber: "TG001234",
-      status: "active",
-      lastMaintenance: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-      nextMaintenance: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
-      purchaseDate: new Date(2023, 0, 15),
-      warrantyUntil: new Date(2025, 0, 15),
-      location: "Área Cardio - Posição 1"
-    },
-    {
-      id: "2",
-      name: "Supino Reto",
-      category: "Musculação",
-      brand: "Biotech",
-      model: "Premium Line",
-      serialNumber: "BT005678",
-      status: "maintenance",
-      lastMaintenance: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-      nextMaintenance: new Date(Date.now() + 85 * 24 * 60 * 60 * 1000),
-      purchaseDate: new Date(2022, 5, 10),
-      location: "Área de Peito - Centro",
-      notes: "Cabo do ajuste de altura com defeito"
-    },
-    {
-      id: "3",
-      name: "Leg Press 45°",
-      category: "Musculação",
-      brand: "Movement",
-      model: "Titanium",
-      serialNumber: "MV009876",
-      status: "active",
-      lastMaintenance: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
-      nextMaintenance: new Date(Date.now() + 75 * 24 * 60 * 60 * 1000),
-      purchaseDate: new Date(2023, 8, 20),
-      warrantyUntil: new Date(2025, 8, 20),
-      location: "Área de Pernas"
-    }
-  ]);
 
   const filteredEquipment = equipment.filter(item =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.brand.toLowerCase().includes(searchQuery.toLowerCase())
+    item.type.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const getStatusInfo = (status: string) => {
     switch(status) {
-      case "active":
+      case "working":
         return { color: "bg-green-100 text-green-800", icon: CheckCircle, label: "Ativo" };
       case "maintenance":
         return { color: "bg-yellow-100 text-yellow-800", icon: Wrench, label: "Manutenção" };
       case "broken":
         return { color: "bg-red-100 text-red-800", icon: AlertTriangle, label: "Quebrado" };
-      case "retired":
-        return { color: "bg-gray-100 text-gray-800", icon: Calendar, label: "Aposentado" };
       default:
         return { color: "bg-gray-100 text-gray-800", icon: CheckCircle, label: "Desconhecido" };
     }
@@ -100,22 +40,25 @@ export function Equipment() {
     }
   };
 
-  const isMaintenanceDue = (nextMaintenance: Date) => {
-    const daysUntil = Math.ceil((nextMaintenance.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+  const isMaintenanceDue = (nextMaintenance?: string) => {
+    if (!nextMaintenance) return false;
+    const daysUntil = Math.ceil((new Date(nextMaintenance).getTime() - Date.now()) / (24 * 60 * 60 * 1000));
     return daysUntil <= 7;
   };
 
-  const handleAddEquipment = (newEquipment: Omit<Equipment, "id">) => {
-    const equipment_item: Equipment = {
-      ...newEquipment,
-      id: Date.now().toString()
-    };
-    setEquipment(prev => [...prev, equipment_item]);
+  const handleAddEquipment = (newEquipment: any) => {
+    addEquipment({
+      name: newEquipment.name,
+      type: newEquipment.category || newEquipment.type,
+      status: 'working',
+      acquisitionDate: newEquipment.purchaseDate || new Date().toISOString().split('T')[0],
+      cost: newEquipment.cost || 0
+    });
   };
 
   const stats = {
     total: equipment.length,
-    active: equipment.filter(e => e.status === "active").length,
+    active: equipment.filter(e => e.status === "working").length,
     maintenance: equipment.filter(e => e.status === "maintenance").length,
     maintenanceDue: equipment.filter(e => isMaintenanceDue(e.nextMaintenance)).length
   };
@@ -213,8 +156,8 @@ export function Equipment() {
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">{item.name}</CardTitle>
                   <div className="flex items-center space-x-2">
-                    <Badge className={getCategoryColor(item.category)}>
-                      {item.category}
+                    <Badge className={getCategoryColor(item.type)}>
+                      {item.type}
                     </Badge>
                     <Badge className={statusInfo.color}>
                       <StatusIcon className="w-3 h-3 mr-1" />
@@ -222,64 +165,58 @@ export function Equipment() {
                     </Badge>
                   </div>
                 </div>
-                
-                <div className="text-sm text-gray-600">
-                  {item.brand} - {item.model}
-                </div>
               </CardHeader>
 
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span className="text-gray-600">Série:</span>
-                    <span className="font-medium ml-1">{item.serialNumber}</span>
+                    <span className="text-gray-600">Custo:</span>
+                    <span className="font-medium ml-1">R$ {item.cost.toLocaleString()}</span>
                   </div>
                   <div>
-                    <span className="text-gray-600">Local:</span>
-                    <span className="font-medium ml-1">{item.location}</span>
+                    <span className="text-gray-600">Aquisição:</span>
+                    <span className="font-medium ml-1">{new Date(item.acquisitionDate + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Última manutenção:</span>
-                    <span>{item.lastMaintenance.toLocaleDateString()}</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Próxima manutenção:</span>
-                    <span className={maintenanceDue ? "font-bold text-orange-600" : ""}>
-                      {item.nextMaintenance.toLocaleDateString()}
-                      {maintenanceDue && " ⚠️"}
-                    </span>
-                  </div>
-
-                  {item.warrantyUntil && (
+                  {item.lastMaintenance && (
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Garantia até:</span>
-                      <span>{item.warrantyUntil.toLocaleDateString()}</span>
+                      <span className="text-gray-600">Última manutenção:</span>
+                      <span>{new Date(item.lastMaintenance + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
+                    </div>
+                  )}
+                  
+                  {item.nextMaintenance && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Próxima manutenção:</span>
+                      <span className={maintenanceDue ? "font-bold text-orange-600" : ""}>
+                        {new Date(item.nextMaintenance + 'T00:00:00').toLocaleDateString('pt-BR')}
+                        {maintenanceDue && " ⚠️"}
+                      </span>
+                    </div>
+                  )}
+
+                  {item.warranty && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Garantia:</span>
+                      <span>{item.warranty}</span>
                     </div>
                   )}
                 </div>
-
-                {item.notes && (
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-600">{item.notes}</p>
-                  </div>
-                )}
 
                 <div className="flex items-center justify-end space-x-2 pt-2 border-t">
                   <Button variant="outline" size="sm">
                     Editar
                   </Button>
                   
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => updateEquipment(item.id, { status: item.status === 'working' ? 'maintenance' : 'working' })}
+                  >
                     <Wrench className="w-4 h-4 mr-1" />
-                    Manutenção
-                  </Button>
-                  
-                  <Button variant="outline" size="sm">
-                    Histórico
+                    {item.status === 'working' ? 'Manutenção' : 'Ativar'}
                   </Button>
                 </div>
               </CardContent>
@@ -290,7 +227,12 @@ export function Equipment() {
 
       {filteredEquipment.length === 0 && (
         <div className="text-center py-12">
-          <p className="text-gray-500">Nenhum equipamento encontrado</p>
+          <p className="text-gray-500">
+            {equipment.length === 0 ? "Nenhum equipamento cadastrado" : "Nenhum equipamento encontrado"}
+          </p>
+          {equipment.length === 0 && (
+            <p className="text-sm text-gray-400 mt-1">Cadastre seu primeiro equipamento para começar</p>
+          )}
         </div>
       )}
 

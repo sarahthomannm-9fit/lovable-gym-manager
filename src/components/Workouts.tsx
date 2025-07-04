@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -5,15 +6,17 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Dumbbell, Users, Target, Calendar } from "lucide-react";
 import { WorkoutTemplates } from "./workouts/WorkoutTemplates";
 import { StudentWorkouts } from "./workouts/StudentWorkouts";
+import { useGymData } from "@/contexts/GymDataContext";
 
 export function Workouts() {
+  const { workoutTemplates, students } = useGymData();
   const [activeTab, setActiveTab] = useState("templates");
 
   const workoutStats = {
-    totalTemplates: 15,
-    activeWorkouts: 42,
-    completedThisWeek: 156,
-    averageCompletion: 87
+    totalTemplates: workoutTemplates.length,
+    activeWorkouts: students.filter(s => s.status === 'active').length,
+    completedThisWeek: 0, // This would need to be tracked in context
+    averageCompletion: students.length > 0 ? Math.round((students.filter(s => s.status === 'active').length / students.length) * 100) : 0
   };
 
   const tabs = [
@@ -56,12 +59,12 @@ export function Workouts() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-blue-700 flex items-center">
               <Users className="w-4 h-4 mr-2" />
-              Treinos Ativos
+              Alunos Ativos
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-800">{workoutStats.activeWorkouts}</div>
-            <p className="text-xs text-blue-600 mt-1">Alunos com treino</p>
+            <p className="text-xs text-blue-600 mt-1">Com treinos ativos</p>
           </CardContent>
         </Card>
 
@@ -69,12 +72,12 @@ export function Workouts() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-green-700 flex items-center">
               <Dumbbell className="w-4 h-4 mr-2" />
-              Esta Semana
+              Total de Alunos
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-800">{workoutStats.completedThisWeek}</div>
-            <p className="text-xs text-green-600 mt-1">Treinos realizados</p>
+            <div className="text-2xl font-bold text-green-800">{students.length}</div>
+            <p className="text-xs text-green-600 mt-1">Alunos cadastrados</p>
           </CardContent>
         </Card>
 
@@ -82,12 +85,12 @@ export function Workouts() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-purple-700 flex items-center">
               <Calendar className="w-4 h-4 mr-2" />
-              Taxa de Adesão
+              Taxa de Atividade
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-800">{workoutStats.averageCompletion}%</div>
-            <p className="text-xs text-purple-600 mt-1">Média de conclusão</p>
+            <p className="text-xs text-purple-600 mt-1">Alunos ativos</p>
           </CardContent>
         </Card>
       </div>

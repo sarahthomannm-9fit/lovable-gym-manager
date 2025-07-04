@@ -9,58 +9,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { CreditCard, Plus, Calendar, DollarSign, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useGymData } from "@/contexts/GymDataContext";
 
 export function Payments() {
-  const [payments, setPayments] = useState([
-    {
-      id: 1,
-      student: "João Silva",
-      value: 250.00,
-      dueDate: "2024-01-20",
-      status: "Pago",
-      method: "PIX",
-      paidDate: "2024-01-18"
-    },
-    {
-      id: 2,
-      student: "Maria Santos",
-      value: 200.00,
-      dueDate: "2024-01-25",
-      status: "Pendente",
-      method: "Cartão",
-      paidDate: null
-    },
-    {
-      id: 3,
-      student: "Pedro Costa",
-      value: 150.00,
-      dueDate: "2024-01-15",
-      status: "Atrasado",
-      method: "PIX",
-      paidDate: null
-    },
-    {
-      id: 4,
-      student: "Ana Paula",
-      value: 300.00,
-      dueDate: "2024-01-30",
-      status: "Pendente",
-      method: "Boleto",
-      paidDate: null
-    }
-  ]);
-
-  const [newPayment, setNewPayment] = useState({
-    student: "",
-    value: "",
-    dueDate: "",
-    method: ""
-  });
-
+  const { payments, students, addPayment, updatePayment, updateStudent } = useGymData();
   const { toast } = useToast();
 
+  const [newPayment, setNewPayment] = useState({
+    studentId: "",
+    amount: "",
+    dueDate: "",
+    method: "" as 'pix' | 'card' | 'cash' | 'transfer'
+  });
+
   const handleAddPayment = () => {
-    if (!newPayment.student || !newPayment.value || !newPayment.dueDate || !newPayment.method) {
+    if (!newPayment.studentId || !newPayment.amount || !newPayment.dueDate || !newPayment.method) {
       toast({
         title: "Erro",
         description: "Preencha todos os campos",
@@ -69,20 +32,25 @@ export function Payments() {
       return;
     }
 
-    const payment = {
-      id: payments.length + 1,
-      ...newPayment,
-      value: parseFloat(newPayment.value),
-      status: "Pendente",
-      paidDate: null
-    };
+    const student = students.find(s => s.id.toString() === newPayment.studentId);
+    if (!student) return;
 
-    setPayments([...payments, payment]);
+    addPayment({
+      studentId: parseInt(newPayment.studentId),
+      studentName: student.name,
+      amount: parseFloat(newPayment.amount),
+      date: new Date().toISOString().split('T')[0],
+      method: newPayment.method,
+      status: 'pending',
+      plan: student.plan,
+      dueDate: newPayment.dueDate
+    });
+
     setNewPayment({
-      student: "",
-      value: "",
+      studentId: "",
+      amount: "",
       dueDate: "",
-      method: ""
+      method: "" as 'pix' | 'card' | 'cash' | 'transfer'
     });
 
     toast({
@@ -91,16 +59,46 @@ export function Payments() {
     });
   };
 
+  const handleMarkAsPaid = (paymentId: string) => {
+    const payment = payments.find(p => p.id === paymentId);
+    if (payment) {
+      updatePayment(paymentId, {
+        status: 'confirmed',
+        date: new Date().toISOString().split('T')[0]
+      });
+      
+      // Update student payment status
+      updateStudent(payment.studentId, {
+        paymentStatus: 'up-to-date',
+        daysOverdue: 0
+      });
+
+      toast({
+        title: "Pagamento confirmado",
+        description: `Pagamento de ${payment.studentName} foi confirmado`,
+      });
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Pago":
+      case "confirmed":
         return "bg-green-100 text-green-800";
-      case "Pendente":
+      case "pending":
         return "bg-yellow-100 text-yellow-800";
-      case "Atrasado":
+      case "cancelled":
         return "bg-red-100 text-red-800";
       default:
         return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "confirmed": return "Pago";
+      case "pending": return "Pendente";
+      case "cancelled": return "Cancelado";
+      default: return status;
     }
   };
 
@@ -113,12 +111,18 @@ export function Payments() {
   };
 
   const totalPendente = payments
-    .filter(p => p.status === "Pendente" || p.status === "Atrasado")
-    .reduce((sum, p) => sum + p.value, 0);
+    .filter(p => p.status === "pending")
+    .reduce((sum, p) => sum + p.amount, 0);
 
   const totalRecebido = payments
-    .filter(p => p.status === "Pago")
-    .reduce((sum, p) => sum + p.value, 0);
+    .filter(p => p.status === "confirmed")
+    .reduce((sum, p) => sum + p.amount, 0);
+
+  const overduePayments = payments.filter(p => {
+    if (p.status === "confirmed") return false;
+    if (!p.dueDate) return false;
+    return getDaysOverdue(p.dueDate) > 0;
+  });
 
   return (
     <div className="space-y-6">
@@ -144,15 +148,16 @@ export function Payments() {
             <div className="space-y-4">
               <div>
                 <Label htmlFor="student">Aluno</Label>
-                <Select value={newPayment.student} onValueChange={(value) => setNewPayment({...newPayment, student: value})}>
+                <Select value={newPayment.studentId} onValueChange={(value) => setNewPayment({...newPayment, studentId: value})}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o aluno" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="João Silva">João Silva</SelectItem>
-                    <SelectItem value="Maria Santos">Maria Santos</SelectItem>
-                    <SelectItem value="Pedro Costa">Pedro Costa</SelectItem>
-                    <SelectItem value="Ana Paula">Ana Paula</SelectItem>
+                    {students.map(student => (
+                      <SelectItem key={student.id} value={student.id.toString()}>
+                        {student.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -163,8 +168,8 @@ export function Payments() {
                   id="value"
                   type="number"
                   step="0.01"
-                  value={newPayment.value}
-                  onChange={(e) => setNewPayment({...newPayment, value: e.target.value})}
+                  value={newPayment.amount}
+                  onChange={(e) => setNewPayment({...newPayment, amount: e.target.value})}
                   placeholder="0,00"
                 />
               </div>
@@ -181,15 +186,15 @@ export function Payments() {
               
               <div>
                 <Label htmlFor="method">Método de Pagamento</Label>
-                <Select value={newPayment.method} onValueChange={(value) => setNewPayment({...newPayment, method: value})}>
+                <Select value={newPayment.method} onValueChange={(value: 'pix' | 'card' | 'cash' | 'transfer') => setNewPayment({...newPayment, method: value})}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o método" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="PIX">PIX</SelectItem>
-                    <SelectItem value="Cartão">Cartão de Crédito</SelectItem>
-                    <SelectItem value="Boleto">Boleto</SelectItem>
-                    <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                    <SelectItem value="pix">PIX</SelectItem>
+                    <SelectItem value="card">Cartão de Crédito</SelectItem>
+                    <SelectItem value="cash">Dinheiro</SelectItem>
+                    <SelectItem value="transfer">Transferência</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -212,7 +217,7 @@ export function Payments() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              R$ {totalRecebido.toFixed(2).replace('.', ',')}
+              R$ {totalRecebido.toLocaleString()}
             </div>
           </CardContent>
         </Card>
@@ -226,7 +231,7 @@ export function Payments() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-600">
-              R$ {totalPendente.toFixed(2).replace('.', ',')}
+              R$ {totalPendente.toLocaleString()}
             </div>
           </CardContent>
         </Card>
@@ -240,7 +245,7 @@ export function Payments() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {payments.filter(p => p.status === "Atrasado").length}
+              {overduePayments.length}
             </div>
           </CardContent>
         </Card>
@@ -251,9 +256,9 @@ export function Payments() {
           <Card key={payment.id} className="hover:shadow-lg transition-shadow duration-200">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-semibold">{payment.student}</CardTitle>
+                <CardTitle className="text-lg font-semibold">{payment.studentName}</CardTitle>
                 <Badge className={getStatusColor(payment.status)}>
-                  {payment.status}
+                  {getStatusLabel(payment.status)}
                 </Badge>
               </div>
             </CardHeader>
@@ -262,23 +267,25 @@ export function Payments() {
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Valor:</span>
                   <span className="font-semibold text-lg">
-                    R$ {payment.value.toFixed(2).replace('.', ',')}
+                    R$ {payment.amount.toLocaleString()}
                   </span>
                 </div>
                 
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Vencimento:</span>
-                  <span className="text-sm">
-                    {new Date(payment.dueDate + 'T00:00:00').toLocaleDateString('pt-BR')}
-                  </span>
-                </div>
+                {payment.dueDate && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Vencimento:</span>
+                    <span className="text-sm">
+                      {new Date(payment.dueDate + 'T00:00:00').toLocaleDateString('pt-BR')}
+                    </span>
+                  </div>
+                )}
                 
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Método:</span>
-                  <span className="text-sm">{payment.method}</span>
+                  <span className="text-sm capitalize">{payment.method}</span>
                 </div>
                 
-                {payment.status === "Atrasado" && (
+                {payment.status === "pending" && payment.dueDate && getDaysOverdue(payment.dueDate) > 0 && (
                   <div className="bg-red-50 p-2 rounded border border-red-200">
                     <p className="text-xs text-red-800">
                       Atrasado há {getDaysOverdue(payment.dueDate)} dias
@@ -286,17 +293,22 @@ export function Payments() {
                   </div>
                 )}
                 
-                {payment.status === "Pago" && payment.paidDate && (
+                {payment.status === "confirmed" && (
                   <div className="bg-green-50 p-2 rounded border border-green-200">
                     <p className="text-xs text-green-800">
-                      Pago em {new Date(payment.paidDate + 'T00:00:00').toLocaleDateString('pt-BR')}
+                      Pago em {new Date(payment.date + 'T00:00:00').toLocaleDateString('pt-BR')}
                     </p>
                   </div>
                 )}
                 
                 <div className="flex space-x-2 mt-4">
-                  {payment.status !== "Pago" && (
-                    <Button size="sm" variant="outline" className="text-green-600 border-green-600 hover:bg-green-50">
+                  {payment.status !== "confirmed" && (
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="text-green-600 border-green-600 hover:bg-green-50"
+                      onClick={() => handleMarkAsPaid(payment.id)}
+                    >
                       Marcar Pago
                     </Button>
                   )}
@@ -309,6 +321,13 @@ export function Payments() {
           </Card>
         ))}
       </div>
+
+      {payments.length === 0 && (
+        <div className="text-center py-12">
+          <p className="text-gray-500">Nenhum pagamento cadastrado</p>
+          <p className="text-sm text-gray-400 mt-1">Crie sua primeira cobrança para começar</p>
+        </div>
+      )}
     </div>
   );
 }

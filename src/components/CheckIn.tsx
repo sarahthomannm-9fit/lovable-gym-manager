@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -5,56 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search, Clock, Users, Activity, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-interface CheckInRecord {
-  id: string;
-  studentName: string;
-  studentId: string;
-  checkInTime: Date;
-  checkOutTime?: Date;
-  duration?: number; // em minutos
-  plan: string;
-}
+import { useGymData } from "@/contexts/GymDataContext";
 
 export function CheckIn() {
+  const { students, checkIns, addCheckIn } = useGymData();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
-  const [checkInRecords, setCheckInRecords] = useState<CheckInRecord[]>([
-    {
-      id: "1",
-      studentName: "João Silva",
-      studentId: "001",
-      checkInTime: new Date(Date.now() - 45 * 60000), // 45 min atrás
-      plan: "Mensal"
-    },
-    {
-      id: "2", 
-      studentName: "Maria Santos",
-      studentId: "002",
-      checkInTime: new Date(Date.now() - 120 * 60000), // 2h atrás
-      checkOutTime: new Date(Date.now() - 30 * 60000), // saiu 30 min atrás
-      duration: 90,
-      plan: "Trimestral"
-    },
-    {
-      id: "3",
-      studentName: "Carlos Oliveira", 
-      studentId: "003",
-      checkInTime: new Date(Date.now() - 20 * 60000), // 20 min atrás
-      plan: "Anual"
-    }
-  ]);
 
-  // Simular dados de alunos para busca
-  const students = [
-    { id: "001", name: "João Silva", plan: "Mensal", status: "active" },
-    { id: "002", name: "Maria Santos", plan: "Trimestral", status: "active" },
-    { id: "003", name: "Carlos Oliveira", plan: "Anual", status: "active" },
-    { id: "004", name: "Ana Costa", plan: "Mensal", status: "active" },
-    { id: "005", name: "Pedro Lima", plan: "Anual", status: "inactive" }
-  ];
-
-  const handleCheckIn = (studentId: string) => {
+  const handleCheckIn = (studentId: number) => {
     const student = students.find(s => s.id === studentId);
     
     if (!student) {
@@ -76,8 +35,9 @@ export function CheckIn() {
     }
 
     // Verificar se já tem check-in ativo
-    const activeCheckIn = checkInRecords.find(
-      record => record.studentId === studentId && !record.checkOutTime
+    const activeCheckIn = checkIns.find(
+      record => record.studentId === studentId && record.type === 'entry' && 
+      !checkIns.some(exit => exit.studentId === studentId && exit.type === 'exit' && exit.date >= record.date)
     );
 
     if (activeCheckIn) {
@@ -89,15 +49,15 @@ export function CheckIn() {
       return;
     }
 
-    const newCheckIn: CheckInRecord = {
-      id: Date.now().toString(),
-      studentName: student.name,
+    const now = new Date();
+    addCheckIn({
       studentId: studentId,
-      checkInTime: new Date(),
-      plan: student.plan
-    };
+      studentName: student.name,
+      date: now.toISOString().split('T')[0],
+      time: now.toTimeString().split(' ')[0],
+      type: 'entry'
+    });
 
-    setCheckInRecords(prev => [newCheckIn, ...prev]);
     setSearchQuery("");
     
     toast({
@@ -106,42 +66,50 @@ export function CheckIn() {
     });
   };
 
-  const handleCheckOut = (recordId: string) => {
-    setCheckInRecords(prev => prev.map(record => {
-      if (record.id === recordId && !record.checkOutTime) {
-        const duration = Math.floor((Date.now() - record.checkInTime.getTime()) / 60000);
-        return {
-          ...record,
-          checkOutTime: new Date(),
-          duration
-        };
-      }
-      return record;
-    }));
+  const handleCheckOut = (studentId: number) => {
+    const student = students.find(s => s.id === studentId);
+    if (!student) return;
 
-    const record = checkInRecords.find(r => r.id === recordId);
-    if (record) {
-      toast({
-        title: "Check-out realizado",
-        description: `${record.studentName} saiu da academia`,
-      });
-    }
+    const now = new Date();
+    addCheckIn({
+      studentId: studentId,
+      studentName: student.name,
+      date: now.toISOString().split('T')[0],
+      time: now.toTimeString().split(' ')[0],
+      type: 'exit'
+    });
+
+    toast({
+      title: "Check-out realizado",
+      description: `${student.name} saiu da academia`,
+    });
   };
 
   const filteredStudents = students.filter(student =>
     student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    student.id.includes(searchQuery)
+    student.id.toString().includes(searchQuery)
   );
 
-  const activeStudents = checkInRecords.filter(record => !record.checkOutTime).length;
-  const todayCheckIns = checkInRecords.filter(record => 
-    record.checkInTime.toDateString() === new Date().toDateString()
-  ).length;
+  // Calculate active students (those who checked in but haven't checked out)
+  const activeStudents = students.filter(student => {
+    const lastEntry = checkIns
+      .filter(c => c.studentId === student.id && c.type === 'entry')
+      .sort((a, b) => new Date(`${b.date} ${b.time}`).getTime() - new Date(`${a.date} ${a.time}`).getTime())[0];
+    
+    if (!lastEntry) return false;
+    
+    const lastExit = checkIns
+      .filter(c => c.studentId === student.id && c.type === 'exit')
+      .sort((a, b) => new Date(`${b.date} ${b.time}`).getTime() - new Date(`${a.date} ${a.time}`).getTime())[0];
+    
+    if (!lastExit) return true;
+    
+    return new Date(`${lastEntry.date} ${lastEntry.time}`) > new Date(`${lastExit.date} ${lastExit.time}`);
+  });
 
-  const averageTime = checkInRecords
-    .filter(record => record.duration)
-    .reduce((sum, record) => sum + (record.duration || 0), 0) / 
-    checkInRecords.filter(record => record.duration).length || 0;
+  const todayCheckIns = checkIns.filter(record => 
+    record.date === new Date().toISOString().split('T')[0] && record.type === 'entry'
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -162,7 +130,7 @@ export function CheckIn() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-800">{activeStudents}</div>
+            <div className="text-2xl font-bold text-green-800">{activeStudents.length}</div>
             <p className="text-xs text-green-600 mt-1">Alunos ativos agora</p>
           </CardContent>
         </Card>
@@ -184,12 +152,12 @@ export function CheckIn() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-purple-700 flex items-center">
               <Clock className="w-4 h-4 mr-2" />
-              Tempo Médio
+              Total Check-ins
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-800">{Math.round(averageTime)}min</div>
-            <p className="text-xs text-purple-600 mt-1">Permanência média</p>
+            <div className="text-2xl font-bold text-purple-800">{checkIns.filter(c => c.type === 'entry').length}</div>
+            <p className="text-xs text-purple-600 mt-1">Histórico total</p>
           </CardContent>
         </Card>
 
@@ -197,12 +165,12 @@ export function CheckIn() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-orange-700 flex items-center">
               <Activity className="w-4 h-4 mr-2" />
-              Pico Hoje
+              Alunos Cadastrados
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-800">18:30</div>
-            <p className="text-xs text-orange-600 mt-1">Horário de pico</p>
+            <div className="text-2xl font-bold text-orange-800">{students.length}</div>
+            <p className="text-xs text-orange-600 mt-1">Total de alunos</p>
           </CardContent>
         </Card>
       </div>
@@ -241,12 +209,12 @@ export function CheckIn() {
                       </div>
                       <div className="flex items-center space-x-2">
                         <Badge variant={student.status === "active" ? "default" : "destructive"}>
-                          {student.status === "active" ? "Ativo" : "Inadimplente"}
+                          {student.status === "active" ? "Ativo" : student.status === "inactive" ? "Inadimplente" : "Suspenso"}
                         </Badge>
                         <Button
                           size="sm"
                           onClick={() => handleCheckIn(student.id)}
-                          disabled={student.status === "inactive"}
+                          disabled={student.status !== "active"}
                         >
                           Check-in
                         </Button>
@@ -266,35 +234,44 @@ export function CheckIn() {
           <CardHeader>
             <CardTitle className="flex items-center">
               <Users className="w-5 h-5 mr-2" />
-              Alunos na Academia ({activeStudents})
+              Alunos na Academia ({activeStudents.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="max-h-80 overflow-y-auto space-y-2">
-              {checkInRecords.filter(record => !record.checkOutTime).map((record) => (
-                <div
-                  key={record.id}
-                  className="flex items-center justify-between p-3 border rounded-lg"
-                >
-                  <div>
-                    <div className="font-medium">{record.studentName}</div>
-                    <div className="text-sm text-gray-600">
-                      Entrada: {record.checkInTime.toLocaleTimeString()} • {record.plan}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {Math.floor((Date.now() - record.checkInTime.getTime()) / 60000)} min na academia
-                    </div>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleCheckOut(record.id)}
+              {activeStudents.map((student) => {
+                const lastEntry = checkIns
+                  .filter(c => c.studentId === student.id && c.type === 'entry')
+                  .sort((a, b) => new Date(`${b.date} ${b.time}`).getTime() - new Date(`${a.date} ${a.time}`).getTime())[0];
+                
+                const entryTime = lastEntry ? new Date(`${lastEntry.date} ${lastEntry.time}`) : new Date();
+                const minutesInGym = Math.floor((Date.now() - entryTime.getTime()) / 60000);
+                
+                return (
+                  <div
+                    key={student.id}
+                    className="flex items-center justify-between p-3 border rounded-lg"
                   >
-                    Check-out
-                  </Button>
-                </div>
-              ))}
-              {activeStudents === 0 && (
+                    <div>
+                      <div className="font-medium">{student.name}</div>
+                      <div className="text-sm text-gray-600">
+                        Entrada: {lastEntry?.time} • {student.plan}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {minutesInGym} min na academia
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleCheckOut(student.id)}
+                    >
+                      Check-out
+                    </Button>
+                  </div>
+                );
+              })}
+              {activeStudents.length === 0 && (
                 <p className="text-gray-500 text-center py-8">Nenhum aluno na academia</p>
               )}
             </div>
@@ -309,30 +286,30 @@ export function CheckIn() {
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {checkInRecords.slice(0, 10).map((record) => (
-              <div
-                key={record.id}
-                className="flex items-center justify-between p-3 border rounded-lg"
-              >
-                <div>
-                  <div className="font-medium">{record.studentName}</div>
-                  <div className="text-sm text-gray-600">
-                    {record.checkInTime.toLocaleString()} 
-                    {record.checkOutTime && ` - ${record.checkOutTime.toLocaleString()}`}
+            {checkIns
+              .sort((a, b) => new Date(`${b.date} ${b.time}`).getTime() - new Date(`${a.date} ${a.time}`).getTime())
+              .slice(0, 10)
+              .map((record, index) => (
+                <div
+                  key={`${record.id}-${index}`}
+                  className="flex items-center justify-between p-3 border rounded-lg"
+                >
+                  <div>
+                    <div className="font-medium">{record.studentName}</div>
+                    <div className="text-sm text-gray-600">
+                      {new Date(`${record.date} ${record.time}`).toLocaleString('pt-BR')}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <Badge variant={record.type === 'entry' ? "default" : "secondary"}>
+                      {record.type === 'entry' ? "Entrada" : "Saída"}
+                    </Badge>
                   </div>
                 </div>
-                <div className="text-right">
-                  <Badge variant={record.checkOutTime ? "secondary" : "default"}>
-                    {record.checkOutTime ? "Concluído" : "Ativo"}
-                  </Badge>
-                  {record.duration && (
-                    <div className="text-sm text-gray-600 mt-1">
-                      {record.duration} min
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
+              ))}
+            {checkIns.length === 0 && (
+              <p className="text-gray-500 text-center py-8">Nenhum check-in registrado</p>
+            )}
           </div>
         </CardContent>
       </Card>
