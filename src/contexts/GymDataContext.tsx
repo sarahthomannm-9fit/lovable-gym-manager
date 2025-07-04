@@ -1,114 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-// Interfaces
-export interface Student {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-  plan: string;
-  registrationDate: string;
-  status: 'active' | 'inactive' | 'suspended';
-  lastVisit?: string;
-  avatar?: string;
-  age?: number;
-  emergencyContact?: string;
-  medicalNotes?: string;
-  monthlyPayment: number;
-  paymentStatus: 'up-to-date' | 'overdue' | 'pending';
-  daysOverdue?: number;
-}
-
-export interface Class {
-  id: number;
-  name: string;
-  instructor: string;
-  date: string;
-  time: string;
-  capacity: number;
-  enrolled: number;
-  type: string;
-  price?: number;
-}
-
-export interface Payment {
-  id: string;
-  studentId: number;
-  studentName: string;
-  amount: number;
-  date: string;
-  method: 'pix' | 'card' | 'cash' | 'transfer';
-  status: 'confirmed' | 'pending' | 'cancelled';
-  plan: string;
-  dueDate?: string;
-}
-
-export interface Equipment {
-  id: number;
-  name: string;
-  type: string;
-  status: 'working' | 'maintenance' | 'broken';
-  lastMaintenance?: string;
-  nextMaintenance?: string;
-  acquisitionDate: string;
-  warranty?: string;
-  cost: number;
-}
-
-export interface Plan {
-  id: number;
-  name: string;
-  price: number;
-  duration: number; // em meses
-  benefits: string[];
-  active: boolean;
-}
-
-export interface CheckIn {
-  id: string;
-  studentId: number;
-  studentName: string;
-  date: string;
-  time: string;
-  type: 'entry' | 'exit';
-}
-
-export interface WorkoutTemplate {
-  id: number;
-  name: string;
-  description: string;
-  exercises: Exercise[];
-  targetMuscles: string[];
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  duration: number; // em minutos
-}
-
-export interface Exercise {
-  id: number;
-  name: string;
-  sets: number;
-  reps: string;
-  rest: string;
-  equipment?: string;
-}
-
-export interface PerformanceRecord {
-  id: string;
-  studentId: number;
-  date: string;
-  metrics: {
-    weight?: number;
-    bodyFat?: number;
-    muscle?: number;
-    measurements?: {
-      chest?: number;
-      waist?: number;
-      arm?: number;
-      thigh?: number;
-    };
-  };
-  notes?: string;
-}
+import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { 
+  Student, Class, Payment, Equipment, Plan, CheckIn,
+  WorkoutTemplate, PerformanceRecord, GymMetrics
+} from '@/types/gym';
+import { useGymMetrics } from '@/hooks/useGymMetrics';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 
 interface GymDataContextType {
   // Data
@@ -147,16 +44,7 @@ interface GymDataContextType {
   addPerformanceRecord: (record: Omit<PerformanceRecord, 'id'>) => void;
 
   // Calculated metrics
-  metrics: {
-    totalStudents: number;
-    activeStudents: number;
-    monthlyRevenue: number;
-    averageAttendance: number;
-    overduePayments: number;
-    equipmentInMaintenance: number;
-    totalClasses: number;
-    classAttendanceRate: number;
-  };
+  metrics: GymMetrics;
 }
 
 const GymDataContext = createContext<GymDataContextType | undefined>(undefined);
@@ -171,6 +59,23 @@ export function GymDataProvider({ children }: { children: ReactNode }) {
   const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
   const [workoutTemplates, setWorkoutTemplates] = useState<WorkoutTemplate[]>([]);
   const [performanceRecords, setPerformanceRecords] = useState<PerformanceRecord[]>([]);
+
+  // Persistência no localStorage
+  const allData = {
+    students, classes, payments, equipment, plans, 
+    checkIns, workoutTemplates, performanceRecords
+  };
+
+  useLocalStorage('gymData', allData, (data) => {
+    setStudents(data.students || []);
+    setClasses(data.classes || []);
+    setPayments(data.payments || []);
+    setEquipment(data.equipment || []);
+    setPlans(data.plans || []);
+    setCheckIns(data.checkIns || []);
+    setWorkoutTemplates(data.workoutTemplates || []);
+    setPerformanceRecords(data.performanceRecords || []);
+  });
 
   // Actions
   const addStudent = (student: Omit<Student, 'id'>) => {
@@ -203,7 +108,6 @@ export function GymDataProvider({ children }: { children: ReactNode }) {
     const newPayment = { ...payment, id: Date.now().toString() };
     setPayments(prev => [...prev, newPayment]);
     
-    // Atualizar status do aluno
     updateStudent(payment.studentId, { 
       paymentStatus: 'up-to-date',
       daysOverdue: 0 
@@ -236,7 +140,6 @@ export function GymDataProvider({ children }: { children: ReactNode }) {
     const newCheckIn = { ...checkIn, id: Date.now().toString() };
     setCheckIns(prev => [...prev, newCheckIn]);
     
-    // Atualizar última visita do aluno
     updateStudent(checkIn.studentId, { 
       lastVisit: `${checkIn.date} ${checkIn.time}` 
     });
@@ -257,73 +160,17 @@ export function GymDataProvider({ children }: { children: ReactNode }) {
   };
 
   // Métricas calculadas
-  const metrics = {
-    totalStudents: students.length,
-    activeStudents: students.filter(s => s.status === 'active').length,
-    monthlyRevenue: payments
-      .filter(p => p.status === 'confirmed')
-      .reduce((sum, p) => sum + p.amount, 0),
-    averageAttendance: students.length > 0 ? 
-      (checkIns.filter(c => c.type === 'entry').length / students.length) : 0,
-    overduePayments: payments
-      .filter(p => p.status === 'pending' || 
-        students.find(s => s.id === p.studentId)?.paymentStatus === 'overdue')
-      .reduce((sum, p) => sum + p.amount, 0),
-    equipmentInMaintenance: equipment.filter(e => e.status === 'maintenance' || e.status === 'broken').length,
-    totalClasses: classes.length,
-    classAttendanceRate: classes.length > 0 ? 
-      (classes.reduce((sum, c) => sum + c.enrolled, 0) / classes.reduce((sum, c) => sum + c.capacity, 0)) * 100 : 0
-  };
-
-  // Persistir dados no localStorage
-  useEffect(() => {
-    const data = {
-      students, classes, payments, equipment, plans, 
-      checkIns, workoutTemplates, performanceRecords
-    };
-    localStorage.setItem('gymData', JSON.stringify(data));
-  }, [students, classes, payments, equipment, plans, checkIns, workoutTemplates, performanceRecords]);
-
-  // Carregar dados do localStorage
-  useEffect(() => {
-    const savedData = localStorage.getItem('gymData');
-    if (savedData) {
-      const data = JSON.parse(savedData);
-      setStudents(data.students || []);
-      setClasses(data.classes || []);
-      setPayments(data.payments || []);
-      setEquipment(data.equipment || []);
-      setPlans(data.plans || []);
-      setCheckIns(data.checkIns || []);
-      setWorkoutTemplates(data.workoutTemplates || []);
-      setPerformanceRecords(data.performanceRecords || []);
-    }
-  }, []);
+  const metrics = useGymMetrics(students, payments, checkIns, equipment, classes);
 
   const value: GymDataContextType = {
-    students,
-    classes,
-    payments,
-    equipment,
-    plans,
-    checkIns,
-    workoutTemplates,
-    performanceRecords,
-    addStudent,
-    updateStudent,
-    deleteStudent,
-    addClass,
-    updateClass,
-    deleteClass,
-    addPayment,
-    updatePayment,
-    addEquipment,
-    updateEquipment,
-    addPlan,
-    updatePlan,
+    students, classes, payments, equipment, plans, checkIns, workoutTemplates, performanceRecords,
+    addStudent, updateStudent, deleteStudent,
+    addClass, updateClass, deleteClass,
+    addPayment, updatePayment,
+    addEquipment, updateEquipment,
+    addPlan, updatePlan,
     addCheckIn,
-    addWorkoutTemplate,
-    updateWorkoutTemplate,
+    addWorkoutTemplate, updateWorkoutTemplate,
     addPerformanceRecord,
     metrics
   };
