@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Student } from "@/contexts/GymDataContext";
+import { Student } from "@/types/gym";
 
 interface AddStudentDialogProps {
   onAddStudent: (student: Omit<Student, 'id' | 'status' | 'registrationDate' | 'paymentStatus'>) => void;

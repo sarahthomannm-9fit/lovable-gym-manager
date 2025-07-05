@@ -1,10 +1,8 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Search, User } from "lucide-react";
 import { StudentCard } from "./StudentCard";
-
-import { Student } from "@/contexts/GymDataContext";
+import { Student } from "@/types/gym";
 
 interface StudentsListProps {
   students: Student[];

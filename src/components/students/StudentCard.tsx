@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { User, Phone, Mail, Eye } from "lucide-react";
-import { Student } from "@/contexts/GymDataContext";
+import { Student } from "@/types/gym";
 
 interface StudentCardProps {
   student: Student;
