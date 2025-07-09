@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBankIntegration } from "@/hooks/useBankIntegration";
-import { useStudents } from "@/hooks/useStudents";
+import { useGymData } from "@/contexts/GymDataContext";
 import { useState } from "react";
 import { CreditCard, Plus, Download, DollarSign, TrendingUp, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -23,7 +23,7 @@ export function BankIntegration() {
     getMonthlyRevenue,
     getRevenueByCategory
   } = useBankIntegration();
-  const { students } = useStudents();
+  const { students } = useGymData();
   const [manualEntry, setManualEntry] = useState({ 
     amount: '', 
     description: '', 

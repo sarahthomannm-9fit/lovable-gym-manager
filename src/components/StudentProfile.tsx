@@ -3,27 +3,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { ArrowLeft, TrendingUp, Weight, Ruler, Calendar, MessageCircle, FileText } from "lucide-react";
-import { useStudents } from "@/hooks/useStudents";
+import { useGymData } from "@/contexts/GymDataContext";
+import { Student } from "@/types/gym";
 
 interface StudentProfileProps {
-  student: {
-    id: number;
-    name: string;
-    email: string;
-    phone: string;
-    plan: string;
-    status: string;
-    startDate: string;
-    paymentMethod?: string;
-    emergencyContact?: string;
-    medicalInfo?: string;
-  };
+  student: Student;
   onBack: () => void;
 }
 
 export function StudentProfile({ student, onBack }: StudentProfileProps) {
-  const { getStudentById } = useStudents();
-  const fullStudent = getStudentById(student.id);
+  const { students } = useGymData();
+  const fullStudent = students.find(s => s.id === student.id);
   
   // Usar dados de performance do hook ou dados padrão
   const performanceData = fullStudent?.performanceData ? 

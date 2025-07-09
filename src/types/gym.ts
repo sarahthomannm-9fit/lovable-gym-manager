@@ -1,6 +1,22 @@
 
 // Core interfaces for the gym management system
 
+export interface PerformanceData {
+  weight: number[];
+  bodyFat: number[];
+  muscle: number[];
+  dates: string[];
+  workoutData: WorkoutData[];
+  frequency: number;
+}
+
+export interface WorkoutData {
+  exercise: string;
+  weight: number;
+  reps: number;
+  sets: number;
+}
+
 export interface Student {
   id: number;
   name: string;
@@ -17,6 +33,10 @@ export interface Student {
   monthlyPayment: number;
   paymentStatus: 'up-to-date' | 'overdue' | 'pending';
   daysOverdue?: number;
+  startDate?: string;
+  paymentMethod?: string;
+  medicalInfo?: string;
+  performanceData?: PerformanceData;
 }
 
 export interface Class {
