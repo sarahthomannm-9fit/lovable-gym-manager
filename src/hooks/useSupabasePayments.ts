@@ -31,7 +31,15 @@ export function useSupabasePayments() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setPayments(data || []);
+      
+      // Cast the data to our expected types
+      const typedPayments = (data || []).map(payment => ({
+        ...payment,
+        status: payment.status as 'pendente' | 'pago' | 'atrasado' | 'cancelado',
+        metodo_pagamento: payment.metodo_pagamento as 'pix' | 'cartao' | 'dinheiro' | 'transferencia' | undefined,
+      })) as SupabasePayment[];
+      
+      setPayments(typedPayments);
     } catch (error) {
       console.error('Error fetching payments:', error);
       toast({
@@ -54,13 +62,20 @@ export function useSupabasePayments() {
 
       if (error) throw error;
       
-      setPayments(prev => [data, ...prev]);
+      // Cast the returned data to our expected type
+      const typedPayment = {
+        ...data,
+        status: data.status as 'pendente' | 'pago' | 'atrasado' | 'cancelado',
+        metodo_pagamento: data.metodo_pagamento as 'pix' | 'cartao' | 'dinheiro' | 'transferencia' | undefined,
+      } as SupabasePayment;
+      
+      setPayments(prev => [typedPayment, ...prev]);
       toast({
         title: "Sucesso",
         description: "Pagamento adicionado com sucesso!",
       });
       
-      return data;
+      return typedPayment;
     } catch (error) {
       console.error('Error adding payment:', error);
       toast({
@@ -83,13 +98,20 @@ export function useSupabasePayments() {
 
       if (error) throw error;
       
-      setPayments(prev => prev.map(p => p.id === id ? data : p));
+      // Cast the returned data to our expected type
+      const typedPayment = {
+        ...data,
+        status: data.status as 'pendente' | 'pago' | 'atrasado' | 'cancelado',
+        metodo_pagamento: data.metodo_pagamento as 'pix' | 'cartao' | 'dinheiro' | 'transferencia' | undefined,
+      } as SupabasePayment;
+      
+      setPayments(prev => prev.map(p => p.id === id ? typedPayment : p));
       toast({
         title: "Sucesso",
         description: "Pagamento atualizado com sucesso!",
       });
       
-      return data;
+      return typedPayment;
     } catch (error) {
       console.error('Error updating payment:', error);
       toast({

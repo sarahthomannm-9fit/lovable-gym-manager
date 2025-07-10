@@ -35,7 +35,15 @@ export function useSupabaseStudents() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setStudents(data || []);
+      
+      // Cast the data to our expected types
+      const typedStudents = (data || []).map(student => ({
+        ...student,
+        status: student.status as 'ativo' | 'inativo' | 'suspenso',
+        forma_pagamento: student.forma_pagamento as 'pix' | 'cartao' | 'dinheiro' | 'transferencia' | undefined,
+      })) as SupabaseStudent[];
+      
+      setStudents(typedStudents);
     } catch (error) {
       console.error('Error fetching students:', error);
       toast({
@@ -58,13 +66,20 @@ export function useSupabaseStudents() {
 
       if (error) throw error;
       
-      setStudents(prev => [data, ...prev]);
+      // Cast the returned data to our expected type
+      const typedStudent = {
+        ...data,
+        status: data.status as 'ativo' | 'inativo' | 'suspenso',
+        forma_pagamento: data.forma_pagamento as 'pix' | 'cartao' | 'dinheiro' | 'transferencia' | undefined,
+      } as SupabaseStudent;
+      
+      setStudents(prev => [typedStudent, ...prev]);
       toast({
         title: "Sucesso",
         description: "Aluno adicionado com sucesso!",
       });
       
-      return data;
+      return typedStudent;
     } catch (error) {
       console.error('Error adding student:', error);
       toast({
@@ -87,13 +102,20 @@ export function useSupabaseStudents() {
 
       if (error) throw error;
       
-      setStudents(prev => prev.map(s => s.id === id ? data : s));
+      // Cast the returned data to our expected type
+      const typedStudent = {
+        ...data,
+        status: data.status as 'ativo' | 'inativo' | 'suspenso',
+        forma_pagamento: data.forma_pagamento as 'pix' | 'cartao' | 'dinheiro' | 'transferencia' | undefined,
+      } as SupabaseStudent;
+      
+      setStudents(prev => prev.map(s => s.id === id ? typedStudent : s));
       toast({
         title: "Sucesso",
         description: "Aluno atualizado com sucesso!",
       });
       
-      return data;
+      return typedStudent;
     } catch (error) {
       console.error('Error updating student:', error);
       toast({
