@@ -1,52 +1,157 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Calendar, DollarSign, TrendingUp } from "lucide-react";
-import { useGymData } from "@/contexts/GymDataContext";
+import { useSupabaseGymData } from "@/contexts/SupabaseGymDataContext";
+import { useMemo } from "react";
 
 export function Dashboard() {
-  const { metrics, students, classes, payments } = useGymData();
+  const { 
+    students, 
+    studentsLoading, 
+    payments, 
+    paymentsLoading, 
+    checkIns, 
+    checkInsLoading,
+    plans 
+  } = useSupabaseGymData();
+
+  // Calcular métricas baseadas nos dados do Supabase
+  const metrics = useMemo(() => {
+    const totalStudents = students.length;
+    const activeStudents = students.filter(s => s.status === 'ativo').length;
+    
+    // Pagamentos pendentes/atrasados
+    const overduePayments = payments.filter(p => 
+      p.status === 'pendente' || p.status === 'atrasado'
+    ).length;
+    
+    // Check-ins de hoje
+    const today = new Date().toISOString().split('T')[0];
+    const todayCheckIns = checkIns.filter(c => 
+      c.data_checkin === today || 
+      (c.horario_entrada && c.horario_entrada.startsWith(today))
+    ).length;
+    
+    // Receita mensal (pagamentos pagos este mês)
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    const monthlyRevenue = payments
+      .filter(p => {
+        if (p.status !== 'pago' || !p.data_pagamento) return false;
+        const paymentDate = new Date(p.data_pagamento);
+        return paymentDate.getMonth() === currentMonth && 
+               paymentDate.getFullYear() === currentYear;
+      })
+      .reduce((sum, p) => sum + Number(p.valor), 0);
+
+    return {
+      totalStudents,
+      activeStudents,
+      overduePayments,
+      todayCheckIns,
+      monthlyRevenue,
+      totalClasses: 0, // Será implementado quando tivermos aulas
+      classAttendanceRate: 0,
+      averageAttendance: checkIns.length > 0 ? (checkIns.length / totalStudents) * 100 : 0,
+      equipmentInMaintenance: 0
+    };
+  }, [students, payments, checkIns]);
 
   const stats = [
     {
       title: "Total de Alunos",
       value: metrics.totalStudents.toString(),
-      change: metrics.activeStudents > 0 ? `${metrics.activeStudents} ativos` : "Sem alunos",
+      change: `${metrics.activeStudents} ativos`,
       icon: Users,
       color: "text-blue-600",
     },
     {
-      title: "Aulas Este Mês",
-      value: metrics.totalClasses.toString(),
-      change: `${Math.round(metrics.classAttendanceRate)}% ocupação`,
+      title: "Check-ins Hoje",
+      value: metrics.todayCheckIns.toString(),
+      change: `${Math.round(metrics.averageAttendance)}% frequência média`,
       icon: Calendar,
       color: "text-green-600",
     },
     {
-      title: "Faturamento",
+      title: "Faturamento Mensal",
       value: `R$ ${metrics.monthlyRevenue.toLocaleString()}`,
-      change: metrics.overduePayments > 0 ? `R$ ${metrics.overduePayments.toLocaleString()} em atraso` : "Em dia",
+      change: `${metrics.overduePayments} pagamentos pendentes`,
       icon: DollarSign,
       color: "text-emerald-600",
     },
     {
-      title: "Taxa de Frequência",
+      title: "Frequência Geral",
       value: `${Math.round(metrics.averageAttendance)}%`,
-      change: `${metrics.equipmentInMaintenance} equipamentos em manutenção`,
+      change: "Taxa baseada em check-ins",
       icon: TrendingUp,
       color: "text-purple-600",
     },
   ];
 
-  // Próximas aulas baseadas nos dados reais
-  const upcomingClasses = classes
-    .filter(c => new Date(`${c.date} ${c.time}`) > new Date())
-    .sort((a, b) => new Date(`${a.date} ${a.time}`).getTime() - new Date(`${b.date} ${b.time}`).getTime())
-    .slice(0, 3);
+  // Próximos vencimentos (próximos 7 dias)
+  const upcomingPayments = useMemo(() => {
+    const nextWeek = new Date();
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    
+    return payments
+      .filter(p => p.status === 'pendente' && p.data_vencimento)
+      .filter(p => {
+        const dueDate = new Date(p.data_vencimento);
+        return dueDate <= nextWeek;
+      })
+      .sort((a, b) => new Date(a.data_vencimento).getTime() - new Date(b.data_vencimento).getTime())
+      .slice(0, 5)
+      .map(payment => {
+        const student = students.find(s => s.id === payment.aluno_id);
+        return {
+          ...payment,
+          studentName: student?.nome || 'Aluno não encontrado'
+        };
+      });
+  }, [payments, students]);
 
-  // Pagamentos pendentes baseados nos dados reais
-  const overdueStudents = students
-    .filter(s => s.paymentStatus === 'overdue')
-    .slice(0, 3);
+  // Alunos com pagamentos em atraso
+  const overdueStudents = useMemo(() => {
+    const today = new Date();
+    
+    return payments
+      .filter(p => p.status === 'atrasado' || 
+        (p.status === 'pendente' && new Date(p.data_vencimento) < today))
+      .slice(0, 5)
+      .map(payment => {
+        const student = students.find(s => s.id === payment.aluno_id);
+        const daysOverdue = Math.floor(
+          (today.getTime() - new Date(payment.data_vencimento).getTime()) / (1000 * 60 * 60 * 24)
+        );
+        
+        return {
+          id: payment.id,
+          name: student?.nome || 'Aluno não encontrado',
+          amount: Number(payment.valor),
+          daysOverdue: daysOverdue > 0 ? daysOverdue : 0,
+          plan: student?.plano_id ? 'Plano ativo' : 'Sem plano'
+        };
+      });
+  }, [payments, students]);
+
+  if (studentsLoading || paymentsLoading || checkInsLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader className="pb-2">
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -71,7 +176,7 @@ export function Dashboard() {
             <CardContent>
               <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
               <p className="text-xs text-green-600 font-medium mt-1">
-                {stat.change} em relação ao mês anterior
+                {stat.change}
               </p>
             </CardContent>
           </Card>
@@ -81,29 +186,29 @@ export function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="hover:shadow-lg transition-shadow duration-200">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold">Próximas Aulas</CardTitle>
+            <CardTitle className="text-lg font-semibold">Próximos Vencimentos</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {upcomingClasses.length > 0 ? (
-                upcomingClasses.map((aula) => (
-                  <div key={aula.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              {upcomingPayments.length > 0 ? (
+                upcomingPayments.map((payment) => (
+                  <div key={payment.id} className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-100">
                     <div>
-                      <p className="font-medium text-gray-900">{aula.name}</p>
-                      <p className="text-sm text-gray-600">{aula.type}</p>
-                      <p className="text-xs text-gray-500">{aula.enrolled}/{aula.capacity} inscritos</p>
+                      <p className="font-medium text-gray-900">{payment.studentName}</p>
+                      <p className="text-sm text-yellow-600">
+                        Vence em {new Date(payment.data_vencimento).toLocaleDateString()}
+                      </p>
                     </div>
-                    <div className="text-right">
-                      <span className="text-sm font-medium text-blue-600">{aula.time}</span>
-                      <p className="text-xs text-gray-500">{new Date(aula.date).toLocaleDateString()}</p>
-                    </div>
+                    <span className="text-sm font-medium text-gray-900">
+                      R$ {Number(payment.valor).toLocaleString()}
+                    </span>
                   </div>
                 ))
               ) : (
                 <div className="text-center py-8 text-gray-500">
                   <Calendar className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>Nenhuma aula agendada</p>
-                  <p className="text-sm">Adicione aulas para visualizá-las aqui</p>
+                  <p>Nenhum vencimento próximo</p>
+                  <p className="text-sm">Todos os pagamentos estão em dia</p>
                 </div>
               )}
             </div>
@@ -112,7 +217,7 @@ export function Dashboard() {
 
         <Card className="hover:shadow-lg transition-shadow duration-200">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold">Pagamentos Pendentes</CardTitle>
+            <CardTitle className="text-lg font-semibold">Pagamentos em Atraso</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -122,20 +227,20 @@ export function Dashboard() {
                     <div>
                       <p className="font-medium text-gray-900">{student.name}</p>
                       <p className="text-sm text-red-600">
-                        {student.daysOverdue ? `${student.daysOverdue} dias em atraso` : 'Pagamento pendente'}
+                        {student.daysOverdue > 0 ? `${student.daysOverdue} dias em atraso` : 'Vencido'}
                       </p>
                       <p className="text-xs text-gray-500">{student.plan}</p>
                     </div>
                     <span className="text-sm font-medium text-gray-900">
-                      R$ {student.monthlyPayment.toLocaleString()}
+                      R$ {student.amount.toLocaleString()}
                     </span>
                   </div>
                 ))
               ) : (
                 <div className="text-center py-8 text-gray-500">
                   <DollarSign className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>Todos os pagamentos em dia!</p>
-                  <p className="text-sm">Nenhum pagamento pendente encontrado</p>
+                  <p>Nenhum pagamento em atraso!</p>
+                  <p className="text-sm">Todos os pagamentos estão em dia</p>
                 </div>
               )}
             </div>
