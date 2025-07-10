@@ -4,6 +4,8 @@ import { useSupabaseStudents, SupabaseStudent } from '@/hooks/useSupabaseStudent
 import { useSupabasePayments, SupabasePayment } from '@/hooks/useSupabasePayments';
 import { useSupabaseCheckIns, SupabaseCheckIn } from '@/hooks/useSupabaseCheckIns';
 import { useSupabasePlans, SupabasePlan } from '@/hooks/useSupabasePlans';
+import { useSupabaseClasses, SupabaseClass } from '@/hooks/useSupabaseClasses';
+import { useSupabasePlanHistory, SupabasePlanHistory } from '@/hooks/useSupabasePlanHistory';
 
 interface SupabaseGymDataContextType {
   // Students
@@ -32,6 +34,21 @@ interface SupabaseGymDataContextType {
   plans: SupabasePlan[];
   plansLoading: boolean;
   refetchPlans: () => Promise<void>;
+
+  // Classes
+  classes: SupabaseClass[];
+  classesLoading: boolean;
+  addClass: (classData: Omit<SupabaseClass, 'id' | 'created_at' | 'updated_at'>) => Promise<SupabaseClass>;
+  updateClass: (id: string, updates: Partial<SupabaseClass>) => Promise<SupabaseClass>;
+  deleteClass: (id: string) => Promise<void>;
+  refetchClasses: () => Promise<void>;
+
+  // Plan History
+  planHistory: SupabasePlanHistory[];
+  planHistoryLoading: boolean;
+  addPlanHistory: (historyData: Omit<SupabasePlanHistory, 'id' | 'created_at' | 'updated_at'>) => Promise<SupabasePlanHistory>;
+  updatePlanHistory: (id: string, updates: Partial<SupabasePlanHistory>) => Promise<SupabasePlanHistory>;
+  refetchPlanHistory: (studentId?: string) => Promise<void>;
 }
 
 const SupabaseGymDataContext = createContext<SupabaseGymDataContextType | undefined>(undefined);
@@ -41,6 +58,8 @@ export function SupabaseGymDataProvider({ children }: { children: ReactNode }) {
   const paymentsHook = useSupabasePayments();
   const checkInsHook = useSupabaseCheckIns();
   const plansHook = useSupabasePlans();
+  const classesHook = useSupabaseClasses();
+  const planHistoryHook = useSupabasePlanHistory();
 
   const value: SupabaseGymDataContextType = {
     // Students
@@ -69,6 +88,21 @@ export function SupabaseGymDataProvider({ children }: { children: ReactNode }) {
     plans: plansHook.plans,
     plansLoading: plansHook.loading,
     refetchPlans: plansHook.refetch,
+
+    // Classes
+    classes: classesHook.classes,
+    classesLoading: classesHook.loading,
+    addClass: classesHook.addClass,
+    updateClass: classesHook.updateClass,
+    deleteClass: classesHook.deleteClass,
+    refetchClasses: classesHook.refetch,
+
+    // Plan History
+    planHistory: planHistoryHook.planHistory,
+    planHistoryLoading: planHistoryHook.loading,
+    addPlanHistory: planHistoryHook.addPlanHistory,
+    updatePlanHistory: planHistoryHook.updatePlanHistory,
+    refetchPlanHistory: planHistoryHook.refetch,
   };
 
   return (

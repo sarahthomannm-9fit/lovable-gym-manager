@@ -16,6 +16,8 @@ export type Database = {
     Tables: {
       alunos: {
         Row: {
+          aulas_disponiveis: number | null
+          aulas_por_mes: number | null
           contato_emergencia: string | null
           created_at: string | null
           data_matricula: string | null
@@ -33,6 +35,8 @@ export type Database = {
           valor_mensalidade: number | null
         }
         Insert: {
+          aulas_disponiveis?: number | null
+          aulas_por_mes?: number | null
           contato_emergencia?: string | null
           created_at?: string | null
           data_matricula?: string | null
@@ -50,6 +54,8 @@ export type Database = {
           valor_mensalidade?: number | null
         }
         Update: {
+          aulas_disponiveis?: number | null
+          aulas_por_mes?: number | null
           contato_emergencia?: string | null
           created_at?: string | null
           data_matricula?: string | null
@@ -82,10 +88,12 @@ export type Database = {
           created_at: string | null
           data_aula: string
           descricao: string | null
+          dia_semana: string | null
           horario_fim: string
           horario_inicio: string
           id: string
           nome: string
+          plano_id: string | null
           professor_id: string | null
           tipo: string | null
           updated_at: string | null
@@ -95,10 +103,12 @@ export type Database = {
           created_at?: string | null
           data_aula: string
           descricao?: string | null
+          dia_semana?: string | null
           horario_fim: string
           horario_inicio: string
           id?: string
           nome: string
+          plano_id?: string | null
           professor_id?: string | null
           tipo?: string | null
           updated_at?: string | null
@@ -108,15 +118,24 @@ export type Database = {
           created_at?: string | null
           data_aula?: string
           descricao?: string | null
+          dia_semana?: string | null
           horario_fim?: string
           horario_inicio?: string
           id?: string
           nome?: string
+          plano_id?: string | null
           professor_id?: string | null
           tipo?: string | null
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "aulas_plano_id_fkey"
+            columns: ["plano_id"]
+            isOneToOne: false
+            referencedRelation: "planos"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "aulas_professor_id_fkey"
             columns: ["professor_id"]
@@ -172,6 +191,54 @@ export type Database = {
             columns: ["aluno_id"]
             isOneToOne: false
             referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      historico_planos: {
+        Row: {
+          aluno_id: string | null
+          ativo: boolean | null
+          created_at: string | null
+          data_fim: string | null
+          data_inicio: string | null
+          id: string
+          plano_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          aluno_id?: string | null
+          ativo?: boolean | null
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio?: string | null
+          id?: string
+          plano_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          aluno_id?: string | null
+          ativo?: boolean | null
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio?: string | null
+          id?: string
+          plano_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "historico_planos_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historico_planos_plano_id_fkey"
+            columns: ["plano_id"]
+            isOneToOne: false
+            referencedRelation: "planos"
             referencedColumns: ["id"]
           },
         ]

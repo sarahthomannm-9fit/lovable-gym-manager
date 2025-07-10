@@ -12,7 +12,8 @@ export function Dashboard() {
     paymentsLoading, 
     checkIns, 
     checkInsLoading,
-    plans 
+    classes,
+    classesLoading
   } = useSupabaseGymData();
 
   // Calcular métricas baseadas nos dados do Supabase
@@ -44,18 +45,22 @@ export function Dashboard() {
       })
       .reduce((sum, p) => sum + Number(p.valor), 0);
 
+    // Aulas de hoje
+    const todayClasses = classes.filter(c => c.data_aula === today).length;
+
+    // Média de frequência
+    const averageAttendance = totalStudents > 0 ? (checkIns.length / totalStudents) * 100 : 0;
+
     return {
       totalStudents,
       activeStudents,
       overduePayments,
       todayCheckIns,
       monthlyRevenue,
-      totalClasses: 0, // Será implementado quando tivermos aulas
-      classAttendanceRate: 0,
-      averageAttendance: checkIns.length > 0 ? (checkIns.length / totalStudents) * 100 : 0,
-      equipmentInMaintenance: 0
+      todayClasses,
+      averageAttendance
     };
-  }, [students, payments, checkIns]);
+  }, [students, payments, checkIns, classes]);
 
   const stats = [
     {
@@ -80,9 +85,9 @@ export function Dashboard() {
       color: "text-emerald-600",
     },
     {
-      title: "Frequência Geral",
-      value: `${Math.round(metrics.averageAttendance)}%`,
-      change: "Taxa baseada em check-ins",
+      title: "Aulas Hoje",
+      value: metrics.todayClasses.toString(),
+      change: `${classes.length} aulas cadastradas`,
       icon: TrendingUp,
       color: "text-purple-600",
     },
@@ -134,7 +139,7 @@ export function Dashboard() {
       });
   }, [payments, students]);
 
-  if (studentsLoading || paymentsLoading || checkInsLoading) {
+  if (studentsLoading || paymentsLoading || checkInsLoading || classesLoading) {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

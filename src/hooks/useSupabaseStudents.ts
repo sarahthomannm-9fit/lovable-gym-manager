@@ -17,6 +17,8 @@ export interface SupabaseStudent {
   forma_pagamento?: 'pix' | 'cartao' | 'dinheiro' | 'transferencia';
   contato_emergencia?: string;
   observacoes_medicas?: string;
+  aulas_disponiveis?: number;
+  aulas_por_mes?: number;
   created_at?: string;
   updated_at?: string;
 }
