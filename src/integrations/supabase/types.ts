@@ -14,7 +14,281 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      alunos: {
+        Row: {
+          contato_emergencia: string | null
+          created_at: string | null
+          data_matricula: string | null
+          data_nascimento: string | null
+          email: string
+          endereco: string | null
+          forma_pagamento: string | null
+          id: string
+          nome: string
+          observacoes_medicas: string | null
+          plano_id: string | null
+          status: string | null
+          telefone: string | null
+          updated_at: string | null
+          valor_mensalidade: number | null
+        }
+        Insert: {
+          contato_emergencia?: string | null
+          created_at?: string | null
+          data_matricula?: string | null
+          data_nascimento?: string | null
+          email: string
+          endereco?: string | null
+          forma_pagamento?: string | null
+          id?: string
+          nome: string
+          observacoes_medicas?: string | null
+          plano_id?: string | null
+          status?: string | null
+          telefone?: string | null
+          updated_at?: string | null
+          valor_mensalidade?: number | null
+        }
+        Update: {
+          contato_emergencia?: string | null
+          created_at?: string | null
+          data_matricula?: string | null
+          data_nascimento?: string | null
+          email?: string
+          endereco?: string | null
+          forma_pagamento?: string | null
+          id?: string
+          nome?: string
+          observacoes_medicas?: string | null
+          plano_id?: string | null
+          status?: string | null
+          telefone?: string | null
+          updated_at?: string | null
+          valor_mensalidade?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alunos_plano_id_fkey"
+            columns: ["plano_id"]
+            isOneToOne: false
+            referencedRelation: "planos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aulas: {
+        Row: {
+          capacidade_maxima: number | null
+          created_at: string | null
+          data_aula: string
+          descricao: string | null
+          horario_fim: string
+          horario_inicio: string
+          id: string
+          nome: string
+          professor_id: string | null
+          tipo: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          capacidade_maxima?: number | null
+          created_at?: string | null
+          data_aula: string
+          descricao?: string | null
+          horario_fim: string
+          horario_inicio: string
+          id?: string
+          nome: string
+          professor_id?: string | null
+          tipo?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          capacidade_maxima?: number | null
+          created_at?: string | null
+          data_aula?: string
+          descricao?: string | null
+          horario_fim?: string
+          horario_inicio?: string
+          id?: string
+          nome?: string
+          professor_id?: string | null
+          tipo?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aulas_professor_id_fkey"
+            columns: ["professor_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      "cadastro.alunos": {
+        Row: {
+          created_at: string
+          id: number
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+        }
+        Update: {
+          created_at?: string
+          id?: number
+        }
+        Relationships: []
+      }
+      checkins: {
+        Row: {
+          aluno_id: string | null
+          created_at: string | null
+          data_checkin: string | null
+          horario_entrada: string | null
+          horario_saida: string | null
+          id: string
+        }
+        Insert: {
+          aluno_id?: string | null
+          created_at?: string | null
+          data_checkin?: string | null
+          horario_entrada?: string | null
+          horario_saida?: string | null
+          id?: string
+        }
+        Update: {
+          aluno_id?: string | null
+          created_at?: string | null
+          data_checkin?: string | null
+          horario_entrada?: string | null
+          horario_saida?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checkins_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pagamentos: {
+        Row: {
+          aluno_id: string | null
+          created_at: string | null
+          data_pagamento: string | null
+          data_vencimento: string
+          id: string
+          metodo_pagamento: string | null
+          observacoes: string | null
+          referencia_mes: string
+          status: string | null
+          updated_at: string | null
+          valor: number
+        }
+        Insert: {
+          aluno_id?: string | null
+          created_at?: string | null
+          data_pagamento?: string | null
+          data_vencimento: string
+          id?: string
+          metodo_pagamento?: string | null
+          observacoes?: string | null
+          referencia_mes: string
+          status?: string | null
+          updated_at?: string | null
+          valor: number
+        }
+        Update: {
+          aluno_id?: string | null
+          created_at?: string | null
+          data_pagamento?: string | null
+          data_vencimento?: string
+          id?: string
+          metodo_pagamento?: string | null
+          observacoes?: string | null
+          referencia_mes?: string
+          status?: string | null
+          updated_at?: string | null
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pagamentos_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      planos: {
+        Row: {
+          ativo: boolean | null
+          beneficios: string[] | null
+          created_at: string | null
+          duracao_meses: number
+          id: string
+          nome: string
+          preco: number
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          beneficios?: string[] | null
+          created_at?: string | null
+          duracao_meses: number
+          id?: string
+          nome: string
+          preco: number
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          beneficios?: string[] | null
+          created_at?: string | null
+          duracao_meses?: number
+          id?: string
+          nome?: string
+          preco?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      usuarios: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          nome: string
+          senha_hash: string
+          tipo: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id?: string
+          nome: string
+          senha_hash: string
+          tipo: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          nome?: string
+          senha_hash?: string
+          tipo?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
