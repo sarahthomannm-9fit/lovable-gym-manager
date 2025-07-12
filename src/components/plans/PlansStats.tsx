@@ -1,11 +1,17 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Users, Calendar } from "lucide-react";
-import { Plan, Student } from "@/types/gym";
+import { Plan } from "@/types/gym";
+
+interface StudentForStats {
+  id: number;
+  name: string;
+  plan: string;
+}
 
 interface PlansStatsProps {
   plans: Plan[];
-  students: Student[];
+  students: StudentForStats[];
 }
 
 export function PlansStats({ plans, students }: PlansStatsProps) {
