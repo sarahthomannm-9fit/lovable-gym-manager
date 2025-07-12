@@ -107,7 +107,14 @@ export function SupabaseGymDataProvider({ children }: { children: ReactNode }) {
   };
 
   // Ativa real-time updates
-  useSupabaseRealtime();
+  useSupabaseRealtime({
+    refetchStudents: studentsHook.refetch,
+    refetchPayments: paymentsHook.refetch,
+    refetchCheckIns: checkInsHook.refetch,
+    refetchPlans: plansHook.refetch,
+    refetchClasses: classesHook.refetch,
+    refetchPlanHistory: planHistoryHook.refetch,
+  });
 
   return (
     <SupabaseGymDataContext.Provider value={value}>

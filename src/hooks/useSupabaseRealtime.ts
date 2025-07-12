@@ -1,17 +1,24 @@
 
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useSupabaseGymData } from '@/contexts/SupabaseGymDataContext';
 
-export function useSupabaseRealtime() {
-  const { 
-    refetchStudents, 
-    refetchPayments, 
-    refetchCheckIns, 
-    refetchPlans, 
-    refetchClasses, 
-    refetchPlanHistory 
-  } = useSupabaseGymData();
+interface UseSupabaseRealtimeProps {
+  refetchStudents: () => Promise<void>;
+  refetchPayments: () => Promise<void>;
+  refetchCheckIns: () => Promise<void>;
+  refetchPlans: () => Promise<void>;
+  refetchClasses: () => Promise<void>;
+  refetchPlanHistory: () => Promise<void>;
+}
+
+export function useSupabaseRealtime({
+  refetchStudents, 
+  refetchPayments, 
+  refetchCheckIns, 
+  refetchPlans, 
+  refetchClasses, 
+  refetchPlanHistory 
+}: UseSupabaseRealtimeProps) {
 
   useEffect(() => {
     console.log('Setting up real-time subscriptions...');
