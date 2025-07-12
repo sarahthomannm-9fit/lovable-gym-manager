@@ -12,7 +12,9 @@ export function SupabaseStudents() {
     students: supabaseStudents, 
     studentsLoading, 
     addStudent, 
-    updateStudent 
+    updateStudent,
+    plans: supabasePlans,
+    plansLoading
   } = useSupabaseGymData();
   
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -23,23 +25,16 @@ export function SupabaseStudents() {
 
   const handleAddStudent = async (studentData: any) => {
     try {
-      const supabaseData = convertOldStudentToSupabase({
-        ...studentData,
-        registrationDate: new Date().toISOString().split('T')[0],
-        status: 'active' as const,
-        paymentStatus: 'up-to-date' as const
-      });
-      
-      await addStudent(supabaseData);
+      await addStudent(studentData);
     } catch (error) {
       console.error('Failed to add student:', error);
     }
   };
 
-  if (studentsLoading) {
+  if (studentsLoading || plansLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-lg">Carregando alunos...</div>
+        <div className="text-lg">Carregando dados...</div>
       </div>
     );
   }
@@ -63,7 +58,10 @@ export function SupabaseStudents() {
           <p className="text-gray-600 mt-1">Gerencie seus alunos conectados ao banco de dados</p>
         </div>
         
-        <AddStudentDialog onAddStudent={handleAddStudent} />
+        <AddStudentDialog 
+          onAddStudent={handleAddStudent} 
+          plans={supabasePlans}
+        />
       </div>
 
       <StudentsList 

@@ -18,13 +18,6 @@ interface ClassItem {
   status: string;
 }
 
-interface NewClass {
-  student: string;
-  date: string;
-  time: string;
-  type: string;
-}
-
 export function SupabaseClasses() {
   const { classes, addClass, students } = useSupabaseGymData();
   const [view, setView] = useState<ViewType>("daily");
@@ -32,21 +25,17 @@ export function SupabaseClasses() {
   // Convert Supabase classes to local format
   const [localClasses, setLocalClasses] = useState<ClassItem[]>([]);
 
-  const handleAddClass = async (newClass: NewClass) => {
+  const handleAddClass = async (classData: any) => {
     try {
-      // Add to Supabase
-      await addClass({
-        nome: `${newClass.type} - ${newClass.student}`,
-        data_aula: newClass.date,
-        horario_inicio: newClass.time,
-        horario_fim: '23:59', // Default end time
-        tipo: newClass.type
-      });
+      await addClass(classData);
 
-      // Add to local state for immediate UI update
+      // Add to local state for immediate UI update (convert to old format)
       const classItem: ClassItem = {
         id: Date.now(),
-        ...newClass,
+        student: "N/A", // Since we don't have individual student assignments
+        date: classData.data_aula,
+        time: classData.horario_inicio,
+        type: classData.tipo || classData.nome,
         status: "Agendada"
       };
 

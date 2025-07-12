@@ -33,6 +33,9 @@ interface SupabaseGymDataContextType {
   // Plans
   plans: SupabasePlan[];
   plansLoading: boolean;
+  addPlan: (planData: Omit<SupabasePlan, 'id' | 'created_at' | 'updated_at'>) => Promise<SupabasePlan>;
+  updatePlan: (id: string, planData: Partial<SupabasePlan>) => Promise<SupabasePlan>;
+  deletePlan: (id: string) => Promise<void>;
   refetchPlans: () => Promise<void>;
 
   // Classes
@@ -87,6 +90,9 @@ export function SupabaseGymDataProvider({ children }: { children: ReactNode }) {
     // Plans
     plans: plansHook.plans,
     plansLoading: plansHook.loading,
+    addPlan: plansHook.addPlan,
+    updatePlan: plansHook.updatePlan,
+    deletePlan: plansHook.deletePlan,
     refetchPlans: plansHook.refetch,
 
     // Classes

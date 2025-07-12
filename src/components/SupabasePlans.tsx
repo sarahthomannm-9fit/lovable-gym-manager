@@ -14,7 +14,10 @@ export function SupabasePlans() {
     plans: supabasePlans, 
     plansLoading, 
     students: supabaseStudents,
-    studentsLoading
+    studentsLoading,
+    addPlan,
+    updatePlan,
+    deletePlan
   } = useSupabaseGymData();
   
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -33,7 +36,16 @@ export function SupabasePlans() {
   const handleAddPlan = async (newPlan: any) => {
     try {
       console.log('Adding new plan:', newPlan);
-      // For now, just close the dialog since we need to implement plan creation in Supabase
+      
+      const planData = {
+        nome: newPlan.name,
+        preco: newPlan.price,
+        duracao_meses: newPlan.duration,
+        beneficios: newPlan.benefits || [],
+        ativo: true
+      };
+
+      await addPlan(planData);
       setIsAddDialogOpen(false);
     } catch (error) {
       console.error('Failed to add plan:', error);
@@ -43,7 +55,17 @@ export function SupabasePlans() {
   const togglePlanStatus = async (planId: number) => {
     try {
       console.log('Toggling plan status:', planId);
-      // Implementation needed for plan status toggle
+      
+      // Find the original supabase plan
+      const supabasePlan = supabasePlans.find(p => 
+        parseInt(p.id.slice(-8), 16) === planId
+      );
+      
+      if (supabasePlan) {
+        await updatePlan(supabasePlan.id, {
+          ativo: !supabasePlan.ativo
+        });
+      }
     } catch (error) {
       console.error('Failed to toggle plan status:', error);
     }
