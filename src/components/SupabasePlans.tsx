@@ -7,12 +7,13 @@ import { PlansStats } from "./plans/PlansStats";
 import { PlanCard } from "./plans/PlanCard";
 import { useSupabaseGymData } from "@/contexts/SupabaseGymDataContext";
 import { convertSupabasePlanToOld, convertOldPlanToSupabase } from "@/utils/dataConverters";
+import { convertSupabaseStudentToOld } from "@/utils/dataConverters";
 
 export function SupabasePlans() {
   const { 
     plans: supabasePlans, 
     plansLoading, 
-    students,
+    students: supabaseStudents,
     studentsLoading
   } = useSupabaseGymData();
   
@@ -20,10 +21,13 @@ export function SupabasePlans() {
 
   // Convert Supabase plans to old format for UI compatibility
   const plans = supabasePlans.map(convertSupabasePlanToOld);
+  
+  // Convert students to old format and create simplified version for stats
+  const students = supabaseStudents.map(convertSupabaseStudentToOld);
   const studentsForStats = students.map(student => ({
     id: student.id,
-    name: student.nome,
-    plan: supabasePlans.find(p => p.id === student.plano_id)?.nome || 'Sem plano'
+    name: student.name,
+    plan: student.plan
   }));
 
   const handleAddPlan = async (newPlan: any) => {

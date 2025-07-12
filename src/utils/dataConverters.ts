@@ -1,6 +1,7 @@
 
-import { Student } from '@/types/gym';
+import { Student, Plan } from '@/types/gym';
 import { SupabaseStudent } from '@/hooks/useSupabaseStudents';
+import { SupabasePlan } from '@/hooks/useSupabasePlans';
 
 // Convert Supabase student to old format for compatibility
 export function convertSupabaseStudentToOld(supabaseStudent: SupabaseStudent): Student {
@@ -37,5 +38,28 @@ export function convertOldStudentToSupabase(oldStudent: Omit<Student, 'id'>): Om
     forma_pagamento: oldStudent.paymentMethod as 'pix' | 'cartao' | 'dinheiro' | 'transferencia' | undefined,
     contato_emergencia: oldStudent.emergencyContact,
     observacoes_medicas: oldStudent.medicalInfo,
+  };
+}
+
+// Convert Supabase plan to old format for compatibility
+export function convertSupabasePlanToOld(supabasePlan: SupabasePlan): Plan {
+  return {
+    id: parseInt(supabasePlan.id.slice(-8), 16), // Convert UUID to number for compatibility
+    name: supabasePlan.nome,
+    price: supabasePlan.preco,
+    duration: supabasePlan.duracao_meses,
+    benefits: supabasePlan.beneficios || [],
+    active: supabasePlan.ativo ?? true,
+  };
+}
+
+// Convert old plan format to Supabase format
+export function convertOldPlanToSupabase(oldPlan: Omit<Plan, 'id'>): Omit<SupabasePlan, 'id' | 'created_at' | 'updated_at'> {
+  return {
+    nome: oldPlan.name,
+    preco: oldPlan.price,
+    duracao_meses: oldPlan.duration,
+    beneficios: oldPlan.benefits,
+    ativo: oldPlan.active,
   };
 }
