@@ -6,6 +6,7 @@ import { useSupabaseCheckIns, SupabaseCheckIn } from '@/hooks/useSupabaseCheckIn
 import { useSupabasePlans, SupabasePlan } from '@/hooks/useSupabasePlans';
 import { useSupabaseClasses, SupabaseClass } from '@/hooks/useSupabaseClasses';
 import { useSupabasePlanHistory, SupabasePlanHistory } from '@/hooks/useSupabasePlanHistory';
+import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
 
 interface SupabaseGymDataContextType {
   // Students
@@ -104,6 +105,9 @@ export function SupabaseGymDataProvider({ children }: { children: ReactNode }) {
     updatePlanHistory: planHistoryHook.updatePlanHistory,
     refetchPlanHistory: planHistoryHook.refetch,
   };
+
+  // Ativa real-time updates
+  useSupabaseRealtime();
 
   return (
     <SupabaseGymDataContext.Provider value={value}>
