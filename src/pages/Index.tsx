@@ -1,85 +1,80 @@
 
-import { Dashboard } from "@/components/Dashboard";
-import { Classes } from "@/components/Classes";
-import { Students } from "@/components/Students";
-import { Performance } from "@/components/Performance";
-import { Reports } from "@/components/Reports";
-import { Documents } from "@/components/Documents";
-import { Communication } from "@/components/Communication";
-import { Payments } from "@/components/Payments";
-import { Feedback } from "@/components/Feedback";
-import { CheckIn } from "@/components/CheckIn";
-import { Workouts } from "@/components/Workouts";
-import { Plans } from "@/components/Plans";
-import { Equipment } from "@/components/Equipment";
-import { ResponsiveLayout } from "@/components/layout/ResponsiveLayout";
-import { useState } from "react";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ArrowRight, Users, Calendar, CreditCard, BarChart3 } from "lucide-react";
 
 export default function Index() {
-  const [activeView, setActiveView] = useState("dashboard");
+  const navigate = useNavigate();
 
-  const getViewConfig = (view: string) => {
-    const configs = {
-      dashboard: { title: "Dashboard", subtitle: "Visão geral do seu negócio" },
-      checkin: { title: "Check-in", subtitle: "Controle de acesso à academia" },
-      classes: { title: "Aulas", subtitle: "Gerencie suas aulas e horários" },
-      students: { title: "Alunos", subtitle: "Gerencie seus alunos" },
-      workouts: { title: "Treinos", subtitle: "Sistema de treinos e exercícios" },
-      performance: { title: "Performance", subtitle: "Acompanhe o progresso dos alunos" },
-      plans: { title: "Planos", subtitle: "Gerencie planos e mensalidades" },
-      equipment: { title: "Equipamentos", subtitle: "Controle e manutenção dos equipamentos" },
-      reports: { title: "Relatórios", subtitle: "Analytics e insights" },
-      documents: { title: "Documentos", subtitle: "Gerencie documentos importantes" },
-      communication: { title: "Comunicação", subtitle: "Messages e notificações" },
-      payments: { title: "Pagamentos", subtitle: "Controle financeiro" },
-      feedback: { title: "Feedback", subtitle: "Avaliações dos alunos" },
-    };
-    return configs[view as keyof typeof configs] || { title: "Dashboard", subtitle: "Visão geral" };
-  };
+  // Redirecionar automaticamente para o painel
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      navigate('/painel');
+    }, 3000);
 
-  const renderContent = () => {
-    switch (activeView) {
-      case "dashboard":
-        return <Dashboard />;
-      case "checkin":
-        return <CheckIn />;
-      case "classes":
-        return <Classes />;
-      case "students":
-        return <Students />;
-      case "workouts":
-        return <Workouts />;
-      case "performance":
-        return <Performance />;
-      case "plans":
-        return <Plans />;
-      case "equipment":
-        return <Equipment />;
-      case "reports":
-        return <Reports />;
-      case "documents":
-        return <Documents />;
-      case "communication":
-        return <Communication />;
-      case "payments":
-        return <Payments />;
-      case "feedback":
-        return <Feedback />;
-      default:
-        return <Dashboard />;
-    }
-  };
-
-  const viewConfig = getViewConfig(activeView);
+    return () => clearTimeout(timer);
+  }, [navigate]);
 
   return (
-    <ResponsiveLayout
-      activeView={activeView}
-      onViewChange={setActiveView}
-      title={viewConfig.title}
-      subtitle={viewConfig.subtitle}
-    >
-      {renderContent()}
-    </ResponsiveLayout>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-16">
+        <div className="text-center space-y-8">
+          <div className="space-y-4">
+            <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
+              FitManage Pro
+            </h1>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Sistema completo de gestão para academias. Gerencie alunos, planos, treinos e muito mais.
+            </p>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 max-w-4xl mx-auto">
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/alunos')}>
+              <CardHeader className="text-center">
+                <Users className="h-8 w-8 mx-auto mb-2 text-blue-600" />
+                <CardTitle className="text-lg">Alunos</CardTitle>
+                <CardDescription>Gerencie cadastros e informações</CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/planos')}>
+              <CardHeader className="text-center">
+                <CreditCard className="h-8 w-8 mx-auto mb-2 text-green-600" />
+                <CardTitle className="text-lg">Planos</CardTitle>
+                <CardDescription>Configure mensalidades e pacotes</CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/aulas')}>
+              <CardHeader className="text-center">
+                <Calendar className="h-8 w-8 mx-auto mb-2 text-purple-600" />
+                <CardTitle className="text-lg">Aulas</CardTitle>
+                <CardDescription>Organize horários e atividades</CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/relatorios')}>
+              <CardHeader className="text-center">
+                <BarChart3 className="h-8 w-8 mx-auto mb-2 text-orange-600" />
+                <CardTitle className="text-lg">Relatórios</CardTitle>
+                <CardDescription>Análises financeiras e insights</CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
+
+          <div className="space-y-4">
+            <Button size="lg" onClick={() => navigate('/painel')} className="text-lg px-8">
+              Acessar Sistema
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+            <p className="text-sm text-muted-foreground">
+              Redirecionamento automático em 3 segundos...
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

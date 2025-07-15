@@ -31,6 +31,7 @@ export type Database = {
           plano_id: string | null
           status: string | null
           telefone: string | null
+          tipo: string | null
           updated_at: string | null
           valor_mensalidade: number | null
         }
@@ -50,6 +51,7 @@ export type Database = {
           plano_id?: string | null
           status?: string | null
           telefone?: string | null
+          tipo?: string | null
           updated_at?: string | null
           valor_mensalidade?: number | null
         }
@@ -69,12 +71,71 @@ export type Database = {
           plano_id?: string | null
           status?: string | null
           telefone?: string | null
+          tipo?: string | null
           updated_at?: string | null
           valor_mensalidade?: number | null
         }
         Relationships: [
           {
             foreignKeyName: "alunos_plano_id_fkey"
+            columns: ["plano_id"]
+            isOneToOne: false
+            referencedRelation: "planos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      alunos_planos: {
+        Row: {
+          aluno_id: string | null
+          created_at: string | null
+          data_fim: string | null
+          data_inicio: string | null
+          forma_pagamento_id: string | null
+          id: string
+          plano_id: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          aluno_id?: string | null
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio?: string | null
+          forma_pagamento_id?: string | null
+          id?: string
+          plano_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          aluno_id?: string | null
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio?: string | null
+          forma_pagamento_id?: string | null
+          id?: string
+          plano_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alunos_planos_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alunos_planos_forma_pagamento_id_fkey"
+            columns: ["forma_pagamento_id"]
+            isOneToOne: false
+            referencedRelation: "formas_pagamento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alunos_planos_plano_id_fkey"
             columns: ["plano_id"]
             isOneToOne: false
             referencedRelation: "planos"
@@ -195,6 +256,24 @@ export type Database = {
           },
         ]
       }
+      formas_pagamento: {
+        Row: {
+          created_at: string | null
+          descricao: string
+          id: string
+        }
+        Insert: {
+          created_at?: string | null
+          descricao: string
+          id?: string
+        }
+        Update: {
+          created_at?: string | null
+          descricao?: string
+          id?: string
+        }
+        Relationships: []
+      }
       historico_planos: {
         Row: {
           aluno_id: string | null
@@ -298,33 +377,83 @@ export type Database = {
           ativo: boolean | null
           beneficios: string[] | null
           created_at: string | null
+          duracao_dias: number | null
           duracao_meses: number
           id: string
           nome: string
           preco: number
+          quantidade_aulas: number | null
+          tipo: string | null
           updated_at: string | null
+          valor: number | null
         }
         Insert: {
           ativo?: boolean | null
           beneficios?: string[] | null
           created_at?: string | null
+          duracao_dias?: number | null
           duracao_meses: number
           id?: string
           nome: string
           preco: number
+          quantidade_aulas?: number | null
+          tipo?: string | null
           updated_at?: string | null
+          valor?: number | null
         }
         Update: {
           ativo?: boolean | null
           beneficios?: string[] | null
           created_at?: string | null
+          duracao_dias?: number | null
           duracao_meses?: number
           id?: string
           nome?: string
           preco?: number
+          quantidade_aulas?: number | null
+          tipo?: string | null
           updated_at?: string | null
+          valor?: number | null
         }
         Relationships: []
+      }
+      treinos: {
+        Row: {
+          aluno_id: string | null
+          created_at: string | null
+          data_fim: string | null
+          data_inicio: string | null
+          descricao: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          aluno_id?: string | null
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio?: string | null
+          descricao?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          aluno_id?: string | null
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio?: string | null
+          descricao?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "treinos_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       usuarios: {
         Row: {
@@ -361,7 +490,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      relatorio_receitas_por_plano: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          nome_plano: string
+          forma_pagamento: string
+          total_recebido: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

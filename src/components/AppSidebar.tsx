@@ -15,17 +15,12 @@ import {
   LayoutDashboard,
   Calendar,
   Users,
-  TrendingUp,
-  BarChart3,
-  FileText,
-  MessageCircle,
   CreditCard,
-  MessageSquare,
   Dumbbell,
-  UserCheck,
-  Settings,
-  Wrench,
+  BarChart3,
+  Home,
 } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 
 interface AppSidebarProps {
   activeView: string;
@@ -33,89 +28,52 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ activeView, onViewChange }: AppSidebarProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const menuItems = [
     {
       category: "Principal",
       items: [
         {
-          title: "Dashboard",
-          icon: LayoutDashboard,
-          key: "dashboard",
-        },
-        {
-          title: "Check-in",
-          icon: UserCheck,
-          key: "checkin",
-        },
-        {
-          title: "Aulas",
-          icon: Calendar,
-          key: "classes",
+          title: "Painel",
+          icon: Home,
+          key: "painel",
+          path: "/painel",
         },
         {
           title: "Alunos",
           icon: Users,
-          key: "students",
+          key: "alunos",
+          path: "/alunos",
+        },
+        {
+          title: "Planos",
+          icon: CreditCard,
+          key: "planos",
+          path: "/planos",
+        },
+        {
+          title: "Aulas",
+          icon: Calendar,
+          key: "aulas",
+          path: "/aulas",
         },
       ],
     },
     {
-      category: "Treinos & Performance",
+      category: "Treinos & Relatórios",
       items: [
         {
           title: "Treinos",
           icon: Dumbbell,
-          key: "workouts",
+          key: "treinos",
+          path: "/treinos",
         },
-        {
-          title: "Performance",
-          icon: TrendingUp,
-          key: "performance",
-        },
-      ],
-    },
-    {
-      category: "Gestão",
-      items: [
-        {
-          title: "Planos",
-          icon: Settings,
-          key: "plans",
-        },
-        {
-          title: "Equipamentos",
-          icon: Wrench,
-          key: "equipment",
-        },
-        {
-          title: "Documentos",
-          icon: FileText,
-          key: "documents",
-        },
-        {
-          title: "Comunicação",
-          icon: MessageCircle,
-          key: "communication",
-        },
-        {
-          title: "Pagamentos",
-          icon: CreditCard,
-          key: "payments",
-        },
-      ],
-    },
-    {
-      category: "Analytics",
-      items: [
         {
           title: "Relatórios",
           icon: BarChart3,
-          key: "reports",
-        },
-        {
-          title: "Feedback",
-          icon: MessageSquare,
-          key: "feedback",
+          key: "relatorios",
+          path: "/relatorios",
         },
       ],
     },
@@ -142,8 +100,8 @@ export function AppSidebar({ activeView, onViewChange }: AppSidebarProps) {
                 {category.items.map((item) => (
                   <SidebarMenuItem key={item.key}>
                     <SidebarMenuButton
-                      onClick={() => onViewChange(item.key)}
-                      isActive={activeView === item.key}
+                      onClick={() => navigate(item.path)}
+                      isActive={location.pathname === item.path}
                       className="w-full justify-start"
                     >
                       <item.icon className="mr-2 h-4 w-4" />
