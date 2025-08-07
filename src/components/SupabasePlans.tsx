@@ -40,6 +40,7 @@ export function SupabasePlans() {
       const planData = {
         nome: newPlan.name,
         preco: newPlan.price,
+        valor: newPlan.price,
         duracao_meses: newPlan.duration,
         beneficios: newPlan.benefits || [],
         ativo: true

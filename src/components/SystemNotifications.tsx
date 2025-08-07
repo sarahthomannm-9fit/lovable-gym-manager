@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -82,7 +81,7 @@ export function SystemNotifications() {
     const studentsWithoutActivePlan = students.filter(student => 
       !planHistory.some(history => 
         history.aluno_id === student.id && 
-        history.ativo === true &&
+        history.status === 'ativo' &&
         (!history.data_fim || new Date(history.data_fim) > new Date())
       )
     );
@@ -117,7 +116,7 @@ export function SystemNotifications() {
 
     // Verificar planos vencendo em 30 dias
     const expiringPlans = planHistory.filter(history => {
-      if (!history.ativo || !history.data_fim) return false;
+      if (history.status !== 'ativo' || !history.data_fim) return false;
       const endDate = new Date(history.data_fim);
       const today = new Date();
       const diffDays = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));

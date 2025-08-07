@@ -7,8 +7,8 @@ export interface SupabasePlan {
   id: string;
   nome: string;
   tipo?: 'mensal' | 'avulso' | 'pacote';
-  valor: number;
-  preco?: number;
+  valor?: number;
+  preco: number;
   duracao_dias?: number;
   duracao_meses?: number;
   quantidade_aulas?: number;
@@ -29,7 +29,7 @@ export function useSupabasePlans() {
       const { data, error } = await supabase
         .from('planos')
         .select('*')
-        .order('valor', { ascending: true });
+        .order('preco', { ascending: true });
 
       if (error) throw error;
       

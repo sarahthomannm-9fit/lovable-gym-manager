@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useSupabaseGymData } from '@/contexts/SupabaseGymDataContext';
 
@@ -71,7 +70,7 @@ export function useGymDashboardMetrics() {
     const activeStudents = students.filter(student => 
       planHistory.some(history => 
         history.aluno_id === student.id && 
-        history.ativo === true &&
+        history.status === 'ativo' &&
         (!history.data_fim || new Date(history.data_fim) > new Date())
       )
     ).length;
@@ -152,7 +151,7 @@ export function useGymDashboardMetrics() {
     const planCounts = new Map<string, number>();
     
     planHistory
-      .filter(history => history.ativo === true)
+      .filter(history => history.status === 'ativo')
       .forEach(history => {
         const plan = plans.find(p => p.id === history.plano_id);
         if (plan) {
