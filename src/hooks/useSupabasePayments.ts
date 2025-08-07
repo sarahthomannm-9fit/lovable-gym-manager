@@ -7,9 +7,12 @@ export interface SupabasePayment {
   id: string;
   aluno_id: string;
   valor: number;
+  data_vencimento: string;
   data_pagamento?: string;
   status?: string;
-  forma_pagamento_id?: string;
+  metodo_pagamento?: string;
+  referencia_mes: string;
+  observacoes?: string;
   created_at?: string;
   updated_at?: string;
 }

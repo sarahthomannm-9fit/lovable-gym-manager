@@ -10,11 +10,11 @@ export function convertSupabaseStudentToOld(supabaseStudent: SupabaseStudent): S
     email: supabaseStudent.email || '',
     phone: supabaseStudent.telefone || '',
     plan: supabaseStudent.tipo || 'presencial',
-    registrationDate: supabaseStudent.created_at ? new Date(supabaseStudent.created_at).toISOString().split('T')[0] : '',
+    registrationDate: supabaseStudent.data_matricula || (supabaseStudent.created_at ? new Date(supabaseStudent.created_at).toISOString().split('T')[0] : ''),
     status: 'active', // Default status since simplified schema doesn't have status
-    monthlyPayment: 0, // Default value since simplified schema doesn't have payment info
+    monthlyPayment: supabaseStudent.valor_mensalidade || 0,
     paymentStatus: 'up-to-date', // Default status
-    startDate: supabaseStudent.created_at ? new Date(supabaseStudent.created_at).toISOString().split('T')[0] : '',
+    startDate: supabaseStudent.data_matricula || (supabaseStudent.created_at ? new Date(supabaseStudent.created_at).toISOString().split('T')[0] : ''),
   };
 }
 
@@ -31,10 +31,10 @@ export function convertSupabasePlanToOld(supabasePlan: SupabasePlan): Plan {
   return {
     id: parseInt(supabasePlan.id.slice(-8), 16), // Convert UUID to number for UI compatibility
     name: supabasePlan.nome,
-    price: Number(supabasePlan.valor),
+    price: Number(supabasePlan.valor || supabasePlan.preco || 0),
     duration: Math.round((supabasePlan.duracao_dias || 30) / 30), // Convert days to months
-    benefits: [], // Default empty benefits since simplified schema doesn't store benefits
-    active: true, // Default active status
+    benefits: supabasePlan.beneficios || [], // Use beneficios array if available
+    active: supabasePlan.ativo ?? true, // Use ativo if available
   };
 }
 
@@ -45,5 +45,7 @@ export function convertOldPlanToSupabase(oldPlan: Partial<Plan>): Partial<Supaba
     duracao_dias: (oldPlan.duration || 1) * 30, // Convert months to days
     tipo: 'mensal', // Default type
     quantidade_aulas: 0, // Default value
+    beneficios: oldPlan.benefits || [],
+    ativo: oldPlan.active ?? true,
   };
 }

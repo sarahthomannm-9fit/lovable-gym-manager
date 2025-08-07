@@ -6,9 +6,20 @@ import { useToast } from '@/hooks/use-toast';
 export interface SupabaseStudent {
   id: string;
   nome: string;
-  email?: string;
+  email: string;
   telefone?: string;
+  endereco?: string;
+  data_nascimento?: string;
   tipo?: 'presencial' | 'consultoria';
+  status?: string;
+  plano_id?: string;
+  data_matricula?: string;
+  valor_mensalidade?: number;
+  forma_pagamento?: string;
+  contato_emergencia?: string;
+  observacoes_medicas?: string;
+  aulas_disponiveis?: number;
+  aulas_por_mes?: number;
   created_at?: string;
   updated_at?: string;
 }

@@ -8,8 +8,12 @@ export interface SupabasePlan {
   nome: string;
   tipo?: 'mensal' | 'avulso' | 'pacote';
   valor: number;
+  preco?: number;
   duracao_dias?: number;
+  duracao_meses?: number;
   quantidade_aulas?: number;
+  beneficios?: string[];
+  ativo?: boolean;
   created_at?: string;
   updated_at?: string;
 }

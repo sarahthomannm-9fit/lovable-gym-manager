@@ -5,10 +5,16 @@ import { useToast } from '@/hooks/use-toast';
 
 export interface SupabaseClass {
   id: string;
-  aluno_id?: string;
+  nome: string;
+  tipo?: string;
+  descricao?: string;
+  professor_id?: string;
+  data_aula: string;
+  horario_inicio: string;
+  horario_fim: string;
+  capacidade_maxima?: number;
   plano_id?: string;
-  data?: string;
-  status?: string;
+  dia_semana?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -24,7 +30,7 @@ export function useSupabaseClasses() {
       const { data, error } = await supabase
         .from('aulas')
         .select('*')
-        .order('data', { ascending: true });
+        .order('data_aula', { ascending: true });
 
       if (error) throw error;
       setClasses(data || []);
