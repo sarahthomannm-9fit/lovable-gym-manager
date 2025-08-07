@@ -55,7 +55,7 @@ export function useSupabasePlans() {
     try {
       const { data, error } = await supabase
         .from('planos')
-        .insert([planData])
+        .insert(planData)
         .select()
         .single();
 

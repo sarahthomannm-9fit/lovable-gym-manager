@@ -31,7 +31,7 @@ export function convertSupabasePlanToOld(supabasePlan: SupabasePlan): Plan {
   return {
     id: parseInt(supabasePlan.id.slice(-8), 16), // Convert UUID to number for UI compatibility
     name: supabasePlan.nome,
-    price: Number(supabasePlan.valor || supabasePlan.preco || 0),
+    price: Number(supabasePlan.preco), // Use preco as the primary price field
     duration: Math.round((supabasePlan.duracao_dias || 30) / 30), // Convert days to months
     benefits: supabasePlan.beneficios || [], // Use beneficios array if available
     active: supabasePlan.ativo ?? true, // Use ativo if available
@@ -41,7 +41,8 @@ export function convertSupabasePlanToOld(supabasePlan: SupabasePlan): Plan {
 export function convertOldPlanToSupabase(oldPlan: Partial<Plan>): Partial<SupabasePlan> {
   return {
     nome: oldPlan.name || '',
-    valor: oldPlan.price || 0,
+    preco: oldPlan.price || 0, // Use preco as the primary price field
+    valor: oldPlan.price || 0, // Also set valor for compatibility
     duracao_dias: (oldPlan.duration || 1) * 30, // Convert months to days
     tipo: 'mensal', // Default type
     quantidade_aulas: 0, // Default value

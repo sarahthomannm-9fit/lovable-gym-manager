@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useSupabaseStudents, SupabaseStudent } from '@/hooks/useSupabaseStudents';
 import { useSupabasePayments, SupabasePayment } from '@/hooks/useSupabasePayments';
@@ -6,7 +5,7 @@ import { useSupabaseCheckIns, SupabaseCheckIn } from '@/hooks/useSupabaseCheckIn
 import { useSupabasePlans, SupabasePlan } from '@/hooks/useSupabasePlans';
 import { useSupabaseClasses, SupabaseClass } from '@/hooks/useSupabaseClasses';
 import { useSupabasePlanHistory, SupabasePlanHistory } from '@/hooks/useSupabasePlanHistory';
-import { useActivityLogger } from '@/hooks/useActivityLogger';
+import { useActivityLoggerInternal } from '@/hooks/useActivityLoggerInternal';
 import { useBusinessRules } from '@/hooks/useBusinessRules';
 
 interface SupabaseGymDataContextType {
@@ -80,7 +79,7 @@ export function SupabaseGymDataProvider({ children }: { children: ReactNode }) {
   const plansHook = useSupabasePlans();
   const classesHook = useSupabaseClasses();
   const planHistoryHook = useSupabasePlanHistory();
-  const activityLogger = useActivityLogger();
+  const activityLogger = useActivityLoggerInternal();
   const businessRules = useBusinessRules();
 
   // Wrap the original functions to include logging and validation
