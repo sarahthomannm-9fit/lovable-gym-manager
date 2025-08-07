@@ -8,12 +8,19 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar, Plus, Clock, DollarSign, CheckCircle } from "lucide-react";
+import { Calendar, Plus, Clock, DollarSign, CheckCircle, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useSupabaseGymData } from "@/contexts/SupabaseGymDataContext";
+import { PackageTypeSelector } from "./PackageTypeSelector";
+import { StudentClassReport } from "./StudentClassReport";
+import { PaymentReminder } from "./PaymentReminder";
 
 interface ScheduleBlock {
   id: number;
+  studentId: string;
   student: string;
+  studentPhone: string;
+  studentEmail: string;
   startDate: string;
   endDate: string;
   days: string[];
@@ -22,13 +29,19 @@ interface ScheduleBlock {
   totalClasses: number;
   totalValue: number;
   status: "Agendado" | "Confirmado" | "Pago";
+  clientType: 'recorrente' | 'variavel';
+  includedInBilling: boolean;
 }
 
 export function MultiDayScheduler() {
+  const { students } = useSupabaseGymData();
   const [schedules, setSchedules] = useState<ScheduleBlock[]>([
     {
       id: 1,
+      studentId: "1",
       student: "João Silva",
+      studentPhone: "(11) 99999-9999",
+      studentEmail: "joao@email.com",
       startDate: "2024-06-01",
       endDate: "2024-06-30",
       days: ["Segunda", "Quarta", "Sexta"],
@@ -36,18 +49,22 @@ export function MultiDayScheduler() {
       type: "Musculação",
       totalClasses: 13,
       totalValue: 650,
-      status: "Confirmado"
+      status: "Confirmado",
+      clientType: "recorrente",
+      includedInBilling: true
     }
   ]);
 
   const [newSchedule, setNewSchedule] = useState({
+    studentId: "",
     student: "",
     startDate: "",
     endDate: "",
     days: [] as string[],
     time: "",
     type: "",
-    pricePerClass: 50
+    pricePerClass: 50,
+    clientType: 'recorrente' as 'recorrente' | 'variavel'
   });
 
   const { toast } = useToast();
@@ -89,12 +106,25 @@ export function MultiDayScheduler() {
       return;
     }
 
+    const selectedStudent = students.find(s => s.nome === newSchedule.student);
+    if (!selectedStudent) {
+      toast({
+        title: "Erro",
+        description: "Aluno não encontrado",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const totalClasses = calculateTotalClasses();
     const totalValue = totalClasses * newSchedule.pricePerClass;
 
     const schedule: ScheduleBlock = {
       id: schedules.length + 1,
+      studentId: selectedStudent.id,
       student: newSchedule.student,
+      studentPhone: selectedStudent.telefone || "",
+      studentEmail: selectedStudent.email || "",
       startDate: newSchedule.startDate,
       endDate: newSchedule.endDate,
       days: newSchedule.days,
@@ -102,24 +132,37 @@ export function MultiDayScheduler() {
       type: newSchedule.type,
       totalClasses,
       totalValue,
-      status: "Agendado"
+      status: "Agendado",
+      clientType: newSchedule.clientType,
+      includedInBilling: newSchedule.clientType === 'recorrente'
     };
 
     setSchedules([...schedules, schedule]);
     setNewSchedule({
+      studentId: "",
       student: "",
       startDate: "",
       endDate: "",
       days: [],
       time: "",
       type: "",
-      pricePerClass: 50
+      pricePerClass: 50,
+      clientType: 'recorrente'
     });
 
     toast({
       title: "Sucesso",
       description: `Agendamento criado: ${totalClasses} aulas por R$ ${totalValue}`,
     });
+  };
+
+  const handleStudentChange = (studentName: string) => {
+    const selectedStudent = students.find(s => s.nome === studentName);
+    setNewSchedule(prev => ({
+      ...prev,
+      student: studentName,
+      studentId: selectedStudent?.id || ""
+    }));
   };
 
   const getStatusColor = (status: string) => {
@@ -133,6 +176,19 @@ export function MultiDayScheduler() {
       default:
         return "bg-gray-100 text-gray-800";
     }
+  };
+
+  const getClientTypeColor = (type: string) => {
+    return type === 'recorrente' ? 
+      "bg-green-100 text-green-800" : 
+      "bg-orange-100 text-orange-800";
+  };
+
+  const handlePackageDetails = (schedule: ScheduleBlock) => {
+    toast({
+      title: "Detalhes do Pacote",
+      description: `Pacote de ${schedule.totalClasses} aulas para ${schedule.student}`,
+    });
   };
 
   return (
@@ -160,15 +216,16 @@ export function MultiDayScheduler() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="student">Aluno *</Label>
-                  <Select value={newSchedule.student} onValueChange={(value) => setNewSchedule({...newSchedule, student: value})}>
+                  <Select value={newSchedule.student} onValueChange={handleStudentChange}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o aluno" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="João Silva">João Silva</SelectItem>
-                      <SelectItem value="Maria Santos">Maria Santos</SelectItem>
-                      <SelectItem value="Pedro Costa">Pedro Costa</SelectItem>
-                      <SelectItem value="Ana Paula">Ana Paula</SelectItem>
+                      {students.map((student) => (
+                        <SelectItem key={student.id} value={student.nome}>
+                          {student.nome}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -188,6 +245,11 @@ export function MultiDayScheduler() {
                   </Select>
                 </div>
               </div>
+
+              <PackageTypeSelector 
+                selectedType={newSchedule.clientType}
+                onTypeChange={(type) => setNewSchedule({...newSchedule, clientType: type})}
+              />
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -256,6 +318,8 @@ export function MultiDayScheduler() {
                     <p><strong>Total de Aulas:</strong> {calculateTotalClasses()}</p>
                     <p><strong>Valor Total:</strong> R$ {(calculateTotalClasses() * newSchedule.pricePerClass).toFixed(2)}</p>
                     <p><strong>Dias:</strong> {newSchedule.days.join(", ")}</p>
+                    <p><strong>Tipo de Cliente:</strong> {newSchedule.clientType === 'recorrente' ? 'Recorrente' : 'Variável'}</p>
+                    <p><strong>Faturamento:</strong> {newSchedule.clientType === 'recorrente' ? 'Imediato' : 'Após confirmação'}</p>
                   </div>
                 </div>
               )}
@@ -274,9 +338,14 @@ export function MultiDayScheduler() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg font-semibold">{schedule.student}</CardTitle>
-                <Badge className={getStatusColor(schedule.status)}>
-                  {schedule.status}
-                </Badge>
+                <div className="flex flex-col space-y-1">
+                  <Badge className={getStatusColor(schedule.status)}>
+                    {schedule.status}
+                  </Badge>
+                  <Badge className={getClientTypeColor(schedule.clientType)}>
+                    {schedule.clientType === 'recorrente' ? 'Recorrente' : 'Variável'}
+                  </Badge>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -303,14 +372,29 @@ export function MultiDayScheduler() {
                     <span className="text-sm font-medium">Total de Aulas:</span>
                     <span className="font-bold">{schedule.totalClasses}</span>
                   </div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between mb-1">
                     <span className="text-sm font-medium flex items-center">
                       <DollarSign className="w-3 h-3 mr-1" />
                       Valor Total:
                     </span>
                     <span className="font-bold text-green-600">R$ {schedule.totalValue}</span>
                   </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-500">No faturamento:</span>
+                    <span className={`text-xs font-medium ${schedule.includedInBilling ? 'text-green-600' : 'text-orange-600'}`}>
+                      {schedule.includedInBilling ? 'Sim' : 'Aguardando confirmação'}
+                    </span>
+                  </div>
                 </div>
+
+                <PaymentReminder 
+                  studentId={schedule.studentId}
+                  studentName={schedule.student}
+                  studentPhone={schedule.studentPhone}
+                  studentEmail={schedule.studentEmail}
+                  planExpirationDate={schedule.endDate}
+                  planValue={schedule.totalValue}
+                />
                 
                 <div className="flex space-x-2 mt-4">
                   {schedule.status === "Agendado" && (
@@ -319,7 +403,20 @@ export function MultiDayScheduler() {
                       Confirmar
                     </Button>
                   )}
-                  <Button size="sm" variant="outline" className="text-blue-600 border-blue-600 hover:bg-blue-50">
+                  
+                  <StudentClassReport 
+                    studentId={schedule.studentId}
+                    studentName={schedule.student}
+                    packageData={schedule}
+                  />
+                  
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                    onClick={() => handlePackageDetails(schedule)}
+                  >
+                    <Eye className="w-3 h-3 mr-1" />
                     Detalhes
                   </Button>
                 </div>

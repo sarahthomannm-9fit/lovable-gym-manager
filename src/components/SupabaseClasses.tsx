@@ -2,12 +2,13 @@
 import { useState } from "react";
 import { MultiDayScheduler } from "./MultiDayScheduler";
 import { DailyClassView } from "./DailyClassView";
+import { ClassCalendar } from "./ClassCalendar";
 import { AddClassDialog } from "./AddClassDialog";
 import { Button } from "@/components/ui/button";
-import { Grid, List } from "lucide-react";
+import { Grid, List, Calendar } from "lucide-react";
 import { useSupabaseGymData } from "@/contexts/SupabaseGymDataContext";
 
-type ViewType = "daily" | "packages";
+type ViewType = "calendar" | "daily" | "packages";
 
 interface ClassItem {
   id: number;
@@ -20,7 +21,7 @@ interface ClassItem {
 
 export function SupabaseClasses() {
   const { classes, addClass, students } = useSupabaseGymData();
-  const [view, setView] = useState<ViewType>("daily");
+  const [view, setView] = useState<ViewType>("calendar");
 
   // Convert Supabase classes to local format
   const [localClasses, setLocalClasses] = useState<ClassItem[]>([]);
@@ -59,6 +60,8 @@ export function SupabaseClasses() {
 
   const renderContent = () => {
     switch (view) {
+      case "calendar":
+        return <ClassCalendar />;
       case "packages":
         return <MultiDayScheduler />;
       case "daily":
@@ -85,6 +88,14 @@ export function SupabaseClasses() {
         
         <div className="flex space-x-2">
           <AddClassDialog onAddClass={handleAddClass} />
+          <Button
+            variant={view === "calendar" ? "default" : "outline"}
+            onClick={() => setView("calendar")}
+            className="flex items-center space-x-2"
+          >
+            <Calendar className="w-4 h-4" />
+            <span>Calendário</span>
+          </Button>
           <Button
             variant={view === "daily" ? "default" : "outline"}
             onClick={() => setView("daily")}
