@@ -7,12 +7,9 @@ export interface SupabasePayment {
   id: string;
   aluno_id: string;
   valor: number;
-  data_vencimento: string;
   data_pagamento?: string;
-  status: 'pendente' | 'pago' | 'atrasado' | 'cancelado';
-  metodo_pagamento?: 'pix' | 'cartao' | 'dinheiro' | 'transferencia';
-  referencia_mes: string;
-  observacoes?: string;
+  status?: string;
+  forma_pagamento_id?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -31,15 +28,7 @@ export function useSupabasePayments() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
-      // Cast the data to our expected types
-      const typedPayments = (data || []).map(payment => ({
-        ...payment,
-        status: payment.status as 'pendente' | 'pago' | 'atrasado' | 'cancelado',
-        metodo_pagamento: payment.metodo_pagamento as 'pix' | 'cartao' | 'dinheiro' | 'transferencia' | undefined,
-      })) as SupabasePayment[];
-      
-      setPayments(typedPayments);
+      setPayments(data || []);
     } catch (error) {
       console.error('Error fetching payments:', error);
       toast({
@@ -62,20 +51,13 @@ export function useSupabasePayments() {
 
       if (error) throw error;
       
-      // Cast the returned data to our expected type
-      const typedPayment = {
-        ...data,
-        status: data.status as 'pendente' | 'pago' | 'atrasado' | 'cancelado',
-        metodo_pagamento: data.metodo_pagamento as 'pix' | 'cartao' | 'dinheiro' | 'transferencia' | undefined,
-      } as SupabasePayment;
-      
-      setPayments(prev => [typedPayment, ...prev]);
+      setPayments(prev => [data, ...prev]);
       toast({
         title: "Sucesso",
         description: "Pagamento adicionado com sucesso!",
       });
       
-      return typedPayment;
+      return data;
     } catch (error) {
       console.error('Error adding payment:', error);
       toast({
@@ -98,20 +80,13 @@ export function useSupabasePayments() {
 
       if (error) throw error;
       
-      // Cast the returned data to our expected type
-      const typedPayment = {
-        ...data,
-        status: data.status as 'pendente' | 'pago' | 'atrasado' | 'cancelado',
-        metodo_pagamento: data.metodo_pagamento as 'pix' | 'cartao' | 'dinheiro' | 'transferencia' | undefined,
-      } as SupabasePayment;
-      
-      setPayments(prev => prev.map(p => p.id === id ? typedPayment : p));
+      setPayments(prev => prev.map(p => p.id === id ? data : p));
       toast({
         title: "Sucesso",
         description: "Pagamento atualizado com sucesso!",
       });
       
-      return typedPayment;
+      return data;
     } catch (error) {
       console.error('Error updating payment:', error);
       toast({

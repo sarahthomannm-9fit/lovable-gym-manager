@@ -6,19 +6,9 @@ import { useToast } from '@/hooks/use-toast';
 export interface SupabaseStudent {
   id: string;
   nome: string;
-  email: string;
+  email?: string;
   telefone?: string;
-  data_nascimento?: string;
-  endereco?: string;
-  plano_id?: string;
-  data_matricula?: string;
-  status: 'ativo' | 'inativo' | 'suspenso';
-  valor_mensalidade?: number;
-  forma_pagamento?: 'pix' | 'cartao' | 'dinheiro' | 'transferencia';
-  contato_emergencia?: string;
-  observacoes_medicas?: string;
-  aulas_disponiveis?: number;
-  aulas_por_mes?: number;
+  tipo?: 'presencial' | 'consultoria';
   created_at?: string;
   updated_at?: string;
 }
@@ -38,11 +28,9 @@ export function useSupabaseStudents() {
 
       if (error) throw error;
       
-      // Cast the data to our expected types
       const typedStudents = (data || []).map(student => ({
         ...student,
-        status: student.status as 'ativo' | 'inativo' | 'suspenso',
-        forma_pagamento: student.forma_pagamento as 'pix' | 'cartao' | 'dinheiro' | 'transferencia' | undefined,
+        tipo: student.tipo as 'presencial' | 'consultoria' | undefined,
       })) as SupabaseStudent[];
       
       setStudents(typedStudents);
@@ -68,11 +56,9 @@ export function useSupabaseStudents() {
 
       if (error) throw error;
       
-      // Cast the returned data to our expected type
       const typedStudent = {
         ...data,
-        status: data.status as 'ativo' | 'inativo' | 'suspenso',
-        forma_pagamento: data.forma_pagamento as 'pix' | 'cartao' | 'dinheiro' | 'transferencia' | undefined,
+        tipo: data.tipo as 'presencial' | 'consultoria' | undefined,
       } as SupabaseStudent;
       
       setStudents(prev => [typedStudent, ...prev]);
@@ -104,11 +90,9 @@ export function useSupabaseStudents() {
 
       if (error) throw error;
       
-      // Cast the returned data to our expected type
       const typedStudent = {
         ...data,
-        status: data.status as 'ativo' | 'inativo' | 'suspenso',
-        forma_pagamento: data.forma_pagamento as 'pix' | 'cartao' | 'dinheiro' | 'transferencia' | undefined,
+        tipo: data.tipo as 'presencial' | 'consultoria' | undefined,
       } as SupabaseStudent;
       
       setStudents(prev => prev.map(s => s.id === id ? typedStudent : s));

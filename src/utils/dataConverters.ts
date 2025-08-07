@@ -3,63 +3,47 @@ import { Student, Plan } from '@/types/gym';
 import { SupabaseStudent } from '@/hooks/useSupabaseStudents';
 import { SupabasePlan } from '@/hooks/useSupabasePlans';
 
-// Convert Supabase student to old format for compatibility
 export function convertSupabaseStudentToOld(supabaseStudent: SupabaseStudent): Student {
   return {
-    id: parseInt(supabaseStudent.id.slice(-8), 16), // Convert UUID to number for compatibility
+    id: parseInt(supabaseStudent.id.slice(-8), 16), // Convert UUID to number for UI compatibility
     name: supabaseStudent.nome,
-    email: supabaseStudent.email,
+    email: supabaseStudent.email || '',
     phone: supabaseStudent.telefone || '',
-    plan: 'Mensal', // Default plan for now
-    registrationDate: supabaseStudent.data_matricula || new Date().toISOString().split('T')[0],
-    status: supabaseStudent.status as 'active' | 'inactive' | 'suspended',
-    monthlyPayment: supabaseStudent.valor_mensalidade || 100,
-    paymentStatus: 'up-to-date' as const,
-    startDate: supabaseStudent.data_matricula,
-    paymentMethod: supabaseStudent.forma_pagamento,
-    emergencyContact: supabaseStudent.contato_emergencia,
-    medicalInfo: supabaseStudent.observacoes_medicas,
-    age: supabaseStudent.data_nascimento ? 
-      new Date().getFullYear() - new Date(supabaseStudent.data_nascimento).getFullYear() : 
-      undefined,
+    plan: supabaseStudent.tipo || 'presencial',
+    registrationDate: supabaseStudent.created_at ? new Date(supabaseStudent.created_at).toISOString().split('T')[0] : '',
+    status: 'active', // Default status since simplified schema doesn't have status
+    monthlyPayment: 0, // Default value since simplified schema doesn't have payment info
+    paymentStatus: 'up-to-date', // Default status
+    startDate: supabaseStudent.created_at ? new Date(supabaseStudent.created_at).toISOString().split('T')[0] : '',
   };
 }
 
-// Convert old student format to Supabase format
-export function convertOldStudentToSupabase(oldStudent: Omit<Student, 'id'>): Omit<SupabaseStudent, 'id' | 'created_at' | 'updated_at'> {
+export function convertOldStudentToSupabase(oldStudent: Partial<Student>): Partial<SupabaseStudent> {
   return {
-    nome: oldStudent.name,
+    nome: oldStudent.name || '',
     email: oldStudent.email,
     telefone: oldStudent.phone,
-    data_matricula: oldStudent.registrationDate,
-    status: oldStudent.status === 'active' ? 'ativo' : 
-            oldStudent.status === 'inactive' ? 'inativo' : 'suspenso',
-    valor_mensalidade: oldStudent.monthlyPayment,
-    forma_pagamento: oldStudent.paymentMethod as 'pix' | 'cartao' | 'dinheiro' | 'transferencia' | undefined,
-    contato_emergencia: oldStudent.emergencyContact,
-    observacoes_medicas: oldStudent.medicalInfo,
+    tipo: oldStudent.plan === 'consultoria' ? 'consultoria' : 'presencial',
   };
 }
 
-// Convert Supabase plan to old format for compatibility
 export function convertSupabasePlanToOld(supabasePlan: SupabasePlan): Plan {
   return {
-    id: parseInt(supabasePlan.id.slice(-8), 16), // Convert UUID to number for compatibility
+    id: parseInt(supabasePlan.id.slice(-8), 16), // Convert UUID to number for UI compatibility
     name: supabasePlan.nome,
-    price: supabasePlan.preco,
-    duration: supabasePlan.duracao_meses,
-    benefits: supabasePlan.beneficios || [],
-    active: supabasePlan.ativo ?? true,
+    price: Number(supabasePlan.valor),
+    duration: Math.round((supabasePlan.duracao_dias || 30) / 30), // Convert days to months
+    benefits: [], // Default empty benefits since simplified schema doesn't store benefits
+    active: true, // Default active status
   };
 }
 
-// Convert old plan format to Supabase format
-export function convertOldPlanToSupabase(oldPlan: Omit<Plan, 'id'>): Omit<SupabasePlan, 'id' | 'created_at' | 'updated_at'> {
+export function convertOldPlanToSupabase(oldPlan: Partial<Plan>): Partial<SupabasePlan> {
   return {
-    nome: oldPlan.name,
-    preco: oldPlan.price,
-    duracao_meses: oldPlan.duration,
-    beneficios: oldPlan.benefits,
-    ativo: oldPlan.active,
+    nome: oldPlan.name || '',
+    valor: oldPlan.price || 0,
+    duracao_dias: (oldPlan.duration || 1) * 30, // Convert months to days
+    tipo: 'mensal', // Default type
+    quantidade_aulas: 0, // Default value
   };
 }

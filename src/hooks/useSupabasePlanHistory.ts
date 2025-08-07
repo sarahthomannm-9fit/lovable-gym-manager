@@ -9,7 +9,8 @@ export interface SupabasePlanHistory {
   plano_id?: string;
   data_inicio?: string;
   data_fim?: string;
-  ativo?: boolean;
+  status?: 'ativo' | 'inativo';
+  forma_pagamento_id?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -23,7 +24,7 @@ export function useSupabasePlanHistory() {
     try {
       setLoading(true);
       let query = supabase
-        .from('historico_planos')
+        .from('alunos_planos')
         .select('*')
         .order('created_at', { ascending: false });
 
@@ -34,7 +35,13 @@ export function useSupabasePlanHistory() {
       const { data, error } = await query;
 
       if (error) throw error;
-      setPlanHistory(data || []);
+      
+      const typedData = (data || []).map(item => ({
+        ...item,
+        status: item.status as 'ativo' | 'inativo' | undefined,
+      })) as SupabasePlanHistory[];
+      
+      setPlanHistory(typedData);
     } catch (error) {
       console.error('Error fetching plan history:', error);
       toast({
@@ -50,20 +57,25 @@ export function useSupabasePlanHistory() {
   const addPlanHistory = async (historyData: Omit<SupabasePlanHistory, 'id' | 'created_at' | 'updated_at'>) => {
     try {
       const { data, error } = await supabase
-        .from('historico_planos')
+        .from('alunos_planos')
         .insert([historyData])
         .select()
         .single();
 
       if (error) throw error;
       
-      setPlanHistory(prev => [data, ...prev]);
+      const typedData = {
+        ...data,
+        status: data.status as 'ativo' | 'inativo' | undefined,
+      } as SupabasePlanHistory;
+      
+      setPlanHistory(prev => [typedData, ...prev]);
       toast({
         title: "Sucesso",
         description: "Histórico de plano adicionado com sucesso!",
       });
       
-      return data;
+      return typedData;
     } catch (error) {
       console.error('Error adding plan history:', error);
       toast({
@@ -78,7 +90,7 @@ export function useSupabasePlanHistory() {
   const updatePlanHistory = async (id: string, updates: Partial<SupabasePlanHistory>) => {
     try {
       const { data, error } = await supabase
-        .from('historico_planos')
+        .from('alunos_planos')
         .update(updates)
         .eq('id', id)
         .select()
@@ -86,13 +98,18 @@ export function useSupabasePlanHistory() {
 
       if (error) throw error;
       
-      setPlanHistory(prev => prev.map(h => h.id === id ? data : h));
+      const typedData = {
+        ...data,
+        status: data.status as 'ativo' | 'inativo' | undefined,
+      } as SupabasePlanHistory;
+      
+      setPlanHistory(prev => prev.map(h => h.id === id ? typedData : h));
       toast({
         title: "Sucesso",
         description: "Histórico de plano atualizado com sucesso!",
       });
       
-      return data;
+      return typedData;
     } catch (error) {
       console.error('Error updating plan history:', error);
       toast({

@@ -6,10 +6,10 @@ import { useToast } from '@/hooks/use-toast';
 export interface SupabasePlan {
   id: string;
   nome: string;
-  preco: number;
-  duracao_meses: number;
-  beneficios?: string[];
-  ativo?: boolean;
+  tipo?: 'mensal' | 'avulso' | 'pacote';
+  valor: number;
+  duracao_dias?: number;
+  quantidade_aulas?: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -25,10 +25,16 @@ export function useSupabasePlans() {
       const { data, error } = await supabase
         .from('planos')
         .select('*')
-        .order('preco', { ascending: true });
+        .order('valor', { ascending: true });
 
       if (error) throw error;
-      setPlans(data || []);
+      
+      const typedPlans = (data || []).map(plan => ({
+        ...plan,
+        tipo: plan.tipo as 'mensal' | 'avulso' | 'pacote' | undefined,
+      })) as SupabasePlan[];
+      
+      setPlans(typedPlans);
     } catch (error) {
       console.error('Error fetching plans:', error);
       toast({
@@ -51,13 +57,18 @@ export function useSupabasePlans() {
 
       if (error) throw error;
       
-      setPlans(prev => [...prev, data]);
+      const typedPlan = {
+        ...data,
+        tipo: data.tipo as 'mensal' | 'avulso' | 'pacote' | undefined,
+      } as SupabasePlan;
+      
+      setPlans(prev => [...prev, typedPlan]);
       toast({
         title: "Sucesso",
         description: "Plano criado com sucesso",
       });
       
-      return data;
+      return typedPlan;
     } catch (error) {
       console.error('Error adding plan:', error);
       toast({
@@ -80,13 +91,18 @@ export function useSupabasePlans() {
 
       if (error) throw error;
       
-      setPlans(prev => prev.map(plan => plan.id === id ? data : plan));
+      const typedPlan = {
+        ...data,
+        tipo: data.tipo as 'mensal' | 'avulso' | 'pacote' | undefined,
+      } as SupabasePlan;
+      
+      setPlans(prev => prev.map(plan => plan.id === id ? typedPlan : plan));
       toast({
         title: "Sucesso",
         description: "Plano atualizado com sucesso",
       });
       
-      return data;
+      return typedPlan;
     } catch (error) {
       console.error('Error updating plan:', error);
       toast({

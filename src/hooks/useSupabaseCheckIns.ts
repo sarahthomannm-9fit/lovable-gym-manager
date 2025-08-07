@@ -6,9 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 export interface SupabaseCheckIn {
   id: string;
   aluno_id: string;
-  data_checkin?: string;
-  horario_entrada: string;
-  horario_saida?: string;
+  data?: string;
   created_at?: string;
 }
 
@@ -23,7 +21,7 @@ export function useSupabaseCheckIns() {
       const { data, error } = await supabase
         .from('checkins')
         .select('*')
-        .order('horario_entrada', { ascending: false });
+        .order('data', { ascending: false });
 
       if (error) throw error;
       setCheckIns(data || []);
