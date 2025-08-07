@@ -19,6 +19,12 @@ import {
   Dumbbell,
   BarChart3,
   Home,
+  Target,
+  UserPlus,
+  MessageSquare,
+  TrendingUp,
+  Mail,
+  Gift,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -74,6 +80,47 @@ export function AppSidebar({ activeView, onViewChange }: AppSidebarProps) {
           icon: BarChart3,
           key: "relatorios",
           path: "/relatorios",
+        },
+      ],
+    },
+    {
+      category: "Marketing",
+      items: [
+        {
+          title: "Campanhas",
+          icon: Target,
+          key: "campanhas",
+          path: "/marketing/campanhas",
+        },
+        {
+          title: "Captação",
+          icon: UserPlus,
+          key: "captacao",
+          path: "/marketing/captacao",
+        },
+        {
+          title: "Comunicação",
+          icon: MessageSquare,
+          key: "comunicacao",
+          path: "/marketing/comunicacao",
+        },
+        {
+          title: "Conversão",
+          icon: TrendingUp,
+          key: "conversao",
+          path: "/marketing/conversao",
+        },
+        {
+          title: "E-mail Marketing",
+          icon: Mail,
+          key: "email-marketing",
+          path: "/marketing/email",
+        },
+        {
+          title: "Promoções",
+          icon: Gift,
+          key: "promocoes",
+          path: "/marketing/promocoes",
         },
       ],
     },
