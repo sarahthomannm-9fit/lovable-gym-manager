@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -5,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Calendar, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { TrainingStats } from "@/components/training/TrainingStats";
 
 interface Treino {
   id: string;
@@ -71,6 +73,16 @@ export function Treinos() {
     fetchTreinos();
   }, []);
 
+  // Converter treinos para o formato esperado pelo TrainingStats
+  const trainingData = treinos.map(treino => ({
+    id: treino.id,
+    studentName: treino.aluno?.nome || 'Aluno não encontrado',
+    description: treino.descricao || 'Sem descrição',
+    startDate: treino.data_inicio,
+    endDate: treino.data_fim,
+    status: 'valid' as const
+  }));
+
   if (loading) {
     return (
       <div className="space-y-6 p-6">
@@ -88,7 +100,7 @@ export function Treinos() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Treinos</h1>
           <p className="text-muted-foreground">
-            Gerencie os treinos dos seus alunos.
+            Gerencie os treinos dos seus alunos e acompanhe o status.
           </p>
         </div>
         <Button>
@@ -97,38 +109,50 @@ export function Treinos() {
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {treinos.map((treino) => {
-          const classificacao = classificarTreino(treino.data_fim);
-          return (
-            <Card key={treino.id}>
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <CardTitle className="text-lg">{treino.descricao}</CardTitle>
-                  <Badge variant={classificacao.variant}>
-                    {classificacao.status}
-                  </Badge>
-                </div>
-                <CardDescription className="flex items-center space-x-2">
-                  <User className="h-4 w-4" />
-                  <span>{treino.aluno?.nome || 'Aluno não encontrado'}</span>
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    <span>
-                      {new Date(treino.data_inicio).toLocaleDateString()} - {' '}
-                      {new Date(treino.data_fim).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      {/* Estatísticas dos Treinos */}
+      <TrainingStats trainings={trainingData} />
+
+      {/* Lista de Treinos */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Todos os Treinos</CardTitle>
+          <CardDescription>Lista completa de treinos cadastrados</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {treinos.map((treino) => {
+              const classificacao = classificarTreino(treino.data_fim);
+              return (
+                <Card key={treino.id}>
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <CardTitle className="text-lg">{treino.descricao}</CardTitle>
+                      <Badge variant={classificacao.variant}>
+                        {classificacao.status}
+                      </Badge>
+                    </div>
+                    <CardDescription className="flex items-center space-x-2">
+                      <User className="h-4 w-4" />
+                      <span>{treino.aluno?.nome || 'Aluno não encontrado'}</span>
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        <span>
+                          {new Date(treino.data_inicio).toLocaleDateString()} - {' '}
+                          {new Date(treino.data_fim).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
 
       {treinos.length === 0 && (
         <Card>

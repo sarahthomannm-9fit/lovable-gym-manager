@@ -2,9 +2,10 @@
 import { useState } from "react";
 import { StudentProfile } from "./StudentProfile";
 import { AddStudentDialog } from "./students/AddStudentDialog";
+import { EditStudentDialog } from "./students/EditStudentDialog";
 import { StudentsList } from "./students/StudentsList";
 import { useSupabaseGymData } from "@/contexts/SupabaseGymDataContext";
-import { convertSupabaseStudentToOld, convertOldStudentToSupabase } from "@/utils/dataConverters";
+import { convertSupabaseStudentToOld } from "@/utils/dataConverters";
 import { Student } from "@/types/gym";
 
 export function SupabaseStudents() {
@@ -18,6 +19,7 @@ export function SupabaseStudents() {
   } = useSupabaseGymData();
   
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
   // Convert Supabase students to old format for UI compatibility
@@ -28,6 +30,15 @@ export function SupabaseStudents() {
       await addStudent(studentData);
     } catch (error) {
       console.error('Failed to add student:', error);
+    }
+  };
+
+  const handleUpdateStudent = async (id: string, updates: any) => {
+    try {
+      await updateStudent(id, updates);
+      setEditingStudent(null);
+    } catch (error) {
+      console.error('Failed to update student:', error);
     }
   };
 
@@ -69,6 +80,15 @@ export function SupabaseStudents() {
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         onViewProfile={setSelectedStudent}
+        onEditStudent={setEditingStudent}
+      />
+
+      <EditStudentDialog
+        student={editingStudent}
+        isOpen={!!editingStudent}
+        onClose={() => setEditingStudent(null)}
+        onUpdateStudent={handleUpdateStudent}
+        plans={supabasePlans}
       />
     </div>
   );

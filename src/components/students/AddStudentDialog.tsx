@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -5,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SupabaseStudent } from "@/hooks/useSupabaseStudents";
@@ -17,6 +19,7 @@ interface AddStudentDialogProps {
 export function AddStudentDialog({ onAddStudent, plans }: AddStudentDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [includeMonthlyPackage, setIncludeMonthlyPackage] = useState(false);
   const [newStudent, setNewStudent] = useState<{
     nome: string;
     email: string;
@@ -68,11 +71,21 @@ export function AddStudentDialog({ onAddStudent, plans }: AddStudentDialogProps)
         endereco: newStudent.endereco || undefined,
         status: 'ativo',
         data_matricula: new Date().toISOString().split('T')[0],
-        aulas_disponiveis: 0,
-        aulas_por_mes: 0,
+        aulas_disponiveis: includeMonthlyPackage ? 12 : 0, // 12 aulas por mês se incluir pacote
+        aulas_por_mes: includeMonthlyPackage ? 12 : 0,
+        tipo: includeMonthlyPackage ? 'presencial' : undefined,
       };
 
       await onAddStudent(studentData);
+      
+      // Se incluir pacote mensal, adicionar ao agendamento (aqui seria integrado com o sistema de agendamento)
+      if (includeMonthlyPackage) {
+        console.log('Adicionando aluno ao agendamento multi-dias com pacote mensal');
+        toast({
+          title: "Sucesso",
+          description: `Aluno cadastrado com pacote mensal de 12 aulas!`,
+        });
+      }
       
       // Reset form
       setNewStudent({
@@ -87,6 +100,7 @@ export function AddStudentDialog({ onAddStudent, plans }: AddStudentDialogProps)
         data_nascimento: "",
         endereco: ""
       });
+      setIncludeMonthlyPackage(false);
       
       setIsOpen(false);
     } catch (error) {
@@ -206,6 +220,17 @@ export function AddStudentDialog({ onAddStudent, plans }: AddStudentDialogProps)
                 <SelectItem value="transferencia">Transferência</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="monthly-package"
+              checked={includeMonthlyPackage}
+              onCheckedChange={(checked) => setIncludeMonthlyPackage(checked as boolean)}
+            />
+            <Label htmlFor="monthly-package" className="text-sm">
+              Incluir pacote mensal (12 aulas/mês)
+            </Label>
           </div>
 
           <div>

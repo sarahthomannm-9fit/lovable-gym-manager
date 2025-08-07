@@ -1,3 +1,4 @@
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Search, User } from "lucide-react";
@@ -9,9 +10,16 @@ interface StudentsListProps {
   searchTerm: string;
   onSearchChange: (term: string) => void;
   onViewProfile: (student: Student) => void;
+  onEditStudent: (student: Student) => void;
 }
 
-export function StudentsList({ students, searchTerm, onSearchChange, onViewProfile }: StudentsListProps) {
+export function StudentsList({ 
+  students, 
+  searchTerm, 
+  onSearchChange, 
+  onViewProfile, 
+  onEditStudent 
+}: StudentsListProps) {
   const filteredStudents = students.filter(student =>
     student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -46,6 +54,7 @@ export function StudentsList({ students, searchTerm, onSearchChange, onViewProfi
               key={student.id} 
               student={student} 
               onViewProfile={onViewProfile}
+              onEditStudent={onEditStudent}
             />
           ))}
         </div>

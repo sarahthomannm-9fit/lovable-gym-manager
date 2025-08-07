@@ -1,11 +1,13 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { AddPlanDialog } from "./plans/AddPlanDialog";
 import { PlansStats } from "./plans/PlansStats";
 import { PlanCard } from "./plans/PlanCard";
+import { PlansOrganization } from "./plans/PlansOrganization";
 import { useSupabaseGymData } from "@/contexts/SupabaseGymDataContext";
-import { convertSupabasePlanToOld, convertOldPlanToSupabase } from "@/utils/dataConverters";
+import { convertSupabasePlanToOld } from "@/utils/dataConverters";
 import { convertSupabaseStudentToOld } from "@/utils/dataConverters";
 
 export function SupabasePlans() {
@@ -20,6 +22,7 @@ export function SupabasePlans() {
   } = useSupabaseGymData();
   
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'cards' | 'organization'>('cards');
 
   // Convert Supabase plans to old format for UI compatibility
   const plans = supabasePlans.map(convertSupabasePlanToOld);
@@ -93,25 +96,42 @@ export function SupabasePlans() {
           <p className="text-gray-600 mt-1">Gerencie os planos da sua academia conectados ao banco de dados</p>
         </div>
         
-        <Button onClick={() => setIsAddDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700">
-          <Plus className="w-4 h-4 mr-2" />
-          Novo Plano
-        </Button>
+        <div className="flex space-x-2">
+          <Button 
+            variant={viewMode === 'cards' ? 'default' : 'outline'}
+            onClick={() => setViewMode('cards')}
+          >
+            Visualização em Cards
+          </Button>
+          <Button 
+            variant={viewMode === 'organization' ? 'default' : 'outline'}
+            onClick={() => setViewMode('organization')}
+          >
+            Organização
+          </Button>
+          <Button onClick={() => setIsAddDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700">
+            <Plus className="w-4 h-4 mr-2" />
+            Novo Plano
+          </Button>
+        </div>
       </div>
 
       <PlansStats plans={plans} students={studentsForStats} />
 
-      {/* Lista de Planos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {plans.map((plan) => (
-          <PlanCard 
-            key={plan.id} 
-            plan={plan}
-            studentsCount={getStudentsForPlan(plan.name)}
-            onToggleStatus={togglePlanStatus}
-          />
-        ))}
-      </div>
+      {viewMode === 'organization' ? (
+        <PlansOrganization plans={plans} />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {plans.map((plan) => (
+            <PlanCard 
+              key={plan.id} 
+              plan={plan}
+              studentsCount={getStudentsForPlan(plan.name)}
+              onToggleStatus={togglePlanStatus}
+            />
+          ))}
+        </div>
+      )}
 
       {plans.length === 0 && (
         <div className="text-center py-12">

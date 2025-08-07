@@ -1,8 +1,10 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { BarChart3, TrendingUp, CreditCard, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { BarChart3, TrendingUp, CreditCard, Users, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -15,15 +17,24 @@ interface ReceitaRelatório {
 export function Relatorios() {
   const [receitas, setReceitas] = useState<ReceitaRelatório[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const { toast } = useToast();
 
   const fetchReceitas = async () => {
     try {
       setLoading(true);
+      console.log('Buscando relatório de receitas...');
+      
       const { data, error } = await supabase.rpc('relatorio_receitas_por_plano');
       
-      if (error) throw error;
+      if (error) {
+        console.error('Erro na função RPC:', error);
+        throw error;
+      }
+      
+      console.log('Dados do relatório:', data);
       setReceitas(data || []);
+      setLastUpdated(new Date());
     } catch (error) {
       console.error('Erro ao buscar relatório de receitas:', error);
       toast({
@@ -39,6 +50,14 @@ export function Relatorios() {
   useEffect(() => {
     fetchReceitas();
   }, []);
+
+  const handleRefresh = () => {
+    toast({
+      title: "Atualizando",
+      description: "Carregando dados mais recentes...",
+    });
+    fetchReceitas();
+  };
 
   const totalGeral = receitas.reduce((total, receita) => total + receita.total_recebido, 0);
   const totalPorPlano = receitas.reduce((acc, receita) => {
@@ -59,11 +78,22 @@ export function Relatorios() {
 
   return (
     <div className="space-y-6 p-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Relatório Financeiro</h1>
-        <p className="text-muted-foreground">
-          Análise detalhada das receitas por plano e forma de pagamento.
-        </p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Relatório Financeiro</h1>
+          <p className="text-muted-foreground">
+            Análise detalhada das receitas por plano e forma de pagamento.
+          </p>
+          {lastUpdated && (
+            <p className="text-sm text-gray-500 mt-1">
+              Última atualização: {lastUpdated.toLocaleString('pt-BR')}
+            </p>
+          )}
+        </div>
+        <Button onClick={handleRefresh} variant="outline">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Atualizar
+        </Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -188,6 +218,10 @@ export function Relatorios() {
             <p className="text-sm text-muted-foreground">
               As receitas aparecerão aqui quando houver vínculos entre alunos e planos com formas de pagamento definidas.
             </p>
+            <Button onClick={handleRefresh} className="mt-4">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Tentar Novamente
+            </Button>
           </CardContent>
         </Card>
       )}

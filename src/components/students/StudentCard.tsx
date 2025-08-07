@@ -1,15 +1,17 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { User, Phone, Mail, Eye } from "lucide-react";
+import { User, Phone, Mail, Eye, Edit } from "lucide-react";
 import { Student } from "@/types/gym";
 
 interface StudentCardProps {
   student: Student;
   onViewProfile: (student: Student) => void;
+  onEditStudent: (student: Student) => void;
 }
 
-export function StudentCard({ student, onViewProfile }: StudentCardProps) {
+export function StudentCard({ student, onViewProfile, onEditStudent }: StudentCardProps) {
   return (
     <Card className="hover:shadow-lg transition-shadow duration-200">
       <CardHeader>
@@ -68,7 +70,9 @@ export function StudentCard({ student, onViewProfile }: StudentCardProps) {
             size="sm" 
             variant="outline"
             className="text-green-600 border-green-600 hover:bg-green-50"
+            onClick={() => onEditStudent(student)}
           >
+            <Edit className="w-3 h-3 mr-1" />
             Editar
           </Button>
         </div>
