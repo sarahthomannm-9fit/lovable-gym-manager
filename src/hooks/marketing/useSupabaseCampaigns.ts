@@ -2,6 +2,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+// Define um tipo Json compatível com o padrão do Supabase
+type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[];
+
 export interface Campaign {
   id: string;
   created_at: string;
@@ -16,7 +25,7 @@ export interface Campaign {
   alcance?: number | null;
   conversoes?: number | null;
   canal?: string | null;
-  segmento?: Record<string, unknown> | null;
+  segmento?: Json | null; // ajustado para JSON
 }
 
 export function useSupabaseCampaigns() {
