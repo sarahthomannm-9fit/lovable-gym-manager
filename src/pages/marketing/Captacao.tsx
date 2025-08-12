@@ -1,44 +1,15 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ResponsiveLayout } from "@/components/layout/ResponsiveLayout";
 import { UserPlus, Users, TrendingUp, Target, Phone, Mail, MessageSquare } from "lucide-react";
+import { AddLeadDialog } from "@/components/marketing/AddLeadDialog";
+import { useSupabaseLeads } from "@/hooks/marketing/useSupabaseLeads";
+import { MarketingSuggestions } from "@/components/marketing/MarketingSuggestions";
 
 export function Captacao() {
-  const leads = [
-    {
-      id: 1,
-      name: "Maria Silva",
-      email: "maria.silva@email.com",
-      phone: "(11) 99999-9999",
-      source: "Instagram",
-      status: "qualificado",
-      score: 85,
-      createdAt: "2024-01-20"
-    },
-    {
-      id: 2,
-      name: "João Santos",
-      email: "joao.santos@email.com",
-      phone: "(11) 88888-8888",
-      source: "Google Ads",
-      status: "novo",
-      score: 65,
-      createdAt: "2024-01-19"
-    },
-    {
-      id: 3,
-      name: "Ana Costa",
-      email: "ana.costa@email.com",
-      phone: "(11) 77777-7777",
-      source: "Indicação",
-      status: "contatado",
-      score: 92,
-      createdAt: "2024-01-18"
-    }
-  ];
+  const { leads, leadsLoading } = useSupabaseLeads();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -46,14 +17,39 @@ export function Captacao() {
       case "qualificado": return "bg-green-100 text-green-800";
       case "contatado": return "bg-yellow-100 text-yellow-800";
       case "convertido": return "bg-purple-100 text-purple-800";
+      case "perdido": return "bg-red-100 text-red-800";
       default: return "bg-gray-100 text-gray-800";
     }
   };
 
-  const getScoreColor = (score: number) => {
+  const getScoreColor = (score?: number | null) => {
+    if (score === null || score === undefined) return "text-muted-foreground";
     if (score >= 80) return "text-green-600 font-semibold";
     if (score >= 60) return "text-yellow-600 font-semibold";
     return "text-red-600 font-semibold";
+  };
+
+  const total = leads.length;
+  const qualificados = leads.filter(l => l.status === "qualificado").length;
+  const convertidos = leads.filter(l => l.status === "convertido").length;
+  const conversao = total > 0 ? ((convertidos / total) * 100).toFixed(1) + "%" : "-";
+  const novos7d = leads.filter(l => {
+    const created = new Date(l.created_at);
+    const diff = Date.now() - created.getTime();
+    return diff <= 7 * 24 * 60 * 60 * 1000;
+  }).length;
+
+  const fontesMap = leads.reduce<Record<string, number>>((acc, l) => {
+    const f = l.fonte || "Indefinida";
+    acc[f] = (acc[f] || 0) + 1;
+    return acc;
+  }, {});
+
+  const funilCounts = {
+    captados: total,
+    qualificados,
+    agendamentos: "-", // sem origem de dados ainda
+    convertidos,
   };
 
   return (
@@ -69,10 +65,7 @@ export function Captacao() {
             <h2 className="text-2xl font-bold">Captação de Clientes</h2>
             <p className="text-muted-foreground">Acompanhe e qualifique seus leads</p>
           </div>
-          <Button>
-            <UserPlus className="mr-2 h-4 w-4" />
-            Adicionar Lead
-          </Button>
+          <AddLeadDialog />
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -82,8 +75,8 @@ export function Captacao() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">143</div>
-              <p className="text-xs text-muted-foreground">+12 esta semana</p>
+              <div className="text-2xl font-bold">{leadsLoading ? "..." : total}</div>
+              <p className="text-xs text-muted-foreground">Baseado nos seus registros</p>
             </CardContent>
           </Card>
           
@@ -93,8 +86,8 @@ export function Captacao() {
               <Target className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">67</div>
-              <p className="text-xs text-muted-foreground">46.9% do total</p>
+              <div className="text-2xl font-bold">{leadsLoading ? "..." : qualificados}</div>
+              <p className="text-xs text-muted-foreground">{total > 0 ? `${((qualificados/total)*100).toFixed(1)}% do total` : "-"}</p>
             </CardContent>
           </Card>
 
@@ -104,19 +97,19 @@ export function Captacao() {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">23.1%</div>
-              <p className="text-xs text-muted-foreground">+2.4% este mês</p>
+              <div className="text-2xl font-bold">{leadsLoading ? "..." : conversao}</div>
+              <p className="text-xs text-muted-foreground">Leads convertidos / total</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Novos Leads</CardTitle>
+              <CardTitle className="text-sm font-medium">Novos (7 dias)</CardTitle>
               <UserPlus className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">28</div>
-              <p className="text-xs text-muted-foreground">+5 hoje</p>
+              <div className="text-2xl font-bold">{leadsLoading ? "..." : novos7d}</div>
+              <p className="text-xs text-muted-foreground">Entradas recentes</p>
             </CardContent>
           </Card>
         </div>
@@ -130,53 +123,53 @@ export function Captacao() {
           
           <TabsContent value="leads" className="space-y-4">
             <div className="grid gap-4">
-              {leads.map((lead) => (
-                <Card key={lead.id}>
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="flex items-center gap-2">
-                          {lead.name}
-                          <Badge className={getStatusColor(lead.status)}>
-                            {lead.status}
-                          </Badge>
-                        </CardTitle>
-                        <CardDescription>
-                          Fonte: {lead.source} • Criado em {lead.createdAt}
-                        </CardDescription>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-sm ${getScoreColor(lead.score)}`}>
-                          Score: {lead.score}
-                        </span>
-                        <div className="flex gap-1">
-                          <Button variant="outline" size="sm">
-                            <Phone className="h-4 w-4" />
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <Mail className="h-4 w-4" />
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <MessageSquare className="h-4 w-4" />
-                          </Button>
+              {leadsLoading ? (
+                <p className="text-sm text-muted-foreground">Carregando...</p>
+              ) : leads.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhum lead cadastrado.</p>
+              ) : (
+                leads.map((lead) => (
+                  <Card key={lead.id}>
+                    <CardHeader>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle className="flex items-center gap-2">
+                            {lead.nome}
+                            <Badge className={getStatusColor(lead.status)}>
+                              {lead.status}
+                            </Badge>
+                          </CardTitle>
+                          <CardDescription>
+                            Fonte: {lead.fonte || "Indefinida"} • Criado em {new Date(lead.created_at).toLocaleDateString()}
+                          </CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-sm ${getScoreColor(lead.score || null)}`}>
+                            Score: {lead.score ?? "-"}
+                          </span>
+                          <div className="flex gap-1">
+                            <div className="inline-flex p-2 rounded border text-muted-foreground"><Phone className="h-4 w-4" /></div>
+                            <div className="inline-flex p-2 rounded border text-muted-foreground"><Mail className="h-4 w-4" /></div>
+                            <div className="inline-flex p-2 rounded border text-muted-foreground"><MessageSquare className="h-4 w-4" /></div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">E-mail</p>
-                        <p className="font-semibold">{lead.email}</p>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-muted-foreground">E-mail</p>
+                          <p className="font-semibold">{lead.email || "-"}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Telefone</p>
+                          <p className="font-semibold">{lead.telefone || "-"}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-muted-foreground">Telefone</p>
-                        <p className="font-semibold">{lead.phone}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                ))
+              )}
             </div>
           </TabsContent>
 
@@ -187,27 +180,19 @@ export function Captacao() {
                   <CardTitle>Fontes de Captação</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span>Instagram</span>
-                      <Badge>42 leads</Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Google Ads</span>
-                      <Badge>38 leads</Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Indicação</span>
-                      <Badge>31 leads</Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Facebook</span>
-                      <Badge>22 leads</Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Site</span>
-                      <Badge>10 leads</Badge>
-                    </div>
+                  <div className="space-y-3">
+                    {leadsLoading ? (
+                      <p className="text-sm text-muted-foreground">Carregando...</p>
+                    ) : Object.keys(fontesMap).length === 0 ? (
+                      <p className="text-sm text-muted-foreground">Sem dados de fontes.</p>
+                    ) : (
+                      Object.entries(fontesMap).map(([fonte, count]) => (
+                        <div key={fonte} className="flex justify-between items-center">
+                          <span>{fonte}</span>
+                          <Badge>{count} leads</Badge>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -217,27 +202,19 @@ export function Captacao() {
                   <CardTitle>Performance por Fonte</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span>Indicação</span>
-                      <span className="text-green-600 font-semibold">45.2%</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Instagram</span>
-                      <span className="text-green-600 font-semibold">28.5%</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Google Ads</span>
-                      <span className="text-yellow-600 font-semibold">21.1%</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Facebook</span>
-                      <span className="text-yellow-600 font-semibold">18.2%</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Site</span>
-                      <span className="text-red-600 font-semibold">12.0%</span>
-                    </div>
+                  <div className="space-y-3">
+                    {leadsLoading || total === 0 ? (
+                      <p className="text-sm text-muted-foreground">Sem dados suficientes.</p>
+                    ) : (
+                      Object.entries(fontesMap).map(([fonte, count]) => (
+                        <div key={fonte} className="flex justify-between items-center">
+                          <span>{fonte}</span>
+                          <span className="text-green-600 font-semibold">
+                            {((count / total) * 100).toFixed(1)}%
+                          </span>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -258,7 +235,7 @@ export function Captacao() {
                       <p className="text-muted-foreground">Total de interessados</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-2xl font-bold">143</p>
+                      <p className="text-2xl font-bold">{total}</p>
                       <p className="text-sm text-muted-foreground">100%</p>
                     </div>
                   </div>
@@ -269,30 +246,34 @@ export function Captacao() {
                       <p className="text-muted-foreground">Com potencial de conversão</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-2xl font-bold">67</p>
-                      <p className="text-sm text-muted-foreground">46.9%</p>
+                      <p className="text-2xl font-bold">{qualificados}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {total > 0 ? `${((qualificados/total)*100).toFixed(1)}%` : "-"}
+                      </p>
                     </div>
                   </div>
                   
                   <div className="flex items-center justify-between p-4 border rounded-lg">
                     <div>
                       <h4 className="font-semibold">Agendamentos</h4>
-                      <p className="text-muted-foreground">Aulas experimentais marcadas</p>
+                      <p className="text-muted-foreground">Aulas experimentais</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-2xl font-bold">45</p>
-                      <p className="text-sm text-muted-foreground">31.5%</p>
+                      <p className="text-2xl font-bold">-</p>
+                      <p className="text-sm text-muted-foreground">Sem dados</p>
                     </div>
                   </div>
                   
                   <div className="flex items-center justify-between p-4 border rounded-lg">
                     <div>
                       <h4 className="font-semibold">Conversões</h4>
-                      <p className="text-muted-foreground">Matriculas efetivadas</p>
+                      <p className="text-muted-foreground">Matrículas efetivadas</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-2xl font-bold">33</p>
-                      <p className="text-sm text-muted-foreground">23.1%</p>
+                      <p className="text-2xl font-bold">{convertidos}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {total > 0 ? `${((convertidos/total)*100).toFixed(1)}%` : "-"}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -300,6 +281,13 @@ export function Captacao() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        <MarketingSuggestions
+          context="captacao"
+          onCreateFromSuggestion={(s) => {
+            console.log("[Suggestion] captacao", s);
+          }}
+        />
       </div>
     </ResponsiveLayout>
   );

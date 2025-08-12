@@ -3,8 +3,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { ResponsiveLayout } from "@/components/layout/ResponsiveLayout";
 import { TrendingUp, Target, Users, Clock, CheckCircle, Calendar } from "lucide-react";
+import { useSupabaseLeads } from "@/hooks/marketing/useSupabaseLeads";
+import { AddCampaignDialog } from "@/components/marketing/AddCampaignDialog";
+import { MarketingSuggestions } from "@/components/marketing/MarketingSuggestions";
 
 export function Conversao() {
+  const { leads, leadsLoading } = useSupabaseLeads();
+
+  const total = leads.length;
+  const qualificados = leads.filter(l => l.status === "qualificado").length;
+  const convertidos = leads.filter(l => l.status === "convertido").length;
+  const taxaConversao = total > 0 ? ((convertidos / total) * 100).toFixed(1) + "%" : "-";
+
   return (
     <ResponsiveLayout 
       activeView="conversao" 
@@ -16,12 +26,9 @@ export function Conversao() {
         <div className="flex justify-between items-center">
           <div>
             <h2 className="text-2xl font-bold">Otimização de Conversão</h2>
-            <p className="text-muted-foreground">Aumente suas taxas de conversão com estratégias focadas</p>
+            <p className="text-muted-foreground">Baseado nos seus dados de leads</p>
           </div>
-          <Button>
-            <Target className="mr-2 h-4 w-4" />
-            Nova Estratégia
-          </Button>
+          <AddCampaignDialog triggerLabel="Nova Estratégia" initialCategoria="conversao" />
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -31,8 +38,8 @@ export function Conversao() {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">23.1%</div>
-              <p className="text-xs text-muted-foreground">+2.4% este mês</p>
+              <div className="text-2xl font-bold">{leadsLoading ? "..." : taxaConversao}</div>
+              <p className="text-xs text-muted-foreground">Convertidos / Total</p>
             </CardContent>
           </Card>
           
@@ -42,7 +49,7 @@ export function Conversao() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">67</div>
+              <div className="text-2xl font-bold">{leadsLoading ? "..." : qualificados}</div>
               <p className="text-xs text-muted-foreground">Prontos para conversão</p>
             </CardContent>
           </Card>
@@ -53,8 +60,8 @@ export function Conversao() {
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">45</div>
-              <p className="text-xs text-muted-foreground">Agendadas esta semana</p>
+              <div className="text-2xl font-bold">-</div>
+              <p className="text-xs text-muted-foreground">Sem dados</p>
             </CardContent>
           </Card>
 
@@ -64,7 +71,7 @@ export function Conversao() {
               <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">7.2d</div>
+              <div className="text-2xl font-bold">-</div>
               <p className="text-xs text-muted-foreground">Lead → Cliente</p>
             </CardContent>
           </Card>
@@ -74,81 +81,39 @@ export function Conversao() {
           <Card>
             <CardHeader>
               <CardTitle>Estratégias de Conversão</CardTitle>
-              <CardDescription>Táticas para aumentar suas vendas</CardDescription>
+              <CardDescription>Registre suas táticas e acompanhe</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <h4 className="font-semibold">Aula Experimental Gratuita</h4>
-                    <p className="text-muted-foreground">Converta 65% dos participantes</p>
-                  </div>
-                  <CheckCircle className="h-5 w-5 text-green-600" />
+                <div className="p-4 border rounded-lg">
+                  <p className="text-muted-foreground text-sm">Cadastre estratégias como campanhas de follow-up, ofertas para primeira mensalidade, etc.</p>
                 </div>
-                
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <h4 className="font-semibold">Desconto First Timer</h4>
-                    <p className="text-muted-foreground">20% off no primeiro mês</p>
-                  </div>
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                </div>
-                
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <h4 className="font-semibold">Programa Amigo Indica</h4>
-                    <p className="text-muted-foreground">Desconto para ambos</p>
-                  </div>
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                </div>
-                
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <h4 className="font-semibold">Follow-up Personalizado</h4>
-                    <p className="text-muted-foreground">Contato em 24h</p>
-                  </div>
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                </div>
+                <AddCampaignDialog triggerLabel="Cadastrar Estratégia" initialCategoria="conversao" />
               </div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Oportunidades de Melhoria</CardTitle>
+              <CardTitle>Oportunidades</CardTitle>
               <CardDescription>Áreas para otimizar suas conversões</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div className="p-4 border rounded-lg">
-                  <h4 className="font-semibold">Reduzir Tempo de Resposta</h4>
-                  <p className="text-muted-foreground">Atualmente: 4.2h | Meta: 2h</p>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                    <div className="bg-orange-600 h-2 rounded-full" style={{ width: '60%' }}></div>
-                  </div>
+                  <p className="text-muted-foreground text-sm">Exiba aqui indicadores a partir de dados reais que você cadastrar.</p>
                 </div>
-                
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-semibold">Aumentar Show Rate</h4>
-                  <p className="text-muted-foreground">Atualmente: 72% | Meta: 85%</p>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                    <div className="bg-yellow-600 h-2 rounded-full" style={{ width: '72%' }}></div>
-                  </div>
-                </div>
-                
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-semibold">Melhorar Follow-up</h4>
-                  <p className="text-muted-foreground">Atualmente: 3 tentativas | Meta: 5</p>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                    <div className="bg-red-600 h-2 rounded-full" style={{ width: '50%' }}></div>
-                  </div>
-                </div>
-
-                <Button className="w-full">Implementar Melhorias</Button>
               </div>
             </CardContent>
           </Card>
         </div>
+
+        <MarketingSuggestions
+          context="conversao"
+          onCreateFromSuggestion={(s) => {
+            console.log("[Suggestion] conversao", s);
+          }}
+        />
       </div>
     </ResponsiveLayout>
   );

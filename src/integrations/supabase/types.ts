@@ -221,6 +221,57 @@ export type Database = {
         }
         Relationships: []
       }
+      campanhas_marketing: {
+        Row: {
+          alcance: number | null
+          canal: string | null
+          categoria: string
+          conversoes: number | null
+          created_at: string
+          data_fim: string | null
+          data_inicio: string | null
+          descricao: string | null
+          id: string
+          orcamento: number | null
+          segmento: Json | null
+          status: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          alcance?: number | null
+          canal?: string | null
+          categoria: string
+          conversoes?: number | null
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string | null
+          descricao?: string | null
+          id?: string
+          orcamento?: number | null
+          segmento?: Json | null
+          status?: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          alcance?: number | null
+          canal?: string | null
+          categoria?: string
+          conversoes?: number | null
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string | null
+          descricao?: string | null
+          id?: string
+          orcamento?: number | null
+          segmento?: Json | null
+          status?: string
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       checkins: {
         Row: {
           aluno_id: string | null
@@ -322,6 +373,90 @@ export type Database = {
           },
         ]
       }
+      leads: {
+        Row: {
+          created_at: string
+          email: string | null
+          fonte: string | null
+          id: string
+          nome: string
+          observacoes: string | null
+          score: number | null
+          status: string
+          telefone: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          fonte?: string | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          score?: number | null
+          status?: string
+          telefone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          fonte?: string | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          score?: number | null
+          status?: string
+          telefone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      mensagens_marketing: {
+        Row: {
+          aluno_id: string | null
+          canal: string
+          corpo: string | null
+          created_at: string
+          destinatarios: number | null
+          entregues: number | null
+          enviadas: number | null
+          enviado_em: string | null
+          id: string
+          lidas: number | null
+          status: string
+          titulo: string | null
+        }
+        Insert: {
+          aluno_id?: string | null
+          canal: string
+          corpo?: string | null
+          created_at?: string
+          destinatarios?: number | null
+          entregues?: number | null
+          enviadas?: number | null
+          enviado_em?: string | null
+          id?: string
+          lidas?: number | null
+          status?: string
+          titulo?: string | null
+        }
+        Update: {
+          aluno_id?: string | null
+          canal?: string
+          corpo?: string | null
+          created_at?: string
+          destinatarios?: number | null
+          entregues?: number | null
+          enviadas?: number | null
+          enviado_em?: string | null
+          id?: string
+          lidas?: number | null
+          status?: string
+          titulo?: string | null
+        }
+        Relationships: []
+      }
       pagamentos: {
         Row: {
           aluno_id: string | null
@@ -414,6 +549,48 @@ export type Database = {
           tipo?: string | null
           updated_at?: string | null
           valor?: number | null
+        }
+        Relationships: []
+      }
+      promocoes: {
+        Row: {
+          created_at: string
+          desconto: string
+          descricao: string | null
+          id: string
+          limite: number | null
+          nome: string
+          status: string
+          tipo: string | null
+          updated_at: string
+          usado: number | null
+          valido_ate: string | null
+        }
+        Insert: {
+          created_at?: string
+          desconto: string
+          descricao?: string | null
+          id?: string
+          limite?: number | null
+          nome: string
+          status?: string
+          tipo?: string | null
+          updated_at?: string
+          usado?: number | null
+          valido_ate?: string | null
+        }
+        Update: {
+          created_at?: string
+          desconto?: string
+          descricao?: string | null
+          id?: string
+          limite?: number | null
+          nome?: string
+          status?: string
+          tipo?: string | null
+          updated_at?: string
+          usado?: number | null
+          valido_ate?: string | null
         }
         Relationships: []
       }

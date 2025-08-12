@@ -2,9 +2,23 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ResponsiveLayout } from "@/components/layout/ResponsiveLayout";
-import { Mail, Send, Users, TrendingUp, Eye, MousePointer } from "lucide-react";
+import { Mail, Users, TrendingUp, Eye, MousePointer } from "lucide-react";
+import { AddCampaignDialog } from "@/components/marketing/AddCampaignDialog";
+import { useSupabaseMarketingMessages } from "@/hooks/marketing/useSupabaseMarketingMessages";
+import { MarketingSuggestions } from "@/components/marketing/MarketingSuggestions";
 
 export function EmailMarketing() {
+  const { messages, messagesLoading } = useSupabaseMarketingMessages("email");
+
+  const totalDest = messages.reduce((acc, m) => acc + (m.destinatarios || 0), 0);
+  const totalEntregues = messages.reduce((acc, m) => acc + (m.entregues || 0), 0);
+  const totalLidas = messages.reduce((acc, m) => acc + (m.lidas || 0), 0);
+
+  const taxaAbertura = totalDest > 0 ? ((totalLidas / totalDest) * 100).toFixed(1) + "%" : "-";
+  const taxaCliques = "-"; // não há campo de cliques neste momento
+  const assinantesAtivos = "-"; // sem tabela de assinantes dedicada
+  const roi = "-"; // sem origem de dados
+
   return (
     <ResponsiveLayout 
       activeView="email-marketing" 
@@ -16,12 +30,9 @@ export function EmailMarketing() {
         <div className="flex justify-between items-center">
           <div>
             <h2 className="text-2xl font-bold">E-mail Marketing</h2>
-            <p className="text-muted-foreground">Crie e gerencie campanhas de e-mail eficazes</p>
+            <p className="text-muted-foreground">Estatísticas baseadas nas mensagens registradas</p>
           </div>
-          <Button>
-            <Mail className="mr-2 h-4 w-4" />
-            Nova Campanha
-          </Button>
+          <AddCampaignDialog triggerLabel="Nova Campanha" initialCategoria="email" initialTitulo="Campanha de E-mail" />
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -31,8 +42,8 @@ export function EmailMarketing() {
               <Eye className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">24.8%</div>
-              <p className="text-xs text-muted-foreground">Média da indústria: 21%</p>
+              <div className="text-2xl font-bold">{messagesLoading ? "..." : taxaAbertura}</div>
+              <p className="text-xs text-muted-foreground">Lidas / Destinatários</p>
             </CardContent>
           </Card>
           
@@ -42,8 +53,8 @@ export function EmailMarketing() {
               <MousePointer className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">3.2%</div>
-              <p className="text-xs text-muted-foreground">Média da indústria: 2.6%</p>
+              <div className="text-2xl font-bold">{messagesLoading ? "..." : taxaCliques}</div>
+              <p className="text-xs text-muted-foreground">Sem dados de clique</p>
             </CardContent>
           </Card>
 
@@ -53,8 +64,8 @@ export function EmailMarketing() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">1.2K</div>
-              <p className="text-xs text-muted-foreground">+15 esta semana</p>
+              <div className="text-2xl font-bold">{assinantesAtivos}</div>
+              <p className="text-xs text-muted-foreground">Sem base de assinantes</p>
             </CardContent>
           </Card>
 
@@ -64,8 +75,8 @@ export function EmailMarketing() {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">420%</div>
-              <p className="text-xs text-muted-foreground">Retorno sobre investimento</p>
+              <div className="text-2xl font-bold">{roi}</div>
+              <p className="text-xs text-muted-foreground">Sem origem de dados</p>
             </CardContent>
           </Card>
         </div>
@@ -74,42 +85,32 @@ export function EmailMarketing() {
           <Card>
             <CardHeader>
               <CardTitle>Campanhas Recentes</CardTitle>
-              <CardDescription>Últimas campanhas enviadas</CardDescription>
+              <CardDescription>Últimos registros de envio (canal: email)</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <h4 className="font-semibold">Newsletter Janeiro</h4>
-                    <p className="text-muted-foreground">Enviado para 1.2K assinantes</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-green-600">28.5% aberto</p>
-                    <p className="text-xs text-muted-foreground">4.1% clicou</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <h4 className="font-semibold">Promoção Ano Novo</h4>
-                    <p className="text-muted-foreground">Enviado para 950 prospects</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-green-600">31.2% aberto</p>
-                    <p className="text-xs text-muted-foreground">5.8% clicou</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <h4 className="font-semibold">Dicas de Treino</h4>
-                    <p className="text-muted-foreground">Enviado para 800 alunos</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-green-600">22.7% aberto</p>
-                    <p className="text-xs text-muted-foreground">2.9% clicou</p>
-                  </div>
-                </div>
+                {messagesLoading ? (
+                  <p className="text-sm text-muted-foreground">Carregando...</p>
+                ) : messages.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhuma mensagem registrada.</p>
+                ) : (
+                  messages.slice(0, 5).map((m) => (
+                    <div key={m.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div>
+                        <h4 className="font-semibold">{m.titulo || "(sem título)"}</h4>
+                        <p className="text-muted-foreground">Enviado para {m.destinatarios || 0} destinatários</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-green-600">
+                          {m.destinatarios ? `${(((m.lidas || 0) / m.destinatarios) * 100).toFixed(1)}% aberto` : "-"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {m.entregues ? `${(((m.entregues || 0) / (m.enviadas || m.destinatarios || 1)) * 100).toFixed(1)}% entregue` : "-"}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
@@ -121,51 +122,19 @@ export function EmailMarketing() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <h4 className="font-semibold">Alunos Ativos</h4>
-                    <p className="text-muted-foreground">Matriculados e frequentando</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold">342</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <h4 className="font-semibold">Ex-alunos</h4>
-                    <p className="text-muted-foreground">Para campanhas de reativação</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold">156</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <h4 className="font-semibold">Prospects Qualificados</h4>
-                    <p className="text-muted-foreground">Interessados em se matricular</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold">89</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <h4 className="font-semibold">Leads Frios</h4>
-                    <p className="text-muted-foreground">Para nurturing</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold">203</p>
-                  </div>
-                </div>
-
-                <Button className="w-full">Gerenciar Segmentos</Button>
+                <p className="text-sm text-muted-foreground">Nenhum segmento cadastrado.</p>
+                <Button variant="outline">Criar Segmento</Button>
               </div>
             </CardContent>
           </Card>
         </div>
+
+        <MarketingSuggestions
+          context="email"
+          onCreateFromSuggestion={(s) => {
+            console.log("[Suggestion] email", s);
+          }}
+        />
       </div>
     </ResponsiveLayout>
   );

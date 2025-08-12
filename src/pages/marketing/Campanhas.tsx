@@ -4,43 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ResponsiveLayout } from "@/components/layout/ResponsiveLayout";
 import { Plus, Target, Users, TrendingUp, Eye } from "lucide-react";
+import { useSupabaseCampaigns } from "@/hooks/marketing/useSupabaseCampaigns";
+import { AddCampaignDialog } from "@/components/marketing/AddCampaignDialog";
+import { MarketingSuggestions } from "@/components/marketing/MarketingSuggestions";
 
 export function Campanhas() {
-  const campaigns = [
-    {
-      id: 1,
-      name: "Volta às Aulas 2024",
-      status: "ativa",
-      type: "Captação",
-      reach: 1250,
-      conversions: 45,
-      budget: 800,
-      startDate: "2024-01-15",
-      endDate: "2024-02-29"
-    },
-    {
-      id: 2,
-      name: "Promoção Amigo Indica Amigo",
-      status: "pausada",
-      type: "Conversão",
-      reach: 890,
-      conversions: 23,
-      budget: 500,
-      startDate: "2024-01-01",
-      endDate: "2024-03-31"
-    },
-    {
-      id: 3,
-      name: "Black Friday Fitness",
-      status: "finalizada",
-      type: "Vendas",
-      reach: 2100,
-      conversions: 78,
-      budget: 1200,
-      startDate: "2023-11-20",
-      endDate: "2023-11-30"
-    }
-  ];
+  const { campaigns, campaignsLoading } = useSupabaseCampaigns();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -50,6 +19,11 @@ export function Campanhas() {
       default: return "bg-gray-100 text-gray-800";
     }
   };
+
+  const ativas = campaigns.filter(c => c.status === "ativa");
+  const alcanceTotal = campaigns.reduce((acc, c) => acc + (c.alcance || 0), 0);
+  const conversoesTotal = campaigns.reduce((acc, c) => acc + (c.conversoes || 0), 0);
+  const taxaConversao = alcanceTotal > 0 ? ((conversoesTotal / alcanceTotal) * 100).toFixed(1) + "%" : "-";
 
   return (
     <ResponsiveLayout 
@@ -61,13 +35,10 @@ export function Campanhas() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h2 className="text-2xl font-bold">Campanhas Ativas</h2>
-            <p className="text-muted-foreground">Acompanhe o desempenho das suas campanhas</p>
+            <h2 className="text-2xl font-bold">Campanhas</h2>
+            <p className="text-muted-foreground">Baseadas nos seus registros</p>
           </div>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Nova Campanha
-          </Button>
+          <AddCampaignDialog triggerLabel="Nova Campanha" />
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -77,8 +48,8 @@ export function Campanhas() {
               <Target className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">3</div>
-              <p className="text-xs text-muted-foreground">+1 desde o mês passado</p>
+              <div className="text-2xl font-bold">{campaignsLoading ? "..." : ativas.length}</div>
+              <p className="text-xs text-muted-foreground">Total no momento</p>
             </CardContent>
           </Card>
           
@@ -88,8 +59,8 @@ export function Campanhas() {
               <Eye className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">4.240</div>
-              <p className="text-xs text-muted-foreground">+15% desde o mês passado</p>
+              <div className="text-2xl font-bold">{campaignsLoading ? "..." : alcanceTotal.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">Soma do campo alcance</p>
             </CardContent>
           </Card>
 
@@ -99,8 +70,8 @@ export function Campanhas() {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">146</div>
-              <p className="text-xs text-muted-foreground">+8% desde o mês passado</p>
+              <div className="text-2xl font-bold">{campaignsLoading ? "..." : conversoesTotal}</div>
+              <p className="text-xs text-muted-foreground">Soma do campo conversões</p>
             </CardContent>
           </Card>
 
@@ -110,52 +81,65 @@ export function Campanhas() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">3.4%</div>
-              <p className="text-xs text-muted-foreground">+0.5% desde o mês passado</p>
+              <div className="text-2xl font-bold">{campaignsLoading ? "..." : taxaConversao}</div>
+              <p className="text-xs text-muted-foreground">Conversões / alcance</p>
             </CardContent>
           </Card>
         </div>
 
         <div className="grid gap-4">
-          {campaigns.map((campaign) => (
-            <Card key={campaign.id}>
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      {campaign.name}
-                      <Badge className={getStatusColor(campaign.status)}>
-                        {campaign.status}
-                      </Badge>
-                    </CardTitle>
-                    <CardDescription>
-                      {campaign.type} • {campaign.startDate} até {campaign.endDate}
-                    </CardDescription>
+          {campaignsLoading ? (
+            <p className="text-sm text-muted-foreground">Carregando...</p>
+          ) : campaigns.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhuma campanha cadastrada.</p>
+          ) : (
+            campaigns.map((campaign) => (
+              <Card key={campaign.id}>
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        {campaign.titulo}
+                        <Badge className={getStatusColor(campaign.status)}>
+                          {campaign.status}
+                        </Badge>
+                      </CardTitle>
+                      <CardDescription>
+                        {campaign.categoria} • {campaign.data_inicio || "-"} até {campaign.data_fim || "-"}
+                      </CardDescription>
+                    </div>
+                    <Button variant="outline" size="sm">
+                      Ver Detalhes
+                    </Button>
                   </div>
-                  <Button variant="outline" size="sm">
-                    Ver Detalhes
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Alcance</p>
-                    <p className="font-semibold">{campaign.reach.toLocaleString()}</p>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Alcance</p>
+                      <p className="font-semibold">{(campaign.alcance || 0).toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Conversões</p>
+                      <p className="font-semibold">{campaign.conversoes || 0}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Orçamento</p>
+                      <p className="font-semibold">{campaign.orcamento ? `R$ ${campaign.orcamento}` : "-"}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-muted-foreground">Conversões</p>
-                    <p className="font-semibold">{campaign.conversions}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Orçamento</p>
-                    <p className="font-semibold">R$ {campaign.budget}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
+
+        <MarketingSuggestions
+          context="campanhas"
+          onCreateFromSuggestion={(s) => {
+            console.log("[Suggestion] campanhas", s);
+          }}
+        />
       </div>
     </ResponsiveLayout>
   );
