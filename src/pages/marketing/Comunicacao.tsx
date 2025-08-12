@@ -196,15 +196,15 @@ export function Comunicacao() {
                   <div className="space-y-3">
                     <div className="p-3 border rounded">
                       <h4 className="font-medium">Lembrete de Aula</h4>
-                      <p className="text-sm text-muted-foreground">Olá {nome}! Sua aula de {modalidade} está marcada para hoje às {horario}.</p>
+                      <p className="text-sm text-muted-foreground">Olá [nome]! Sua aula de [modalidade] está marcada para hoje às [horario].</p>
                     </div>
                     <div className="p-3 border rounded">
                       <h4 className="font-medium">Cobrança Amigável</h4>
-                      <p className="text-sm text-muted-foreground">Olá {nome}! Sua mensalidade vence em {dias} dias. Que tal renovar?</p>
+                      <p className="text-sm text-muted-foreground">Olá [nome]! Sua mensalidade vence em [dias] dias. Que tal renovar?</p>
                     </div>
                     <div className="p-3 border rounded">
                       <h4 className="font-medium">Boas-vindas</h4>
-                      <p className="text-sm text-muted-foreground">Bem-vindo(a) à nossa academia, {nome}! Estamos animados para ter você conosco!</p>
+                      <p className="text-sm text-muted-foreground">Bem-vindo(a) à nossa academia, [nome]! Estamos animados para ter você conosco!</p>
                     </div>
                   </div>
                   <Button className="w-full mt-4">Gerenciar Templates</Button>
