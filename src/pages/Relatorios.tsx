@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { BarChart3, TrendingUp, CreditCard, Users, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useSupabaseFinancialReports } from "@/hooks/useSupabaseFinancialReports";
+import { AdvancedFinancialMetrics } from "@/components/reports/AdvancedFinancialMetrics";
+import { FinancialEvolutionChart } from "@/components/reports/FinancialEvolutionChart";
 
 interface ReceitaRelatório {
   nome_plano: string;
@@ -19,6 +22,16 @@ export function Relatorios() {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const { toast } = useToast();
+
+  // Hook para relatórios avançados
+  const {
+    faturamentoMensal,
+    inadimplencia,
+    metricasGerais,
+    evolucaoReceitas,
+    loading: advancedLoading,
+    refetch: refetchAdvanced
+  } = useSupabaseFinancialReports();
 
   const fetchReceitas = async () => {
     try {
@@ -57,6 +70,7 @@ export function Relatorios() {
       description: "Carregando dados mais recentes...",
     });
     fetchReceitas();
+    refetchAdvanced();
   };
 
   const totalGeral = receitas.reduce((total, receita) => total + receita.total_recebido, 0);
@@ -65,7 +79,9 @@ export function Relatorios() {
     return acc;
   }, {} as Record<string, number>);
 
-  if (loading) {
+  const isLoading = loading || advancedLoading;
+
+  if (isLoading) {
     return (
       <div className="space-y-6 p-6">
         <div>
@@ -96,6 +112,19 @@ export function Relatorios() {
         </Button>
       </div>
 
+      {/* Métricas Avançadas */}
+      <AdvancedFinancialMetrics 
+        metricas={metricasGerais} 
+        inadimplencia={inadimplencia} 
+      />
+
+      {/* Gráficos de Evolução */}
+      <FinancialEvolutionChart 
+        faturamentoMensal={faturamentoMensal}
+        evolucaoReceitas={evolucaoReceitas}
+      />
+
+      {/* Métricas Básicas Existentes */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -158,6 +187,7 @@ export function Relatorios() {
         </Card>
       </div>
 
+      {/* Detalhamento por Planos e Formas de Pagamento */}
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>

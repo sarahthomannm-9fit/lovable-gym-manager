@@ -667,6 +667,48 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      relatorio_evolucao_receitas: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          mes: string
+          receita: number
+          quantidade_pagamentos: number
+          ticket_medio: number
+        }[]
+      }
+      relatorio_faturamento_mensal: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          mes: string
+          total_faturado: number
+          total_recebido: number
+          total_pendente: number
+          quantidade_pagamentos: number
+        }[]
+      }
+      relatorio_inadimplencia: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          aluno_nome: string
+          aluno_id: string
+          valor_em_atraso: number
+          dias_atraso: number
+          plano_nome: string
+          metodo_pagamento: string
+          telefone: string
+        }[]
+      }
+      relatorio_metricas_gerais: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          ticket_medio: number
+          total_alunos_ativos: number
+          total_receita_mes_atual: number
+          total_receita_mes_anterior: number
+          crescimento_percentual: number
+          formas_pagamento_distintas: number
+        }[]
+      }
       relatorio_receitas_por_plano: {
         Args: Record<PropertyKey, never>
         Returns: {
