@@ -111,6 +111,12 @@ export function AppSidebar({ activeView, onViewChange }: AppSidebarProps) {
           path: "/marketing/conversao",
         },
         {
+          title: "Funis",
+          icon: Target,
+          key: "funis",
+          path: "/marketing/funis",
+        },
+        {
           title: "E-mail Marketing",
           icon: Mail,
           key: "email-marketing",

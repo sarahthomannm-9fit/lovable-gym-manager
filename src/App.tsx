@@ -20,6 +20,7 @@ import { Campanhas } from "./pages/marketing/Campanhas";
 import { Captacao } from "./pages/marketing/Captacao";
 import { Comunicacao } from "./pages/marketing/Comunicacao";
 import { Conversao } from "./pages/marketing/Conversao";
+import { Funis } from "./pages/marketing/Funis";
 import { EmailMarketing } from "./pages/marketing/EmailMarketing";
 import { Promocoes } from "./pages/marketing/Promocoes";
 
@@ -49,6 +50,7 @@ const App = () => (
                     <Route path="/marketing/captacao" element={<Captacao />} />
                     <Route path="/marketing/comunicacao" element={<Comunicacao />} />
                     <Route path="/marketing/conversao" element={<Conversao />} />
+                    <Route path="/marketing/funis" element={<Funis />} />
                     <Route path="/marketing/email" element={<EmailMarketing />} />
                     <Route path="/marketing/promocoes" element={<Promocoes />} />
                     {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
