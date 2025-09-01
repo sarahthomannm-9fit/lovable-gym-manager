@@ -8,8 +8,10 @@ import { BarChart3, TrendingUp, CreditCard, Users, RefreshCw } from "lucide-reac
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseFinancialReports } from "@/hooks/useSupabaseFinancialReports";
+import { ReportsCharts } from "@/components/reports/ReportsCharts";
 import { AdvancedFinancialMetrics } from "@/components/reports/AdvancedFinancialMetrics";
 import { FinancialEvolutionChart } from "@/components/reports/FinancialEvolutionChart";
+import { IntelligentFinancialDashboard } from "@/components/reports/IntelligentFinancialDashboard";
 
 interface ReceitaRelatório {
   nome_plano: string;
@@ -123,6 +125,12 @@ export function Relatorios() {
         faturamentoMensal={faturamentoMensal}
         evolucaoReceitas={evolucaoReceitas}
       />
+
+      {/* Dashboard Financeiro Inteligente */}
+      <div className="mt-8">
+        <h2 className="text-xl font-semibold mb-4">Dashboard Financeiro Inteligente</h2>
+        <IntelligentFinancialDashboard />
+      </div>
 
       {/* Métricas Básicas Existentes */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

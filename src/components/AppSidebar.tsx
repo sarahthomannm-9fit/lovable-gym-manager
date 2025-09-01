@@ -25,6 +25,7 @@ import {
   TrendingUp,
   Mail,
   Gift,
+  Package,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -63,6 +64,12 @@ export function AppSidebar({ activeView, onViewChange }: AppSidebarProps) {
           icon: Calendar,
           key: "aulas",
           path: "/aulas",
+        },
+        {
+          title: "Produtos",
+          icon: Package,
+          key: "produtos",
+          path: "/produtos",
         },
       ],
     },

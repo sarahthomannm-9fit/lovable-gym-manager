@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "13.0.4"
@@ -139,6 +139,47 @@ export type Database = {
             columns: ["plano_id"]
             isOneToOne: false
             referencedRelation: "planos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      analises_produto: {
+        Row: {
+          analise_mercado: Json | null
+          campanhas_sugeridas: Json | null
+          created_at: string
+          estrategias_recomendadas: Json | null
+          id: string
+          metricas_projetadas: Json | null
+          produto_id: string | null
+          score_viabilidade: number | null
+        }
+        Insert: {
+          analise_mercado?: Json | null
+          campanhas_sugeridas?: Json | null
+          created_at?: string
+          estrategias_recomendadas?: Json | null
+          id?: string
+          metricas_projetadas?: Json | null
+          produto_id?: string | null
+          score_viabilidade?: number | null
+        }
+        Update: {
+          analise_mercado?: Json | null
+          campanhas_sugeridas?: Json | null
+          created_at?: string
+          estrategias_recomendadas?: Json | null
+          id?: string
+          metricas_projetadas?: Json | null
+          produto_id?: string | null
+          score_viabilidade?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analises_produto_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
             referencedColumns: ["id"]
           },
         ]
@@ -552,6 +593,51 @@ export type Database = {
         }
         Relationships: []
       }
+      produtos: {
+        Row: {
+          canais_preferidos: Json | null
+          created_at: string
+          descricao: string | null
+          id: string
+          nome: string
+          objetivos: Json | null
+          orcamento_marketing: number | null
+          preco: number | null
+          status: string
+          target_publico: string | null
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          canais_preferidos?: Json | null
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          objetivos?: Json | null
+          orcamento_marketing?: number | null
+          preco?: number | null
+          status?: string
+          target_publico?: string | null
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          canais_preferidos?: Json | null
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          objetivos?: Json | null
+          orcamento_marketing?: number | null
+          preco?: number | null
+          status?: string
+          target_publico?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       promocoes: {
         Row: {
           created_at: string
@@ -667,12 +753,36 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      analise_faturamento_avancada: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          estrategias_retencao: Json
+          periodo: string
+          receita_atual: number
+          receita_projetada: number
+          recomendacoes: Json
+          risco_inadimplencia: string
+          taxa_crescimento: number
+          variabilidade: number
+        }[]
+      }
+      projecao_cenarios: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          cenario: string
+          investimento_necessario: number
+          receita_projetada_12m: number
+          receita_projetada_3m: number
+          receita_projetada_6m: number
+          roi_estimado: number
+        }[]
+      }
       relatorio_evolucao_receitas: {
         Args: Record<PropertyKey, never>
         Returns: {
           mes: string
-          receita: number
           quantidade_pagamentos: number
+          receita: number
           ticket_medio: number
         }[]
       }
@@ -680,40 +790,40 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: {
           mes: string
-          total_faturado: number
-          total_recebido: number
-          total_pendente: number
           quantidade_pagamentos: number
+          total_faturado: number
+          total_pendente: number
+          total_recebido: number
         }[]
       }
       relatorio_inadimplencia: {
         Args: Record<PropertyKey, never>
         Returns: {
-          aluno_nome: string
           aluno_id: string
-          valor_em_atraso: number
+          aluno_nome: string
           dias_atraso: number
-          plano_nome: string
           metodo_pagamento: string
+          plano_nome: string
           telefone: string
+          valor_em_atraso: number
         }[]
       }
       relatorio_metricas_gerais: {
         Args: Record<PropertyKey, never>
         Returns: {
-          ticket_medio: number
-          total_alunos_ativos: number
-          total_receita_mes_atual: number
-          total_receita_mes_anterior: number
           crescimento_percentual: number
           formas_pagamento_distintas: number
+          ticket_medio: number
+          total_alunos_ativos: number
+          total_receita_mes_anterior: number
+          total_receita_mes_atual: number
         }[]
       }
       relatorio_receitas_por_plano: {
         Args: Record<PropertyKey, never>
         Returns: {
-          nome_plano: string
           forma_pagamento: string
+          nome_plano: string
           total_recebido: number
         }[]
       }
