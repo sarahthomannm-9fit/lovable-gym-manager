@@ -4,15 +4,19 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AddProductDialog } from '@/components/AddProductDialog';
+import { ProductAnalysisDialog } from '@/components/ProductAnalysisDialog';
+import { CreateCampaignDialog } from '@/components/CreateCampaignDialog';
 import { 
   Smartphone, Monitor, Users, Package, TrendingUp, 
   Target, BarChart3, Lightbulb, AlertCircle, CheckCircle 
 } from 'lucide-react';
-import { useSupabaseProdutos } from '@/hooks/useSupabaseProdutos';
+import { useSupabaseProdutos, Produto } from '@/hooks/useSupabaseProdutos';
 
 export function Produtos() {
   const { produtos, loading } = useSupabaseProdutos();
-  const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Produto | null>(null);
+  const [showAnalysis, setShowAnalysis] = useState(false);
+  const [showCampaign, setShowCampaign] = useState(false);
 
   const getTipoIcon = (tipo: string) => {
     switch (tipo) {
@@ -179,12 +183,22 @@ export function Produtos() {
                     variant="outline" 
                     size="sm" 
                     className="flex-1"
-                    onClick={() => setSelectedProduct(produto.id)}
+                    onClick={() => {
+                      setSelectedProduct(produto);
+                      setShowAnalysis(true);
+                    }}
                   >
                     <BarChart3 className="h-4 w-4 mr-2" />
                     Análises
                   </Button>
-                  <Button size="sm" className="flex-1">
+                  <Button 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={() => {
+                      setSelectedProduct(produto);
+                      setShowCampaign(true);
+                    }}
+                  >
                     <Target className="h-4 w-4 mr-2" />
                     Campanhas
                   </Button>
@@ -208,6 +222,19 @@ export function Produtos() {
           </CardContent>
         </Card>
       )}
+
+      {/* Dialogs */}
+      <ProductAnalysisDialog 
+        produto={selectedProduct}
+        open={showAnalysis}
+        onOpenChange={setShowAnalysis}
+      />
+      
+      <CreateCampaignDialog 
+        produto={selectedProduct}
+        open={showCampaign}
+        onOpenChange={setShowCampaign}
+      />
     </div>
   );
 }

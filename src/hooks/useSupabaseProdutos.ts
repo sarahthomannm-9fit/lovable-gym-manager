@@ -185,7 +185,11 @@ export function useSupabaseProdutos() {
         .from('analises_produto')
         .insert(analise);
 
-      if (error) throw error;
+      // Atualizar status do produto para ativo após análise
+      await supabase
+        .from('produtos')
+        .update({ status: 'ativo' })
+        .eq('id', produtoId);
     } catch (error) {
       console.error('Erro ao gerar análise automática:', error);
     }

@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { GymDataProvider } from "@/contexts/GymDataContext";
 import { SupabaseGymDataProvider } from "@/contexts/SupabaseGymDataContext";
+import { DataIntegrationProvider } from "@/components/DataIntegrationProvider";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import Index from "./pages/Index";
@@ -31,14 +32,15 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <SupabaseGymDataProvider>
       <GymDataProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <SidebarProvider>
-              <div className="flex min-h-screen w-full">
-                <AppSidebar activeView="" onViewChange={() => {}} />
-                <main className="flex-1">
+        <DataIntegrationProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <SidebarProvider>
+                <div className="flex min-h-screen w-full">
+                  <AppSidebar activeView="" onViewChange={() => {}} />
+                  <main className="flex-1">
                   <Routes>
                     <Route path="/" element={<Index />} />
                     <Route path="/painel" element={<Painel />} />
@@ -63,9 +65,10 @@ const App = () => (
             </SidebarProvider>
           </BrowserRouter>
         </TooltipProvider>
-      </GymDataProvider>
-    </SupabaseGymDataProvider>
-  </QueryClientProvider>
+      </DataIntegrationProvider>
+    </GymDataProvider>
+  </SupabaseGymDataProvider>
+</QueryClientProvider>
 );
 
 export default App;
