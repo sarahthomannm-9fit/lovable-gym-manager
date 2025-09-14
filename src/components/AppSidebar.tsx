@@ -26,6 +26,11 @@ import {
   Mail,
   Gift,
   Package,
+  ArrowUpCircle,
+  ArrowDownCircle,
+  Receipt,
+  Brain,
+  Percent,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -74,7 +79,7 @@ export function AppSidebar({ activeView, onViewChange }: AppSidebarProps) {
       ],
     },
     {
-      category: "Treinos & Relatórios",
+      category: "Treinos",
       items: [
         {
           title: "Treinos",
@@ -82,11 +87,46 @@ export function AppSidebar({ activeView, onViewChange }: AppSidebarProps) {
           key: "treinos",
           path: "/treinos",
         },
+      ],
+    },
+    {
+      category: "Relatórios Financeiros 💰",
+      items: [
         {
-          title: "Relatórios",
+          title: "Dashboard",
           icon: BarChart3,
           key: "relatorios",
           path: "/relatorios",
+        },
+        {
+          title: "Fluxo de Pagamentos",
+          icon: ArrowDownCircle,
+          key: "fluxo-pagamentos",
+          path: "/relatorios/pagamentos",
+        },
+        {
+          title: "Fluxo de Recebimentos",
+          icon: ArrowUpCircle,
+          key: "fluxo-recebimentos",
+          path: "/relatorios/recebimentos",
+        },
+        {
+          title: "Cobranças",
+          icon: Receipt,
+          key: "cobrancas",
+          path: "/relatorios/cobrancas",
+        },
+        {
+          title: "Estratégias & IA",
+          icon: Brain,
+          key: "estrategias-ia",
+          path: "/relatorios/estrategias",
+        },
+        {
+          title: "Promoções & Cupons",
+          icon: Percent,
+          key: "promocoes-cupons",
+          path: "/relatorios/promocoes-cupons",
         },
       ],
     },

@@ -14,6 +14,11 @@ import NotFound from "./pages/NotFound";
 import { Painel } from "./pages/Painel";
 import { Treinos } from "./pages/Treinos";
 import { Relatorios } from "./pages/Relatorios";
+import { FluxoPagamentos } from "./pages/relatorios/FluxoPagamentos";
+import { FluxoRecebimentos } from "./pages/relatorios/FluxoRecebimentos";
+import { Cobrancas } from "./pages/relatorios/Cobrancas";
+import { EstrategiasIA } from "./pages/relatorios/EstrategiasIA";
+import { PromocoesCupons } from "./pages/relatorios/PromocoesCupons";
 import { Students } from "./components/Students";
 import { Plans } from "./components/Plans";
 import { Classes } from "./components/Classes";
@@ -48,7 +53,12 @@ const App = () => (
                     <Route path="/planos" element={<Plans />} />
                     <Route path="/aulas" element={<Classes />} />
                     <Route path="/treinos" element={<Treinos />} />
-                    <Route path="/relatorios" element={<Relatorios />} />
+            <Route path="/relatorios" element={<Relatorios />} />
+            <Route path="/relatorios/pagamentos" element={<FluxoPagamentos />} />
+            <Route path="/relatorios/recebimentos" element={<FluxoRecebimentos />} />
+            <Route path="/relatorios/cobrancas" element={<Cobrancas />} />
+            <Route path="/relatorios/estrategias" element={<EstrategiasIA />} />
+            <Route path="/relatorios/promocoes-cupons" element={<PromocoesCupons />} />
                     <Route path="/marketing/campanhas" element={<Campanhas />} />
                     <Route path="/marketing/captacao" element={<Captacao />} />
                     <Route path="/marketing/comunicacao" element={<Comunicacao />} />
