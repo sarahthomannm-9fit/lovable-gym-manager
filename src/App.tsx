@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,6 +8,7 @@ import { SupabaseGymDataProvider } from "@/contexts/SupabaseGymDataContext";
 import { DataIntegrationProvider } from "@/components/DataIntegrationProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import Index from "./pages/Index";
@@ -32,20 +32,32 @@ import { Conversao } from "./pages/marketing/Conversao";
 import { Funis } from "./pages/marketing/Funis";
 import { EmailMarketing } from "./pages/marketing/EmailMarketing";
 import { Promocoes } from "./pages/marketing/Promocoes";
+import { InsightsIA } from "./pages/marketing/InsightsIA";
 import { Produtos } from "./pages/Produtos";
 
-const queryClient = new QueryClient();
+// Configuração otimizada do QueryClient
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutos
+      gcTime: 1000 * 60 * 10, // 10 minutos
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <SupabaseGymDataProvider>
-        <GymDataProvider>
-          <DataIntegrationProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <SupabaseGymDataProvider>
+          <GymDataProvider>
+            <DataIntegrationProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <BrowserRouter>
                 <Routes>
                   <Route path="/" element={<Index />} />
                   <Route path="/auth" element={<Auth />} />
@@ -232,6 +244,16 @@ const App = () => (
                       </SidebarProvider>
                     </ProtectedRoute>
                   } />
+                  <Route path="/marketing/insights-ia" element={
+                    <ProtectedRoute>
+                      <SidebarProvider>
+                        <div className="flex min-h-screen w-full">
+                          <AppSidebar activeView="" onViewChange={() => {}} />
+                          <main className="flex-1"><InsightsIA /></main>
+                        </div>
+                      </SidebarProvider>
+                    </ProtectedRoute>
+                  } />
                   <Route path="/produtos" element={
                     <ProtectedRoute>
                       <SidebarProvider>
@@ -252,6 +274,7 @@ const App = () => (
       </SupabaseGymDataProvider>
     </AuthProvider>
   </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;
