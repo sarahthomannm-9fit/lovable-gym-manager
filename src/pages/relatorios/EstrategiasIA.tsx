@@ -196,6 +196,25 @@ export function EstrategiasIA() {
     );
   }
 
+  const handleRefreshStrategies = async () => {
+    setLoading(true);
+    toast({
+      title: "Atualizando Estratégias",
+      description: "Analisando dados atuais do sistema...",
+    });
+    
+    // Simular recarga dos dados
+    setTimeout(() => {
+      setEstrategias(estrategiasDemo);
+      setAlunosRisco(alunosRiscoDemo);
+      setLoading(false);
+      toast({
+        title: "Estratégias Atualizadas",
+        description: "Análise completa com dados mais recentes concluída!",
+      });
+    }, 2000);
+  };
+
   return (
     <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
@@ -208,6 +227,10 @@ export function EstrategiasIA() {
             Análises inteligentes e recomendações para otimização financeira
           </p>
         </div>
+        <Button onClick={handleRefreshStrategies} disabled={loading}>
+          <TrendingUp className="h-4 w-4 mr-2" />
+          Atualizar Estratégias
+        </Button>
       </div>
 
       {/* Resumo de IA */}

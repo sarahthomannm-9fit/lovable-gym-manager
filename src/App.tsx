@@ -34,6 +34,8 @@ import { EmailMarketing } from "./pages/marketing/EmailMarketing";
 import { Promocoes } from "./pages/marketing/Promocoes";
 import { InsightsIA } from "./pages/marketing/InsightsIA";
 import { Produtos } from "./pages/Produtos";
+import { Automacao } from "./pages/marketing/Automacao";
+import { AgenteIA } from "./pages/AgenteIA";
 
 // Configuração otimizada do QueryClient
 const queryClient = new QueryClient({
@@ -250,6 +252,26 @@ const App = () => (
                         <div className="flex min-h-screen w-full">
                           <AppSidebar activeView="" onViewChange={() => {}} />
                           <main className="flex-1"><InsightsIA /></main>
+                        </div>
+                      </SidebarProvider>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/marketing/automacao" element={
+                    <ProtectedRoute>
+                      <SidebarProvider>
+                        <div className="flex min-h-screen w-full">
+                          <AppSidebar activeView="" onViewChange={() => {}} />
+                          <main className="flex-1"><Automacao /></main>
+                        </div>
+                      </SidebarProvider>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/agente-ia" element={
+                    <ProtectedRoute>
+                      <SidebarProvider>
+                        <div className="flex min-h-screen w-full">
+                          <AppSidebar activeView="" onViewChange={() => {}} />
+                          <main className="flex-1"><AgenteIA /></main>
                         </div>
                       </SidebarProvider>
                     </ProtectedRoute>

@@ -7,6 +7,7 @@ import { UserPlus, Users, TrendingUp, Target, Phone, Mail, MessageSquare } from 
 import { AddLeadDialog } from "@/components/marketing/AddLeadDialog";
 import { useSupabaseLeads } from "@/hooks/marketing/useSupabaseLeads";
 import { MarketingSuggestions } from "@/components/marketing/MarketingSuggestions";
+import { CRMIntegration } from "@/components/marketing/CRMIntegration";
 
 export function Captacao() {
   const { leads, leadsLoading } = useSupabaseLeads();
@@ -281,6 +282,8 @@ export function Captacao() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        <CRMIntegration />
 
         <MarketingSuggestions
           context="captacao"

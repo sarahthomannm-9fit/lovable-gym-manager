@@ -31,6 +31,9 @@ import {
   Receipt,
   Brain,
   Percent,
+  Zap,
+  Sparkles,
+  Bot,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { UserMenu } from "@/components/UserMenu";
@@ -175,6 +178,29 @@ export function AppSidebar({ activeView, onViewChange }: AppSidebarProps) {
           icon: Gift,
           key: "promocoes",
           path: "/marketing/promocoes",
+        },
+        {
+          title: "Automação",
+          icon: Zap,
+          key: "automacao",
+          path: "/marketing/automacao",
+        },
+        {
+          title: "Insights IA",
+          icon: Sparkles,
+          key: "insights-ia",
+          path: "/marketing/insights-ia",
+        },
+      ],
+    },
+    {
+      category: "Inteligência Artificial",
+      items: [
+        {
+          title: "Agente IA",
+          icon: Bot,
+          key: "agente-ia",
+          path: "/agente-ia",
         },
       ],
     },

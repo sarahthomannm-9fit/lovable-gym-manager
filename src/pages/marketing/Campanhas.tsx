@@ -1,15 +1,51 @@
 
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ResponsiveLayout } from "@/components/layout/ResponsiveLayout";
-import { Plus, Target, Users, TrendingUp, Eye } from "lucide-react";
-import { useSupabaseCampaigns } from "@/hooks/marketing/useSupabaseCampaigns";
+import { Plus, Target, Users, TrendingUp, Eye, X, BarChart } from "lucide-react";
+import { useSupabaseCampaigns, Campaign } from "@/hooks/marketing/useSupabaseCampaigns";
 import { AddCampaignDialog } from "@/components/marketing/AddCampaignDialog";
 import { MarketingSuggestions } from "@/components/marketing/MarketingSuggestions";
+import { CampaignReportDialog } from "@/components/marketing/CampaignReportDialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 export function Campanhas() {
-  const { campaigns, campaignsLoading } = useSupabaseCampaigns();
+  const { campaigns, campaignsLoading, refetchCampaigns } = useSupabaseCampaigns();
+  const { toast } = useToast();
+  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
+
+  const handleFinalizeCampaign = async (campaignId: string) => {
+    try {
+      const { error } = await supabase
+        .from('campanhas_marketing')
+        .update({ status: 'finalizada' })
+        .eq('id', campaignId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Campanha Finalizada",
+        description: "A campanha foi marcada como finalizada!",
+      });
+
+      refetchCampaigns();
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleViewReport = (campaign: Campaign) => {
+    setSelectedCampaign(campaign);
+    setReportOpen(true);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -108,9 +144,26 @@ export function Campanhas() {
                         {campaign.categoria} • {campaign.data_inicio || "-"} até {campaign.data_fim || "-"}
                       </CardDescription>
                     </div>
-                    <Button variant="outline" size="sm">
-                      Ver Detalhes
-                    </Button>
+                    <div className="flex gap-2">
+                      {campaign.status === 'ativa' && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleFinalizeCampaign(campaign.id)}
+                        >
+                          <X className="h-4 w-4 mr-1" />
+                          Finalizar
+                        </Button>
+                      )}
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleViewReport(campaign)}
+                      >
+                        <BarChart className="h-4 w-4 mr-1" />
+                        Relatório
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -141,6 +194,12 @@ export function Campanhas() {
           }}
         />
       </div>
+
+      <CampaignReportDialog
+        campaign={selectedCampaign}
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+      />
     </ResponsiveLayout>
   );
 }
