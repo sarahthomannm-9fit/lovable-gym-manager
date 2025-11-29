@@ -817,6 +817,7 @@ export type Database = {
           variabilidade: number
         }[]
       }
+      dashboard_trust: { Args: never; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

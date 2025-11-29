@@ -34,6 +34,7 @@ import {
   Zap,
   Sparkles,
   Bot,
+  Rocket,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { UserMenu } from "@/components/UserMenu";
@@ -201,6 +202,17 @@ export function AppSidebar({ activeView, onViewChange }: AppSidebarProps) {
           icon: Bot,
           key: "agente-ia",
           path: "/agente-ia",
+        },
+      ],
+    },
+    {
+      category: "9FIT OS 🚀",
+      items: [
+        {
+          title: "Dashboard 9FIT",
+          icon: Rocket,
+          key: "9fit",
+          path: "/9fit",
         },
       ],
     },
