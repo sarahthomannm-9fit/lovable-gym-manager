@@ -805,7 +805,7 @@ export type Database = {
     }
     Functions: {
       analise_faturamento_avancada: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           estrategias_retencao: Json
           periodo: string
@@ -824,12 +824,9 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_admin: {
-        Args: { _user_id: string }
-        Returns: boolean
-      }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
       projecao_cenarios: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           cenario: string
           investimento_necessario: number
@@ -840,7 +837,7 @@ export type Database = {
         }[]
       }
       relatorio_evolucao_receitas: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           mes: string
           quantidade_pagamentos: number
@@ -849,7 +846,7 @@ export type Database = {
         }[]
       }
       relatorio_faturamento_mensal: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           mes: string
           quantidade_pagamentos: number
@@ -859,7 +856,7 @@ export type Database = {
         }[]
       }
       relatorio_inadimplencia: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           aluno_id: string
           aluno_nome: string
@@ -871,7 +868,7 @@ export type Database = {
         }[]
       }
       relatorio_metricas_gerais: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           crescimento_percentual: number
           formas_pagamento_distintas: number
@@ -882,7 +879,7 @@ export type Database = {
         }[]
       }
       relatorio_receitas_por_plano: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           forma_pagamento: string
           nome_plano: string
