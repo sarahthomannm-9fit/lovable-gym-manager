@@ -36,6 +36,8 @@ import { InsightsIA } from "./pages/marketing/InsightsIA";
 import { Produtos } from "./pages/Produtos";
 import { Automacao } from "./pages/marketing/Automacao";
 import { AgenteIA } from "./pages/AgenteIA";
+import Dashboard9FIT from "./pages/9fit/Dashboard9FIT";
+import { DemoModeProvider } from "./contexts/DemoModeContext";
 
 // Configuração otimizada do QueryClient
 const queryClient = new QueryClient({
@@ -56,7 +58,8 @@ const App = () => (
         <SupabaseGymDataProvider>
           <GymDataProvider>
             <DataIntegrationProvider>
-              <TooltipProvider>
+              <DemoModeProvider>
+                <TooltipProvider>
                 <Toaster />
                 <Sonner />
                 <BrowserRouter>
@@ -286,15 +289,26 @@ const App = () => (
                       </SidebarProvider>
                     </ProtectedRoute>
                   } />
+                  <Route path="/9fit" element={
+                    <ProtectedRoute>
+                      <SidebarProvider>
+                        <div className="flex min-h-screen w-full">
+                          <AppSidebar activeView="" onViewChange={() => {}} />
+                          <main className="flex-1"><Dashboard9FIT /></main>
+                        </div>
+                      </SidebarProvider>
+                    </ProtectedRoute>
+                  } />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </BrowserRouter>
             </TooltipProvider>
-          </DataIntegrationProvider>
-        </GymDataProvider>
-      </SupabaseGymDataProvider>
-    </AuthProvider>
+          </DemoModeProvider>
+        </DataIntegrationProvider>
+      </GymDataProvider>
+    </SupabaseGymDataProvider>
+  </AuthProvider>
   </QueryClientProvider>
   </ErrorBoundary>
 );
