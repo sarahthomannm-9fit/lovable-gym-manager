@@ -184,9 +184,73 @@ export type Database = {
           },
         ]
       }
+      assinaturas: {
+        Row: {
+          aluno_id: string | null
+          created_at: string | null
+          data_fim: string | null
+          data_inicio: string
+          data_proxima_cobranca: string | null
+          id: string
+          metodo_pagamento: string | null
+          plano_id: string | null
+          status: string | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          updated_at: string | null
+          valor_recorrente: number | null
+        }
+        Insert: {
+          aluno_id?: string | null
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio?: string
+          data_proxima_cobranca?: string | null
+          id?: string
+          metodo_pagamento?: string | null
+          plano_id?: string | null
+          status?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string | null
+          valor_recorrente?: number | null
+        }
+        Update: {
+          aluno_id?: string | null
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio?: string
+          data_proxima_cobranca?: string | null
+          id?: string
+          metodo_pagamento?: string | null
+          plano_id?: string | null
+          status?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string | null
+          valor_recorrente?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assinaturas_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assinaturas_plano_id_fkey"
+            columns: ["plano_id"]
+            isOneToOne: false
+            referencedRelation: "planos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       aulas: {
         Row: {
           capacidade_maxima: number | null
+          categoria: string | null
           created_at: string | null
           data_aula: string
           descricao: string | null
@@ -194,14 +258,19 @@ export type Database = {
           horario_fim: string
           horario_inicio: string
           id: string
+          inscritos_atual: number | null
+          modalidade: string | null
           nome: string
           plano_id: string | null
           professor_id: string | null
+          recorrencia: string | null
+          status: string | null
           tipo: string | null
           updated_at: string | null
         }
         Insert: {
           capacidade_maxima?: number | null
+          categoria?: string | null
           created_at?: string | null
           data_aula: string
           descricao?: string | null
@@ -209,14 +278,19 @@ export type Database = {
           horario_fim: string
           horario_inicio: string
           id?: string
+          inscritos_atual?: number | null
+          modalidade?: string | null
           nome: string
           plano_id?: string | null
           professor_id?: string | null
+          recorrencia?: string | null
+          status?: string | null
           tipo?: string | null
           updated_at?: string | null
         }
         Update: {
           capacidade_maxima?: number | null
+          categoria?: string | null
           created_at?: string | null
           data_aula?: string
           descricao?: string | null
@@ -224,9 +298,13 @@ export type Database = {
           horario_fim?: string
           horario_inicio?: string
           id?: string
+          inscritos_atual?: number | null
+          modalidade?: string | null
           nome?: string
           plano_id?: string | null
           professor_id?: string | null
+          recorrencia?: string | null
+          status?: string | null
           tipo?: string | null
           updated_at?: string | null
         }
@@ -243,6 +321,51 @@ export type Database = {
             columns: ["professor_id"]
             isOneToOne: false
             referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aulas_inscritos: {
+        Row: {
+          aluno_id: string | null
+          aula_id: string | null
+          created_at: string | null
+          data_inscricao: string | null
+          id: string
+          posicao_lista_espera: number | null
+          status: string | null
+        }
+        Insert: {
+          aluno_id?: string | null
+          aula_id?: string | null
+          created_at?: string | null
+          data_inscricao?: string | null
+          id?: string
+          posicao_lista_espera?: number | null
+          status?: string | null
+        }
+        Update: {
+          aluno_id?: string | null
+          aula_id?: string | null
+          created_at?: string | null
+          data_inscricao?: string | null
+          id?: string
+          posicao_lista_espera?: number | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aulas_inscritos_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aulas_inscritos_aula_id_fkey"
+            columns: ["aula_id"]
+            isOneToOne: false
+            referencedRelation: "aulas"
             referencedColumns: ["id"]
           },
         ]
@@ -363,6 +486,95 @@ export type Database = {
           created_at?: string | null
           descricao?: string
           id?: string
+        }
+        Relationships: []
+      }
+      frequencia_alunos: {
+        Row: {
+          aluno_id: string | null
+          created_at: string | null
+          data: string
+          duracao_minutos: number | null
+          horario_entrada: string
+          horario_saida: string | null
+          id: string
+          tipo_entrada: string | null
+        }
+        Insert: {
+          aluno_id?: string | null
+          created_at?: string | null
+          data?: string
+          duracao_minutos?: number | null
+          horario_entrada?: string
+          horario_saida?: string | null
+          id?: string
+          tipo_entrada?: string | null
+        }
+        Update: {
+          aluno_id?: string | null
+          created_at?: string | null
+          data?: string
+          duracao_minutos?: number | null
+          horario_entrada?: string
+          horario_saida?: string | null
+          id?: string
+          tipo_entrada?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "frequencia_alunos_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      funcionarios: {
+        Row: {
+          ativo: boolean | null
+          cargo: string
+          created_at: string | null
+          data_contratacao: string | null
+          email: string | null
+          especialidades: string[] | null
+          horarios: Json | null
+          id: string
+          nome: string
+          observacoes: string | null
+          salario: number | null
+          telefone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          cargo: string
+          created_at?: string | null
+          data_contratacao?: string | null
+          email?: string | null
+          especialidades?: string[] | null
+          horarios?: Json | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          salario?: number | null
+          telefone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          cargo?: string
+          created_at?: string | null
+          data_contratacao?: string | null
+          email?: string | null
+          especialidades?: string[] | null
+          horarios?: Json | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          salario?: number | null
+          telefone?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
