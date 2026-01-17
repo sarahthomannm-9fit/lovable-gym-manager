@@ -35,6 +35,9 @@ import {
   Sparkles,
   Bot,
   Rocket,
+  Briefcase,
+  Activity,
+  UserCheck,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { UserMenu } from "@/components/UserMenu";
@@ -80,6 +83,29 @@ export function AppSidebar({ activeView, onViewChange }: AppSidebarProps) {
           icon: Package,
           key: "produtos",
           path: "/produtos",
+        },
+      ],
+    },
+    {
+      category: "Equipe & Avaliações",
+      items: [
+        {
+          title: "Funcionários",
+          icon: Briefcase,
+          key: "funcionarios",
+          path: "/funcionarios",
+        },
+        {
+          title: "Avaliações Físicas",
+          icon: Activity,
+          key: "avaliacoes",
+          path: "/avaliacoes",
+        },
+        {
+          title: "Aulas Experimentais",
+          icon: UserCheck,
+          key: "experimentais",
+          path: "/experimentais",
         },
       ],
     },

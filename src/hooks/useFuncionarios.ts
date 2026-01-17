@@ -18,7 +18,10 @@ export interface Funcionario {
   updated_at: string;
 }
 
-type FuncionarioInput = Omit<Funcionario, 'id' | 'created_at' | 'updated_at'>;
+export type FuncionarioInput = Partial<Omit<Funcionario, 'id' | 'created_at' | 'updated_at'>> & {
+  nome: string;
+  cargo: Funcionario['cargo'];
+};
 
 export function useFuncionarios() {
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
