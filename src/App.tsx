@@ -38,6 +38,9 @@ import { Automacao } from "./pages/marketing/Automacao";
 import { AgenteIA } from "./pages/AgenteIA";
 import Dashboard9FIT from "./pages/9fit/Dashboard9FIT";
 import { DemoModeProvider } from "./contexts/DemoModeContext";
+import { Funcionarios } from "./pages/Funcionarios";
+import { AvaliacoesFisicas } from "./pages/AvaliacoesFisicas";
+import { AulasExperimentais } from "./pages/AulasExperimentais";
 
 // Configuração otimizada do QueryClient
 const queryClient = new QueryClient({
@@ -295,6 +298,36 @@ const App = () => (
                         <div className="flex min-h-screen w-full">
                           <AppSidebar activeView="" onViewChange={() => {}} />
                           <main className="flex-1"><Dashboard9FIT /></main>
+                        </div>
+                      </SidebarProvider>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/funcionarios" element={
+                    <ProtectedRoute>
+                      <SidebarProvider>
+                        <div className="flex min-h-screen w-full">
+                          <AppSidebar activeView="" onViewChange={() => {}} />
+                          <main className="flex-1"><Funcionarios /></main>
+                        </div>
+                      </SidebarProvider>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/avaliacoes" element={
+                    <ProtectedRoute>
+                      <SidebarProvider>
+                        <div className="flex min-h-screen w-full">
+                          <AppSidebar activeView="" onViewChange={() => {}} />
+                          <main className="flex-1"><AvaliacoesFisicas /></main>
+                        </div>
+                      </SidebarProvider>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/experimentais" element={
+                    <ProtectedRoute>
+                      <SidebarProvider>
+                        <div className="flex min-h-screen w-full">
+                          <AppSidebar activeView="" onViewChange={() => {}} />
+                          <main className="flex-1"><AulasExperimentais /></main>
                         </div>
                       </SidebarProvider>
                     </ProtectedRoute>
