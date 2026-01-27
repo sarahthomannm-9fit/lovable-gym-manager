@@ -1,4 +1,3 @@
-
 import {
   Sidebar,
   SidebarContent,
@@ -40,7 +39,6 @@ import {
   UserCheck,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { UserMenu } from "@/components/UserMenu";
 
 interface AppSidebarProps {
   activeView: string;
@@ -247,16 +245,13 @@ export function AppSidebar({ activeView, onViewChange }: AppSidebarProps) {
   return (
     <Sidebar>
       <SidebarHeader>
-        <div className="px-4 py-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
-              FitManage Pro
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Sistema Completo de Gestão
-            </p>
-          </div>
-          <UserMenu />
+        <div className="px-4 py-6">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
+            FitManage Pro
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Sistema Completo de Gestão
+          </p>
         </div>
       </SidebarHeader>
       <SidebarContent>
