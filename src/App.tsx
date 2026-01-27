@@ -2,17 +2,13 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { GymDataProvider } from "@/contexts/GymDataContext";
 import { SupabaseGymDataProvider } from "@/contexts/SupabaseGymDataContext";
 import { DataIntegrationProvider } from "@/components/DataIntegrationProvider";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import Index from "./pages/Index";
-import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { Painel } from "./pages/Painel";
 import { Treinos } from "./pages/Treinos";
@@ -54,295 +50,65 @@ const queryClient = new QueryClient({
   },
 });
 
+// Layout wrapper component
+const MainLayout = ({ children }: { children: React.ReactNode }) => (
+  <SidebarProvider>
+    <div className="flex min-h-screen w-full">
+      <AppSidebar activeView="" onViewChange={() => {}} />
+      <main className="flex-1">{children}</main>
+    </div>
+  </SidebarProvider>
+);
+
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <SupabaseGymDataProvider>
-          <GymDataProvider>
-            <DataIntegrationProvider>
-              <DemoModeProvider>
-                <TooltipProvider>
+      <SupabaseGymDataProvider>
+        <GymDataProvider>
+          <DataIntegrationProvider>
+            <DemoModeProvider>
+              <TooltipProvider>
                 <Toaster />
                 <Sonner />
                 <BrowserRouter>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/painel" element={
-                    <ProtectedRoute>
-                      <SidebarProvider>
-                        <div className="flex min-h-screen w-full">
-                          <AppSidebar activeView="" onViewChange={() => {}} />
-                          <main className="flex-1">
-                            <Painel />
-                          </main>
-                        </div>
-                      </SidebarProvider>
-                    </ProtectedRoute>
-                  } />
-                  {/* Protected routes with sidebar */}
-                  <Route path="/alunos" element={
-                    <ProtectedRoute>
-                      <SidebarProvider>
-                        <div className="flex min-h-screen w-full">
-                          <AppSidebar activeView="" onViewChange={() => {}} />
-                          <main className="flex-1"><Students /></main>
-                        </div>
-                      </SidebarProvider>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/planos" element={
-                    <ProtectedRoute>
-                      <SidebarProvider>
-                        <div className="flex min-h-screen w-full">
-                          <AppSidebar activeView="" onViewChange={() => {}} />
-                          <main className="flex-1"><Plans /></main>
-                        </div>
-                      </SidebarProvider>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/aulas" element={
-                    <ProtectedRoute>
-                      <SidebarProvider>
-                        <div className="flex min-h-screen w-full">
-                          <AppSidebar activeView="" onViewChange={() => {}} />
-                          <main className="flex-1"><Classes /></main>
-                        </div>
-                      </SidebarProvider>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/treinos" element={
-                    <ProtectedRoute>
-                      <SidebarProvider>
-                        <div className="flex min-h-screen w-full">
-                          <AppSidebar activeView="" onViewChange={() => {}} />
-                          <main className="flex-1"><Treinos /></main>
-                        </div>
-                      </SidebarProvider>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/relatorios" element={
-                    <ProtectedRoute>
-                      <SidebarProvider>
-                        <div className="flex min-h-screen w-full">
-                          <AppSidebar activeView="" onViewChange={() => {}} />
-                          <main className="flex-1"><Relatorios /></main>
-                        </div>
-                      </SidebarProvider>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/relatorios/pagamentos" element={
-                    <ProtectedRoute>
-                      <SidebarProvider>
-                        <div className="flex min-h-screen w-full">
-                          <AppSidebar activeView="" onViewChange={() => {}} />
-                          <main className="flex-1"><FluxoPagamentos /></main>
-                        </div>
-                      </SidebarProvider>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/relatorios/recebimentos" element={
-                    <ProtectedRoute>
-                      <SidebarProvider>
-                        <div className="flex min-h-screen w-full">
-                          <AppSidebar activeView="" onViewChange={() => {}} />
-                          <main className="flex-1"><FluxoRecebimentos /></main>
-                        </div>
-                      </SidebarProvider>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/relatorios/cobrancas" element={
-                    <ProtectedRoute>
-                      <SidebarProvider>
-                        <div className="flex min-h-screen w-full">
-                          <AppSidebar activeView="" onViewChange={() => {}} />
-                          <main className="flex-1"><Cobrancas /></main>
-                        </div>
-                      </SidebarProvider>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/relatorios/estrategias" element={
-                    <ProtectedRoute>
-                      <SidebarProvider>
-                        <div className="flex min-h-screen w-full">
-                          <AppSidebar activeView="" onViewChange={() => {}} />
-                          <main className="flex-1"><EstrategiasIA /></main>
-                        </div>
-                      </SidebarProvider>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/relatorios/promocoes-cupons" element={
-                    <ProtectedRoute>
-                      <SidebarProvider>
-                        <div className="flex min-h-screen w-full">
-                          <AppSidebar activeView="" onViewChange={() => {}} />
-                          <main className="flex-1"><PromocoesCupons /></main>
-                        </div>
-                      </SidebarProvider>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/marketing/campanhas" element={
-                    <ProtectedRoute>
-                      <SidebarProvider>
-                        <div className="flex min-h-screen w-full">
-                          <AppSidebar activeView="" onViewChange={() => {}} />
-                          <main className="flex-1"><Campanhas /></main>
-                        </div>
-                      </SidebarProvider>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/marketing/captacao" element={
-                    <ProtectedRoute>
-                      <SidebarProvider>
-                        <div className="flex min-h-screen w-full">
-                          <AppSidebar activeView="" onViewChange={() => {}} />
-                          <main className="flex-1"><Captacao /></main>
-                        </div>
-                      </SidebarProvider>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/marketing/comunicacao" element={
-                    <ProtectedRoute>
-                      <SidebarProvider>
-                        <div className="flex min-h-screen w-full">
-                          <AppSidebar activeView="" onViewChange={() => {}} />
-                          <main className="flex-1"><Comunicacao /></main>
-                        </div>
-                      </SidebarProvider>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/marketing/conversao" element={
-                    <ProtectedRoute>
-                      <SidebarProvider>
-                        <div className="flex min-h-screen w-full">
-                          <AppSidebar activeView="" onViewChange={() => {}} />
-                          <main className="flex-1"><Conversao /></main>
-                        </div>
-                      </SidebarProvider>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/marketing/funis" element={
-                    <ProtectedRoute>
-                      <SidebarProvider>
-                        <div className="flex min-h-screen w-full">
-                          <AppSidebar activeView="" onViewChange={() => {}} />
-                          <main className="flex-1"><Funis /></main>
-                        </div>
-                      </SidebarProvider>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/marketing/email" element={
-                    <ProtectedRoute>
-                      <SidebarProvider>
-                        <div className="flex min-h-screen w-full">
-                          <AppSidebar activeView="" onViewChange={() => {}} />
-                          <main className="flex-1"><EmailMarketing /></main>
-                        </div>
-                      </SidebarProvider>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/marketing/promocoes" element={
-                    <ProtectedRoute>
-                      <SidebarProvider>
-                        <div className="flex min-h-screen w-full">
-                          <AppSidebar activeView="" onViewChange={() => {}} />
-                          <main className="flex-1"><Promocoes /></main>
-                        </div>
-                      </SidebarProvider>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/marketing/insights-ia" element={
-                    <ProtectedRoute>
-                      <SidebarProvider>
-                        <div className="flex min-h-screen w-full">
-                          <AppSidebar activeView="" onViewChange={() => {}} />
-                          <main className="flex-1"><InsightsIA /></main>
-                        </div>
-                      </SidebarProvider>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/marketing/automacao" element={
-                    <ProtectedRoute>
-                      <SidebarProvider>
-                        <div className="flex min-h-screen w-full">
-                          <AppSidebar activeView="" onViewChange={() => {}} />
-                          <main className="flex-1"><Automacao /></main>
-                        </div>
-                      </SidebarProvider>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/agente-ia" element={
-                    <ProtectedRoute>
-                      <SidebarProvider>
-                        <div className="flex min-h-screen w-full">
-                          <AppSidebar activeView="" onViewChange={() => {}} />
-                          <main className="flex-1"><AgenteIA /></main>
-                        </div>
-                      </SidebarProvider>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/produtos" element={
-                    <ProtectedRoute>
-                      <SidebarProvider>
-                        <div className="flex min-h-screen w-full">
-                          <AppSidebar activeView="" onViewChange={() => {}} />
-                          <main className="flex-1"><Produtos /></main>
-                        </div>
-                      </SidebarProvider>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/9fit" element={
-                    <ProtectedRoute>
-                      <SidebarProvider>
-                        <div className="flex min-h-screen w-full">
-                          <AppSidebar activeView="" onViewChange={() => {}} />
-                          <main className="flex-1"><Dashboard9FIT /></main>
-                        </div>
-                      </SidebarProvider>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/funcionarios" element={
-                    <ProtectedRoute>
-                      <SidebarProvider>
-                        <div className="flex min-h-screen w-full">
-                          <AppSidebar activeView="" onViewChange={() => {}} />
-                          <main className="flex-1"><Funcionarios /></main>
-                        </div>
-                      </SidebarProvider>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/avaliacoes" element={
-                    <ProtectedRoute>
-                      <SidebarProvider>
-                        <div className="flex min-h-screen w-full">
-                          <AppSidebar activeView="" onViewChange={() => {}} />
-                          <main className="flex-1"><AvaliacoesFisicas /></main>
-                        </div>
-                      </SidebarProvider>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/experimentais" element={
-                    <ProtectedRoute>
-                      <SidebarProvider>
-                        <div className="flex min-h-screen w-full">
-                          <AppSidebar activeView="" onViewChange={() => {}} />
-                          <main className="flex-1"><AulasExperimentais /></main>
-                        </div>
-                      </SidebarProvider>
-                    </ProtectedRoute>
-                  } />
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </BrowserRouter>
-            </TooltipProvider>
-          </DemoModeProvider>
-        </DataIntegrationProvider>
-      </GymDataProvider>
-    </SupabaseGymDataProvider>
-  </AuthProvider>
-  </QueryClientProvider>
+                  <Routes>
+                    <Route path="/" element={<Navigate to="/painel" replace />} />
+                    <Route path="/painel" element={<MainLayout><Painel /></MainLayout>} />
+                    <Route path="/alunos" element={<MainLayout><Students /></MainLayout>} />
+                    <Route path="/planos" element={<MainLayout><Plans /></MainLayout>} />
+                    <Route path="/aulas" element={<MainLayout><Classes /></MainLayout>} />
+                    <Route path="/treinos" element={<MainLayout><Treinos /></MainLayout>} />
+                    <Route path="/relatorios" element={<MainLayout><Relatorios /></MainLayout>} />
+                    <Route path="/relatorios/pagamentos" element={<MainLayout><FluxoPagamentos /></MainLayout>} />
+                    <Route path="/relatorios/recebimentos" element={<MainLayout><FluxoRecebimentos /></MainLayout>} />
+                    <Route path="/relatorios/cobrancas" element={<MainLayout><Cobrancas /></MainLayout>} />
+                    <Route path="/relatorios/estrategias" element={<MainLayout><EstrategiasIA /></MainLayout>} />
+                    <Route path="/relatorios/promocoes-cupons" element={<MainLayout><PromocoesCupons /></MainLayout>} />
+                    <Route path="/marketing/campanhas" element={<MainLayout><Campanhas /></MainLayout>} />
+                    <Route path="/marketing/captacao" element={<MainLayout><Captacao /></MainLayout>} />
+                    <Route path="/marketing/comunicacao" element={<MainLayout><Comunicacao /></MainLayout>} />
+                    <Route path="/marketing/conversao" element={<MainLayout><Conversao /></MainLayout>} />
+                    <Route path="/marketing/funis" element={<MainLayout><Funis /></MainLayout>} />
+                    <Route path="/marketing/email" element={<MainLayout><EmailMarketing /></MainLayout>} />
+                    <Route path="/marketing/promocoes" element={<MainLayout><Promocoes /></MainLayout>} />
+                    <Route path="/marketing/insights-ia" element={<MainLayout><InsightsIA /></MainLayout>} />
+                    <Route path="/marketing/automacao" element={<MainLayout><Automacao /></MainLayout>} />
+                    <Route path="/agente-ia" element={<MainLayout><AgenteIA /></MainLayout>} />
+                    <Route path="/produtos" element={<MainLayout><Produtos /></MainLayout>} />
+                    <Route path="/9fit" element={<MainLayout><Dashboard9FIT /></MainLayout>} />
+                    <Route path="/funcionarios" element={<MainLayout><Funcionarios /></MainLayout>} />
+                    <Route path="/avaliacoes" element={<MainLayout><AvaliacoesFisicas /></MainLayout>} />
+                    <Route path="/experimentais" element={<MainLayout><AulasExperimentais /></MainLayout>} />
+                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </BrowserRouter>
+              </TooltipProvider>
+            </DemoModeProvider>
+          </DataIntegrationProvider>
+        </GymDataProvider>
+      </SupabaseGymDataProvider>
+    </QueryClientProvider>
   </ErrorBoundary>
 );
 
