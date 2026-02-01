@@ -1,22 +1,22 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Plus, Dumbbell, Users, Target, Calendar } from "lucide-react";
 import { WorkoutTemplates } from "./workouts/WorkoutTemplates";
 import { StudentWorkouts } from "./workouts/StudentWorkouts";
-import { useGymData } from "@/contexts/GymDataContext";
+import { useSupabaseGymData } from "@/contexts/SupabaseGymDataContext";
 
 export function Workouts() {
-  const { workoutTemplates, students } = useGymData();
+  const { students, studentsLoading } = useSupabaseGymData();
   const [activeTab, setActiveTab] = useState("templates");
 
+  const activeStudents = students.filter(s => s.status === 'ativo').length;
+
   const workoutStats = {
-    totalTemplates: workoutTemplates.length,
-    activeWorkouts: students.filter(s => s.status === 'active').length,
-    completedThisWeek: 0, // This would need to be tracked in context
-    averageCompletion: students.length > 0 ? Math.round((students.filter(s => s.status === 'active').length / students.length) * 100) : 0
+    totalTemplates: 0, // Templates now managed in WorkoutTemplates component
+    activeWorkouts: activeStudents,
+    completedThisWeek: 0,
+    averageCompletion: students.length > 0 ? Math.round((activeStudents / students.length) * 100) : 0
   };
 
   const tabs = [
@@ -24,14 +24,22 @@ export function Workouts() {
     { id: "students", name: "Treinos dos Alunos", icon: Users }
   ];
 
+  if (studentsLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-lg text-muted-foreground">Carregando...</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
             Sistema de Treinos
           </h1>
-          <p className="text-gray-600 mt-1">Gerencie treinos e acompanhe o progresso</p>
+          <p className="text-muted-foreground mt-1">Gerencie treinos e acompanhe o progresso</p>
         </div>
         
         <Button className="bg-orange-600 hover:bg-orange-700">
@@ -42,55 +50,55 @@ export function Workouts() {
 
       {/* Métricas */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="bg-gradient-to-r from-orange-50 to-orange-100">
+        <Card className="bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-950/50 dark:to-orange-900/50">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-orange-700 flex items-center">
+            <CardTitle className="text-sm font-medium text-orange-700 dark:text-orange-300 flex items-center">
               <Target className="w-4 h-4 mr-2" />
               Modelos
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-800">{workoutStats.totalTemplates}</div>
-            <p className="text-xs text-orange-600 mt-1">Modelos criados</p>
+            <div className="text-2xl font-bold text-orange-800 dark:text-orange-200">{workoutStats.totalTemplates}</div>
+            <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">Modelos criados</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-r from-blue-50 to-blue-100">
+        <Card className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-blue-700 flex items-center">
+            <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-300 flex items-center">
               <Users className="w-4 h-4 mr-2" />
               Alunos Ativos
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-800">{workoutStats.activeWorkouts}</div>
-            <p className="text-xs text-blue-600 mt-1">Com treinos ativos</p>
+            <div className="text-2xl font-bold text-blue-800 dark:text-blue-200">{workoutStats.activeWorkouts}</div>
+            <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">Com treinos ativos</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-r from-green-50 to-green-100">
+        <Card className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/50">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-green-700 flex items-center">
+            <CardTitle className="text-sm font-medium text-green-700 dark:text-green-300 flex items-center">
               <Dumbbell className="w-4 h-4 mr-2" />
               Total de Alunos
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-800">{students.length}</div>
-            <p className="text-xs text-green-600 mt-1">Alunos cadastrados</p>
+            <div className="text-2xl font-bold text-green-800 dark:text-green-200">{students.length}</div>
+            <p className="text-xs text-green-600 dark:text-green-400 mt-1">Alunos cadastrados</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-r from-purple-50 to-purple-100">
+        <Card className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/50">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-purple-700 flex items-center">
+            <CardTitle className="text-sm font-medium text-purple-700 dark:text-purple-300 flex items-center">
               <Calendar className="w-4 h-4 mr-2" />
               Taxa de Atividade
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-800">{workoutStats.averageCompletion}%</div>
-            <p className="text-xs text-purple-600 mt-1">Alunos ativos</p>
+            <div className="text-2xl font-bold text-purple-800 dark:text-purple-200">{workoutStats.averageCompletion}%</div>
+            <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">Alunos ativos</p>
           </CardContent>
         </Card>
       </div>

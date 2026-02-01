@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBankIntegration } from "@/hooks/useBankIntegration";
-import { useGymData } from "@/contexts/GymDataContext";
+import { useSupabaseGymData } from "@/contexts/SupabaseGymDataContext";
 import { useState } from "react";
 import { CreditCard, Plus, Download, DollarSign, TrendingUp, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -23,7 +22,7 @@ export function BankIntegration() {
     getMonthlyRevenue,
     getRevenueByCategory
   } = useBankIntegration();
-  const { students } = useGymData();
+  const { students } = useSupabaseGymData();
   const [manualEntry, setManualEntry] = useState({ 
     amount: '', 
     description: '', 
@@ -82,9 +81,8 @@ export function BankIntegration() {
     });
   };
 
-  const handleCategorizeTransaction = (transactionId: string, category: string, studentId?: string) => {
-    const student = studentId ? students.find(s => s.id.toString() === studentId) : undefined;
-    categorizeTransaction(transactionId, category, student?.id, student?.name);
+  const handleCategorizeTransaction = (transactionId: string, category: string) => {
+    categorizeTransaction(transactionId, category);
     
     toast({
       title: "Transação Categorizada",
@@ -98,64 +96,64 @@ export function BankIntegration() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'confirmed':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300';
       case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300';
       case 'cancelled':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-muted text-muted-foreground';
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
             Integração Bancária
           </h1>
-          <p className="text-gray-600 mt-1">Conecte sua conta para importar receitas automaticamente</p>
+          <p className="text-muted-foreground mt-1">Conecte sua conta para importar receitas automaticamente</p>
         </div>
       </div>
 
       {/* Cards de Resumo */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-gradient-to-r from-green-50 to-green-100">
+        <Card className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/50">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-green-700 flex items-center">
+            <CardTitle className="text-sm font-medium text-green-700 dark:text-green-300 flex items-center">
               <DollarSign className="w-4 h-4 mr-2" />
               Receita do Mês
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-800">R$ {monthlyRevenue.toFixed(2)}</div>
+            <div className="text-2xl font-bold text-green-800 dark:text-green-200">R$ {monthlyRevenue.toFixed(2)}</div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-r from-blue-50 to-blue-100">
+        <Card className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-blue-700 flex items-center">
+            <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-300 flex items-center">
               <TrendingUp className="w-4 h-4 mr-2" />
               Saldo Atual
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-800">
+            <div className="text-2xl font-bold text-blue-800 dark:text-blue-200">
               R$ {account?.balance?.toFixed(2) || '0,00'}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-r from-purple-50 to-purple-100">
+        <Card className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/50">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-purple-700 flex items-center">
+            <CardTitle className="text-sm font-medium text-purple-700 dark:text-purple-300 flex items-center">
               <Calendar className="w-4 h-4 mr-2" />
               Última Sync
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-sm font-bold text-purple-800">
+            <div className="text-sm font-bold text-purple-800 dark:text-purple-200">
               {account?.lastSync ? new Date(account.lastSync).toLocaleDateString('pt-BR') : 'Nunca'}
             </div>
           </CardContent>
@@ -167,7 +165,7 @@ export function BankIntegration() {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Status da Conta</span>
-            <Badge className={account?.connected ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+            <Badge className={account?.connected ? "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300" : "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300"}>
               {account?.connected ? "Conectada" : "Desconectada"}
             </Badge>
           </CardTitle>
@@ -175,8 +173,8 @@ export function BankIntegration() {
         <CardContent>
           {!account?.connected ? (
             <div className="text-center py-8">
-              <CreditCard className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-600 mb-4">Conecte sua conta bancária para importar receitas automaticamente</p>
+              <CreditCard className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground mb-4">Conecte sua conta bancária para importar receitas automaticamente</p>
               <Button onClick={handleConnectBank} className="bg-gradient-to-r from-blue-500 to-green-500">
                 Conectar Conta Bancária
               </Button>
@@ -185,7 +183,7 @@ export function BankIntegration() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">{account.name}</p>
-                <p className="text-sm text-gray-600">Sincronização ativa</p>
+                <p className="text-sm text-muted-foreground">Sincronização ativa</p>
               </div>
               <Button onClick={handleImportTransactions} variant="outline">
                 <Download className="w-4 h-4 mr-2" />
@@ -261,7 +259,7 @@ export function BankIntegration() {
           <CardContent>
             <div className="space-y-3">
               {transactions.slice(0, 10).map((transaction) => (
-                <div key={transaction.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div key={transaction.id} className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
                       <p className="font-medium">{transaction.description}</p>
@@ -270,16 +268,16 @@ export function BankIntegration() {
                          transaction.status === 'pending' ? 'Pendente' : 'Cancelado'}
                       </Badge>
                     </div>
-                    <p className="text-sm text-gray-600">{new Date(transaction.date).toLocaleDateString('pt-BR')}</p>
+                    <p className="text-sm text-muted-foreground">{new Date(transaction.date).toLocaleDateString('pt-BR')}</p>
                     {transaction.category && (
-                      <p className="text-xs text-gray-500">Categoria: {transaction.category}</p>
+                      <p className="text-xs text-muted-foreground">Categoria: {transaction.category}</p>
                     )}
                     {transaction.studentName && (
-                      <p className="text-xs text-blue-600">Aluno: {transaction.studentName}</p>
+                      <p className="text-xs text-blue-600 dark:text-blue-400">Aluno: {transaction.studentName}</p>
                     )}
                   </div>
                   <div className="text-right ml-4">
-                    <p className={`font-bold ${transaction.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
+                    <p className={`font-bold ${transaction.type === 'credit' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                       {transaction.type === 'credit' ? '+' : '-'}R$ {transaction.amount.toFixed(2)}
                     </p>
                     {transaction.status === 'pending' && (

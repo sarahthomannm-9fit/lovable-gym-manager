@@ -3,7 +3,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { GymDataProvider } from "@/contexts/GymDataContext";
 import { SupabaseGymDataProvider } from "@/contexts/SupabaseGymDataContext";
 import { DataIntegrationProvider } from "@/components/DataIntegrationProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -18,9 +17,12 @@ import { FluxoRecebimentos } from "./pages/relatorios/FluxoRecebimentos";
 import { Cobrancas } from "./pages/relatorios/Cobrancas";
 import { EstrategiasIA } from "./pages/relatorios/EstrategiasIA";
 import { PromocoesCupons } from "./pages/relatorios/PromocoesCupons";
-import { Students } from "./components/Students";
-import { Plans } from "./components/Plans";
-import { Classes } from "./components/Classes";
+import { SupabaseStudents } from "./components/SupabaseStudents";
+import { SupabasePlans } from "./components/SupabasePlans";
+import { SupabaseClasses } from "./components/SupabaseClasses";
+import { SupabasePayments } from "./components/SupabasePayments";
+import { SupabaseCheckIn } from "./components/SupabaseCheckIn";
+import { Equipment } from "./components/Equipment";
 import { Campanhas } from "./pages/marketing/Campanhas";
 import { Captacao } from "./pages/marketing/Captacao";
 import { Comunicacao } from "./pages/marketing/Comunicacao";
@@ -64,49 +66,50 @@ const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <SupabaseGymDataProvider>
-        <GymDataProvider>
-          <DataIntegrationProvider>
-            <DemoModeProvider>
-              <TooltipProvider>
-                <Toaster />
-                <Sonner />
-                <BrowserRouter>
-                  <Routes>
-                    <Route path="/" element={<Navigate to="/painel" replace />} />
-                    <Route path="/painel" element={<MainLayout><Painel /></MainLayout>} />
-                    <Route path="/alunos" element={<MainLayout><Students /></MainLayout>} />
-                    <Route path="/planos" element={<MainLayout><Plans /></MainLayout>} />
-                    <Route path="/aulas" element={<MainLayout><Classes /></MainLayout>} />
-                    <Route path="/treinos" element={<MainLayout><Treinos /></MainLayout>} />
-                    <Route path="/relatorios" element={<MainLayout><Relatorios /></MainLayout>} />
-                    <Route path="/relatorios/pagamentos" element={<MainLayout><FluxoPagamentos /></MainLayout>} />
-                    <Route path="/relatorios/recebimentos" element={<MainLayout><FluxoRecebimentos /></MainLayout>} />
-                    <Route path="/relatorios/cobrancas" element={<MainLayout><Cobrancas /></MainLayout>} />
-                    <Route path="/relatorios/estrategias" element={<MainLayout><EstrategiasIA /></MainLayout>} />
-                    <Route path="/relatorios/promocoes-cupons" element={<MainLayout><PromocoesCupons /></MainLayout>} />
-                    <Route path="/marketing/campanhas" element={<MainLayout><Campanhas /></MainLayout>} />
-                    <Route path="/marketing/captacao" element={<MainLayout><Captacao /></MainLayout>} />
-                    <Route path="/marketing/comunicacao" element={<MainLayout><Comunicacao /></MainLayout>} />
-                    <Route path="/marketing/conversao" element={<MainLayout><Conversao /></MainLayout>} />
-                    <Route path="/marketing/funis" element={<MainLayout><Funis /></MainLayout>} />
-                    <Route path="/marketing/email" element={<MainLayout><EmailMarketing /></MainLayout>} />
-                    <Route path="/marketing/promocoes" element={<MainLayout><Promocoes /></MainLayout>} />
-                    <Route path="/marketing/insights-ia" element={<MainLayout><InsightsIA /></MainLayout>} />
-                    <Route path="/marketing/automacao" element={<MainLayout><Automacao /></MainLayout>} />
-                    <Route path="/agente-ia" element={<MainLayout><AgenteIA /></MainLayout>} />
-                    <Route path="/produtos" element={<MainLayout><Produtos /></MainLayout>} />
-                    <Route path="/9fit" element={<MainLayout><Dashboard9FIT /></MainLayout>} />
-                    <Route path="/funcionarios" element={<MainLayout><Funcionarios /></MainLayout>} />
-                    <Route path="/avaliacoes" element={<MainLayout><AvaliacoesFisicas /></MainLayout>} />
-                    <Route path="/experimentais" element={<MainLayout><AulasExperimentais /></MainLayout>} />
-                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </BrowserRouter>
-              </TooltipProvider>
-            </DemoModeProvider>
-          </DataIntegrationProvider>
-        </GymDataProvider>
+        <DataIntegrationProvider>
+          <DemoModeProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/" element={<Navigate to="/painel" replace />} />
+                  <Route path="/painel" element={<MainLayout><Painel /></MainLayout>} />
+                  <Route path="/alunos" element={<MainLayout><SupabaseStudents /></MainLayout>} />
+                  <Route path="/planos" element={<MainLayout><SupabasePlans /></MainLayout>} />
+                  <Route path="/aulas" element={<MainLayout><SupabaseClasses /></MainLayout>} />
+                  <Route path="/pagamentos" element={<MainLayout><SupabasePayments /></MainLayout>} />
+                  <Route path="/checkin" element={<MainLayout><SupabaseCheckIn /></MainLayout>} />
+                  <Route path="/equipamentos" element={<MainLayout><Equipment /></MainLayout>} />
+                  <Route path="/treinos" element={<MainLayout><Treinos /></MainLayout>} />
+                  <Route path="/relatorios" element={<MainLayout><Relatorios /></MainLayout>} />
+                  <Route path="/relatorios/pagamentos" element={<MainLayout><FluxoPagamentos /></MainLayout>} />
+                  <Route path="/relatorios/recebimentos" element={<MainLayout><FluxoRecebimentos /></MainLayout>} />
+                  <Route path="/relatorios/cobrancas" element={<MainLayout><Cobrancas /></MainLayout>} />
+                  <Route path="/relatorios/estrategias" element={<MainLayout><EstrategiasIA /></MainLayout>} />
+                  <Route path="/relatorios/promocoes-cupons" element={<MainLayout><PromocoesCupons /></MainLayout>} />
+                  <Route path="/marketing/campanhas" element={<MainLayout><Campanhas /></MainLayout>} />
+                  <Route path="/marketing/captacao" element={<MainLayout><Captacao /></MainLayout>} />
+                  <Route path="/marketing/comunicacao" element={<MainLayout><Comunicacao /></MainLayout>} />
+                  <Route path="/marketing/conversao" element={<MainLayout><Conversao /></MainLayout>} />
+                  <Route path="/marketing/funis" element={<MainLayout><Funis /></MainLayout>} />
+                  <Route path="/marketing/email" element={<MainLayout><EmailMarketing /></MainLayout>} />
+                  <Route path="/marketing/promocoes" element={<MainLayout><Promocoes /></MainLayout>} />
+                  <Route path="/marketing/insights-ia" element={<MainLayout><InsightsIA /></MainLayout>} />
+                  <Route path="/marketing/automacao" element={<MainLayout><Automacao /></MainLayout>} />
+                  <Route path="/agente-ia" element={<MainLayout><AgenteIA /></MainLayout>} />
+                  <Route path="/produtos" element={<MainLayout><Produtos /></MainLayout>} />
+                  <Route path="/9fit" element={<MainLayout><Dashboard9FIT /></MainLayout>} />
+                  <Route path="/funcionarios" element={<MainLayout><Funcionarios /></MainLayout>} />
+                  <Route path="/avaliacoes" element={<MainLayout><AvaliacoesFisicas /></MainLayout>} />
+                  <Route path="/experimentais" element={<MainLayout><AulasExperimentais /></MainLayout>} />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </TooltipProvider>
+          </DemoModeProvider>
+        </DataIntegrationProvider>
       </SupabaseGymDataProvider>
     </QueryClientProvider>
   </ErrorBoundary>

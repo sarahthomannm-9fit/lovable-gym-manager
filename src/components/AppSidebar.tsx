@@ -65,16 +65,34 @@ export function AppSidebar({ activeView, onViewChange }: AppSidebarProps) {
           path: "/alunos",
         },
         {
+          title: "Check-in",
+          icon: UserCheck,
+          key: "checkin",
+          path: "/checkin",
+        },
+        {
           title: "Planos",
           icon: CreditCard,
           key: "planos",
           path: "/planos",
         },
         {
+          title: "Pagamentos",
+          icon: Receipt,
+          key: "pagamentos",
+          path: "/pagamentos",
+        },
+        {
           title: "Aulas",
           icon: Calendar,
           key: "aulas",
           path: "/aulas",
+        },
+        {
+          title: "Equipamentos",
+          icon: Dumbbell,
+          key: "equipamentos",
+          path: "/equipamentos",
         },
         {
           title: "Produtos",
