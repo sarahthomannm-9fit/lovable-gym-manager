@@ -1,253 +1,269 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
-import { ArrowLeft, TrendingUp, Weight, Ruler, Calendar, MessageCircle, FileText } from "lucide-react";
-import { Student } from "@/types/gym";
+import { ArrowLeft, TrendingUp, Weight, Ruler, Calendar, MessageCircle, FileText, DollarSign, Dumbbell, Activity } from "lucide-react";
+import { Tables } from "@/integrations/supabase/types";
+import { useAvaliacoesFisicas } from "@/hooks/useAvaliacoesFisicas";
+import { useSupabasePayments } from "@/hooks/useSupabasePayments";
+import { useSupabaseCheckIns } from "@/hooks/useSupabaseCheckIns";
+import { useFrequencia } from "@/hooks/useFrequencia";
+import { useMemo } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect } from "react";
+
+type SupabaseStudent = Tables<"alunos">;
 
 interface StudentProfileProps {
-  student: Student;
+  student: SupabaseStudent;
   onBack: () => void;
+  planName?: string;
 }
 
-export function StudentProfile({ student, onBack }: StudentProfileProps) {
-  // Usar dados de performance do aluno ou dados padrão
-  const performanceData = student.performanceData ? 
-    student.performanceData.dates.map((date, index) => ({
-      date,
-      weight: student.performanceData!.weight[index],
-      bodyFat: student.performanceData!.bodyFat[index],
-      muscle: student.performanceData!.muscle[index]
-    })) : [
-      { date: "Jan", weight: 75.2, bodyFat: 18.5, muscle: 42.1 },
-      { date: "Fev", weight: 74.8, bodyFat: 17.8, muscle: 42.8 },
-      { date: "Mar", weight: 74.2, bodyFat: 17.2, muscle: 43.5 },
-      { date: "Abr", weight: 73.8, bodyFat: 16.8, muscle: 44.1 },
-      { date: "Mai", weight: 73.5, bodyFat: 16.2, muscle: 44.8 },
-    ];
+export function StudentProfile({ student, onBack, planName }: StudentProfileProps) {
+  const { getAvaliacoesByAluno } = useAvaliacoesFisicas();
+  const { payments } = useSupabasePayments();
+  const { checkIns } = useSupabaseCheckIns();
+  const { frequencias } = useFrequencia();
+  const [treinos, setTreinos] = useState<any[]>([]);
 
-  const workoutData = student.performanceData?.workoutData || [
-    { exercise: "Supino", weight: 80, reps: 12, sets: 3 },
-    { exercise: "Agachamento", weight: 120, reps: 10, sets: 4 },
-    { exercise: "Levantamento", weight: 100, reps: 8, sets: 3 },
-    { exercise: "Desenvolvimento", weight: 60, reps: 12, sets: 3 },
-  ];
+  useEffect(() => {
+    supabase.from('treinos').select('*').eq('aluno_id', student.id).order('created_at', { ascending: false }).then(({ data }) => setTreinos(data || []));
+  }, [student.id]);
 
-  const frequency = student.performanceData?.frequency || 95;
-  const currentWeight = performanceData[performanceData.length - 1]?.weight || 0;
-  const currentBodyFat = performanceData[performanceData.length - 1]?.bodyFat || 0;
-  const currentMuscle = performanceData[performanceData.length - 1]?.muscle || 0;
-  
-  const weightDiff = performanceData.length > 1 ? 
-    (currentWeight - performanceData[0].weight).toFixed(1) : "0";
-  const bodyFatDiff = performanceData.length > 1 ? 
-    (currentBodyFat - performanceData[0].bodyFat).toFixed(1) : "0";
-  const muscleDiff = performanceData.length > 1 ? 
-    (currentMuscle - performanceData[0].muscle).toFixed(1) : "0";
+  // Dados do aluno
+  const avaliacoes = useMemo(() => getAvaliacoesByAluno(student.id), [student.id, getAvaliacoesByAluno]);
+  const pagamentosAluno = useMemo(() => payments.filter(p => p.aluno_id === student.id), [payments, student.id]);
+  const checkinsAluno = useMemo(() => checkIns.filter(c => c.aluno_id === student.id), [checkIns, student.id]);
+  const frequenciasAluno = useMemo(() => frequencias.filter(f => f.aluno_id === student.id), [frequencias, student.id]);
 
-  const frequencyData = [
-    { month: "Jan", frequency: 85 },
-    { month: "Fev", frequency: 92 },
-    { month: "Mar", frequency: 78 },
-    { month: "Abr", frequency: 88 },
-    { month: "Mai", frequency: frequency },
-  ];
+  // Evolução física (dados reais)
+  const evolucaoData = useMemo(() => {
+    return avaliacoes
+      .sort((a, b) => a.data_avaliacao.localeCompare(b.data_avaliacao))
+      .map(av => ({
+        date: new Date(av.data_avaliacao).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }),
+        weight: av.peso || 0,
+        bodyFat: av.percentual_gordura || 0,
+        muscle: av.massa_muscular || 0,
+      }));
+  }, [avaliacoes]);
+
+  // Frequência mensal
+  const frequenciaData = useMemo(() => {
+    const meses: Record<string, number> = {};
+    [...checkinsAluno, ...frequenciasAluno].forEach(c => {
+      const data = (c as any).data_checkin || (c as any).data;
+      if (data) {
+        const mes = new Date(data).toLocaleDateString('pt-BR', { month: 'short' });
+        meses[mes] = (meses[mes] || 0) + 1;
+      }
+    });
+    return Object.entries(meses).map(([month, count]) => ({ month, visits: count }));
+  }, [checkinsAluno, frequenciasAluno]);
+
+  // Última avaliação
+  const ultimaAv = avaliacoes[0];
+  const currentWeight = ultimaAv?.peso || 0;
+  const currentBodyFat = ultimaAv?.percentual_gordura || 0;
+  const currentMuscle = ultimaAv?.massa_muscular || 0;
+
+  // Pagamentos resumo
+  const totalPago = pagamentosAluno.filter(p => p.status === 'pago').reduce((s, p) => s + (p.valor || 0), 0);
+  const totalPendente = pagamentosAluno.filter(p => p.status === 'pendente').reduce((s, p) => s + (p.valor || 0), 0);
+
+  const hoje = new Date().toISOString().split('T')[0];
+  const treinoAtivo = treinos.find(t => !t.data_fim || t.data_fim >= hoje);
 
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center space-x-4">
-        <Button 
-          variant="outline" 
-          onClick={onBack}
-          className="flex items-center space-x-2"
-        >
+        <Button variant="outline" onClick={onBack} className="flex items-center space-x-2">
           <ArrowLeft className="w-4 h-4" />
           <span>Voltar</span>
         </Button>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
-            {student.name}
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-green-600 bg-clip-text text-transparent">
+            {student.nome}
           </h1>
-          <p className="text-muted-foreground">{student.email} • {student.plan}</p>
+          <p className="text-muted-foreground">{student.email} • {planName || student.tipo || 'Sem plano'}</p>
         </div>
-        <div className="flex space-x-2">
-          <Button variant="outline" className="text-blue-600 border-blue-600">
-            <MessageCircle className="w-4 h-4 mr-2" />
-            Mensagem
-          </Button>
-          <Button variant="outline" className="text-green-600 border-green-600">
-            <FileText className="w-4 h-4 mr-2" />
-            Relatório
-          </Button>
-        </div>
+        <Badge variant={student.status === 'ativo' ? 'default' : 'secondary'}>{student.status}</Badge>
       </div>
 
-      {/* Informações Pessoais */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Informações Pessoais</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Telefone</p>
-              <p className="font-medium">{student.phone}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Plano</p>
-              <p className="font-medium">{student.plan}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Início</p>
-              <p className="font-medium">{student.startDate ? new Date(student.startDate + 'T00:00:00').toLocaleDateString('pt-BR') : 'Não informado'}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Forma de Pagamento</p>
-              <p className="font-medium">{student.paymentMethod || 'Não informado'}</p>
-            </div>
-            {student.emergencyContact && (
-              <div>
-                <p className="text-sm text-muted-foreground">Contato de Emergência</p>
-                <p className="font-medium">{student.emergencyContact}</p>
+      {/* KPIs */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground flex items-center gap-2"><Weight className="h-4 w-4" />Peso</CardTitle></CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{currentWeight ? `${currentWeight} kg` : '—'}</div>
+            {evolucaoData.length > 1 && <p className="text-xs text-muted-foreground">{(currentWeight - evolucaoData[0].weight).toFixed(1)}kg desde início</p>}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground flex items-center gap-2"><TrendingUp className="h-4 w-4" />% Gordura</CardTitle></CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{currentBodyFat ? `${currentBodyFat}%` : '—'}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground flex items-center gap-2"><Ruler className="h-4 w-4" />Massa Muscular</CardTitle></CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{currentMuscle ? `${currentMuscle} kg` : '—'}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground flex items-center gap-2"><Calendar className="h-4 w-4" />Check-ins</CardTitle></CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{checkinsAluno.length + frequenciasAluno.length}</div>
+            <p className="text-xs text-muted-foreground">total registrado</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tabs */}
+      <Tabs defaultValue="resumo" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="resumo">Resumo</TabsTrigger>
+          <TabsTrigger value="evolucao">Evolução</TabsTrigger>
+          <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
+          <TabsTrigger value="treinos">Treinos</TabsTrigger>
+          <TabsTrigger value="frequencia">Frequência</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="resumo">
+          <Card>
+            <CardHeader><CardTitle>Informações Pessoais</CardTitle></CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><p className="text-sm text-muted-foreground">Telefone</p><p className="font-medium">{student.telefone || '—'}</p></div>
+                <div><p className="text-sm text-muted-foreground">Plano</p><p className="font-medium">{planName || student.tipo || '—'}</p></div>
+                <div><p className="text-sm text-muted-foreground">Matrícula</p><p className="font-medium">{student.data_matricula ? new Date(student.data_matricula + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}</p></div>
+                <div><p className="text-sm text-muted-foreground">Mensalidade</p><p className="font-medium">{student.valor_mensalidade ? `R$ ${student.valor_mensalidade}` : '—'}</p></div>
+                <div><p className="text-sm text-muted-foreground">Pagamento</p><p className="font-medium">{student.forma_pagamento || '—'}</p></div>
+                {student.contato_emergencia && <div><p className="text-sm text-muted-foreground">Emergência</p><p className="font-medium">{student.contato_emergencia}</p></div>}
+                {student.observacoes_medicas && <div className="col-span-2"><p className="text-sm text-muted-foreground">Observações Médicas</p><p className="font-medium">{student.observacoes_medicas}</p></div>}
               </div>
-            )}
-            {student.medicalInfo && (
-              <div>
-                <p className="text-sm text-muted-foreground">Informações Médicas</p>
-                <p className="font-medium">{student.medicalInfo}</p>
-              </div>
-            )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="evolucao">
+          {evolucaoData.length > 0 ? (
+            <Card>
+              <CardHeader><CardTitle>Evolução Física</CardTitle></CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={evolucaoData}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
+                    <Line type="monotone" dataKey="weight" stroke="hsl(var(--primary))" strokeWidth={2} name="Peso (kg)" />
+                    <Line type="monotone" dataKey="bodyFat" stroke="#EF4444" strokeWidth={2} name="% Gordura" />
+                    <Line type="monotone" dataKey="muscle" stroke="#10B981" strokeWidth={2} name="Massa Muscular" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card><CardContent className="py-12 text-center text-muted-foreground">Nenhuma avaliação física registrada para este aluno</CardContent></Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="financeiro">
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><DollarSign className="h-4 w-4" />Total Pago</CardTitle></CardHeader>
+                <CardContent><div className="text-2xl font-bold text-green-600">R$ {totalPago.toLocaleString('pt-BR')}</div></CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><DollarSign className="h-4 w-4" />Pendente</CardTitle></CardHeader>
+                <CardContent><div className="text-2xl font-bold text-amber-600">R$ {totalPendente.toLocaleString('pt-BR')}</div></CardContent>
+              </Card>
+            </div>
+            <Card>
+              <CardHeader><CardTitle>Histórico de Pagamentos</CardTitle></CardHeader>
+              <CardContent className="space-y-2">
+                {pagamentosAluno.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-4">Nenhum pagamento registrado</p>
+                ) : pagamentosAluno.map(p => (
+                  <div key={p.id} className="flex items-center justify-between p-2 rounded border text-sm">
+                    <div>
+                      <span className="font-medium">R$ {p.valor}</span>
+                      <span className="text-muted-foreground ml-2">• {p.metodo_pagamento || '—'}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">{p.data_vencimento ? new Date(p.data_vencimento + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}</span>
+                      <Badge variant={p.status === 'pago' ? 'default' : 'secondary'}>{p.status}</Badge>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
+        </TabsContent>
 
-      {/* Cards de resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-300 flex items-center">
-              <Weight className="w-4 h-4 mr-2" />
-              Peso Atual
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-800 dark:text-blue-200">{currentWeight} kg</div>
-            <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-              {parseFloat(weightDiff) >= 0 ? '+' : ''}{weightDiff}kg desde Jan
-            </p>
-          </CardContent>
-        </Card>
+        <TabsContent value="treinos">
+          <div className="space-y-4">
+            {treinoAtivo && (
+              <Card className="border-primary">
+                <CardHeader><CardTitle className="flex items-center gap-2"><Dumbbell className="h-5 w-5" />Treino Ativo</CardTitle></CardHeader>
+                <CardContent>
+                  <p>{treinoAtivo.descricao || 'Sem descrição'}</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {treinoAtivo.data_inicio && `Início: ${new Date(treinoAtivo.data_inicio + 'T00:00:00').toLocaleDateString('pt-BR')}`}
+                    {treinoAtivo.data_fim && ` • Fim: ${new Date(treinoAtivo.data_fim + 'T00:00:00').toLocaleDateString('pt-BR')}`}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+            <Card>
+              <CardHeader><CardTitle>Histórico de Treinos</CardTitle></CardHeader>
+              <CardContent className="space-y-2">
+                {treinos.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-4">Nenhum treino registrado</p>
+                ) : treinos.map(t => (
+                  <div key={t.id} className="flex items-center justify-between p-2 rounded border text-sm">
+                    <span>{t.descricao || 'Treino'}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">
+                        {t.data_inicio ? new Date(t.data_inicio + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}
+                      </span>
+                      <Badge variant={!t.data_fim || t.data_fim >= hoje ? 'default' : 'secondary'}>
+                        {!t.data_fim || t.data_fim >= hoje ? 'Ativo' : 'Vencido'}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
 
-        <Card className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-green-700 dark:text-green-300 flex items-center">
-              <TrendingUp className="w-4 h-4 mr-2" />
-              % Gordura
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-800 dark:text-green-200">{currentBodyFat}%</div>
-            <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-              {parseFloat(bodyFatDiff) >= 0 ? '+' : ''}{bodyFatDiff}% desde Jan
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-purple-700 dark:text-purple-300 flex items-center">
-              <Ruler className="w-4 h-4 mr-2" />
-              Massa Muscular
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-800 dark:text-purple-200">{currentMuscle} kg</div>
-            <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
-              {parseFloat(muscleDiff) >= 0 ? '+' : ''}{muscleDiff}kg desde Jan
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-950/50 dark:to-yellow-900/50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-yellow-700 dark:text-yellow-300 flex items-center">
-              <Calendar className="w-4 h-4 mr-2" />
-              Frequência
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-800 dark:text-yellow-200">{frequency}%</div>
-            <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">Este mês</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Gráficos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Evolução Física */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Evolução Física</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={performanceData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="date" className="text-muted-foreground" />
-                <YAxis className="text-muted-foreground" />
-                <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
-                <Line type="monotone" dataKey="weight" stroke="hsl(var(--primary))" strokeWidth={3} name="Peso (kg)" />
-                <Line type="monotone" dataKey="bodyFat" stroke="#EF4444" strokeWidth={3} name="% Gordura" />
-                <Line type="monotone" dataKey="muscle" stroke="#10B981" strokeWidth={3} name="Massa Muscular (kg)" />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Cargas de Treino */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Cargas Atuais</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={workoutData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="exercise" className="text-muted-foreground" />
-                <YAxis className="text-muted-foreground" />
-                <Tooltip 
-                  formatter={(value, name) => [
-                    name === 'weight' ? `${value}kg` : value,
-                    name === 'weight' ? 'Peso' : name === 'reps' ? 'Repetições' : 'Séries'
-                  ]}
-                  contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} 
-                />
-                <Bar dataKey="weight" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Frequência Mensal */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Frequência Mensal (%)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={frequencyData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="month" className="text-muted-foreground" />
-                <YAxis domain={[0, 100]} className="text-muted-foreground" />
-                <Tooltip 
-                  formatter={(value) => [`${value}%`, 'Frequência']}
-                  contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} 
-                />
-                <Bar dataKey="frequency" fill="#10B981" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
+        <TabsContent value="frequencia">
+          {frequenciaData.length > 0 ? (
+            <Card>
+              <CardHeader><CardTitle>Frequência Mensal</CardTitle></CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={frequenciaData}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="visits" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Visitas" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card><CardContent className="py-12 text-center text-muted-foreground">Nenhum check-in registrado para este aluno</CardContent></Card>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

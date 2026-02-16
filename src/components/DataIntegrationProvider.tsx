@@ -1,34 +1,50 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { useSupabaseStudents } from '@/hooks/useSupabaseStudents';
 import { useSupabasePlans } from '@/hooks/useSupabasePlans';
 import { useSupabasePayments } from '@/hooks/useSupabasePayments';
 import { useSupabaseClasses } from '@/hooks/useSupabaseClasses';
 import { useSupabaseProdutos } from '@/hooks/useSupabaseProdutos';
 import { useSupabaseCampaigns } from '@/hooks/marketing/useSupabaseCampaigns';
-import { useSupabaseFinancialReports } from '@/hooks/useSupabaseFinancialReports';
+import { useSupabaseCheckIns } from '@/hooks/useSupabaseCheckIns';
+import { useAvaliacoesFisicas } from '@/hooks/useAvaliacoesFisicas';
+import { useAulasExperimentais } from '@/hooks/useAulasExperimentais';
+import { useFrequencia } from '@/hooks/useFrequencia';
+import { useFuncionarios } from '@/hooks/useFuncionarios';
+import { useNotificacoes } from '@/hooks/useNotificacoes';
+import { useSupabaseLeads } from '@/hooks/marketing/useSupabaseLeads';
+import { useCrossMetrics, CrossMetrics } from '@/hooks/useCrossMetrics';
+import { useSmartAlerts, SmartAlert } from '@/hooks/useSmartAlerts';
 
 interface IntegratedData {
-  // Dados básicos
+  // Dados brutos
   alunos: any[];
   planos: any[];
   pagamentos: any[];
   aulas: any[];
   produtos: any[];
   campanhas: any[];
+  checkins: any[];
+  avaliacoes: any[];
+  treinos: any[];
+  experimentais: any[];
+  funcionarios: any[];
+  notificacoes: any[];
+  leads: any[];
+  frequencias: any[];
+
+  // Métricas cruzadas calculadas
+  metrics: CrossMetrics;
   
-  // Métricas cruzadas
-  alunosPorPlano: { [key: string]: number };
-  faturamentoPorPlano: { [key: string]: number };
-  conversaoLeadsPorCampanha: { [key: string]: number };
-  produtosPorStatus: { [key: string]: number };
-  
-  // Insights e recomendações
-  insights: {
-    retencao: any[];
-    crescimento: any[];
-    otimizacao: any[];
-  };
-  
+  // Alertas inteligentes
+  alerts: SmartAlert[];
+
+  // Métricas legacy (mantidas por compatibilidade)
+  alunosPorPlano: Record<string, number>;
+  faturamentoPorPlano: Record<string, number>;
+  conversaoLeadsPorCampanha: Record<string, number>;
+  produtosPorStatus: Record<string, number>;
+  insights: { retencao: any[]; crescimento: any[]; otimizacao: any[] };
+
   loading: boolean;
   refetchAll: () => void;
 }
@@ -42,140 +58,116 @@ export function DataIntegrationProvider({ children }: { children: React.ReactNod
   const { classes: aulas, loading: loadingClasses, refetch: refetchClasses } = useSupabaseClasses();
   const { produtos, loading: loadingProdutos, refetch: refetchProdutos } = useSupabaseProdutos();
   const { campaigns: campanhas, campaignsLoading: loadingCampaigns, refetchCampaigns } = useSupabaseCampaigns();
+  const { checkIns: checkins, loading: loadingCheckins, refetch: refetchCheckins } = useSupabaseCheckIns();
+  const { avaliacoes, loading: loadingAvaliacoes, refetch: refetchAvaliacoes } = useAvaliacoesFisicas();
+  const { aulasExperimentais: experimentais, loading: loadingExperimentais, refetch: refetchExperimentais } = useAulasExperimentais();
+  const { frequencias, loading: loadingFrequencias, refetch: refetchFrequencias } = useFrequencia();
+  const { funcionarios, loading: loadingFuncionarios, refetch: refetchFuncionarios } = useFuncionarios();
+  const { notificacoes, loading: loadingNotificacoes, refetch: refetchNotificacoes } = useNotificacoes();
+  const { leads, leadsLoading: loadingLeads, refetchLeads } = useSupabaseLeads();
 
-  const [integratedData, setIntegratedData] = useState<Partial<IntegratedData>>({});
+  const loading = loadingStudents || loadingPlans || loadingPayments || loadingClasses || 
+    loadingProdutos || loadingCampaigns || loadingCheckins || loadingAvaliacoes || 
+    loadingExperimentais || loadingFrequencias || loadingFuncionarios || loadingNotificacoes || loadingLeads;
 
-  const loading = loadingStudents || loadingPlans || loadingPayments || 
-                 loadingClasses || loadingProdutos || loadingCampaigns;
-
+  // Treinos - fetch directly since there's no dedicated hook in context
+  const [treinos, setTreinos] = useState<any[]>([]);
   useEffect(() => {
-    if (!loading) {
-      processIntegratedData();
-    }
-  }, [alunos, planos, pagamentos, aulas, produtos, campanhas, loading]);
+    import('@/integrations/supabase/client').then(({ supabase }) => {
+      supabase.from('treinos').select('*').order('created_at', { ascending: false }).then(({ data }) => {
+        setTreinos(data || []);
+      });
+    });
+  }, []);
 
-  const processIntegratedData = () => {
-    // Processar dados cruzados
-    const alunosPorPlano: { [key: string]: number } = {};
-    const faturamentoPorPlano: { [key: string]: number } = {};
+  // Cross metrics
+  const metrics = useCrossMetrics({
+    alunos: alunos || [],
+    pagamentos: pagamentos || [],
+    planos: planos || [],
+    checkins: checkins || [],
+    avaliacoes: avaliacoes || [],
+    treinos,
+    experimentais: experimentais || [],
+    aulas: aulas || [],
+    funcionarios: funcionarios || [],
+    leads: leads || [],
+    campanhas: campanhas || [],
+  });
+
+  // Smart alerts
+  const alerts = useSmartAlerts(metrics);
+
+  // Legacy metrics (backward compat)
+  const legacyMetrics = useMemo(() => {
+    const alunosPorPlano: Record<string, number> = {};
+    const faturamentoPorPlano: Record<string, number> = {};
     
-    // Agrupar alunos por plano
-    alunos?.forEach(aluno => {
+    (alunos || []).forEach((aluno: any) => {
       if (aluno.plano_id) {
-        const plano = planos?.find(p => p.id === aluno.plano_id);
-        const nomeePlano = plano?.nome || 'Sem plano';
-        alunosPorPlano[nomeePlano] = (alunosPorPlano[nomeePlano] || 0) + 1;
+        const plano = (planos || []).find((p: any) => p.id === aluno.plano_id);
+        const nome = plano?.nome || 'Sem plano';
+        alunosPorPlano[nome] = (alunosPorPlano[nome] || 0) + 1;
       }
     });
 
-    // Faturamento por plano
-    pagamentos?.forEach(pagamento => {
-      if (pagamento.status === 'pago' && pagamento.aluno_id) {
-        const aluno = alunos?.find(a => a.id === pagamento.aluno_id);
+    (pagamentos || []).forEach((pag: any) => {
+      if (pag.status === 'pago' && pag.aluno_id) {
+        const aluno = (alunos || []).find((a: any) => a.id === pag.aluno_id);
         if (aluno?.plano_id) {
-          const plano = planos?.find(p => p.id === aluno.plano_id);
-          const nomePlano = plano?.nome || 'Sem plano';
-          faturamentoPorPlano[nomePlano] = (faturamentoPorPlano[nomePlano] || 0) + (pagamento.valor || 0);
+          const plano = (planos || []).find((p: any) => p.id === aluno.plano_id);
+          const nome = plano?.nome || 'Sem plano';
+          faturamentoPorPlano[nome] = (faturamentoPorPlano[nome] || 0) + (pag.valor || 0);
         }
       }
     });
 
-    // Conversão de campanhas (simulado - em produção viria de métricas reais)
-    const conversaoLeadsPorCampanha: { [key: string]: number } = {};
-    campanhas?.forEach(campanha => {
-      // Simular taxa de conversão baseada no orçamento e canal
-      const taxaBase = campanha.canal === 'google_ads' ? 3.5 : 
-                     campanha.canal === 'facebook_ads' ? 2.8 : 
-                     campanha.canal === 'instagram' ? 2.2 : 1.5;
-      conversaoLeadsPorCampanha[campanha.titulo] = taxaBase;
+    const conversaoLeadsPorCampanha: Record<string, number> = {};
+    (campanhas || []).forEach((c: any) => {
+      conversaoLeadsPorCampanha[c.titulo] = c.conversoes || 0;
     });
 
-    // Produtos por status
-    const produtosPorStatus: { [key: string]: number } = {};
-    produtos?.forEach(produto => {
-      produtosPorStatus[produto.status] = (produtosPorStatus[produto.status] || 0) + 1;
+    const produtosPorStatus: Record<string, number> = {};
+    (produtos || []).forEach((p: any) => {
+      produtosPorStatus[p.status] = (produtosPorStatus[p.status] || 0) + 1;
     });
 
-    // Gerar insights automatizados
-    const insights = gerarInsights({
-      alunos: alunos || [],
-      pagamentos: pagamentos || [],
-      planos: planos || [],
-      alunosPorPlano,
-      faturamentoPorPlano
-    });
-
-    setIntegratedData({
-      alunosPorPlano,
-      faturamentoPorPlano,
-      conversaoLeadsPorCampanha,
-      produtosPorStatus,
-      insights
-    });
-  };
-
-  const gerarInsights = (data: any) => {
-    const insights = {
-      retencao: [] as any[],
-      crescimento: [] as any[],
-      otimizacao: [] as any[]
-    };
-
-    // Insights de retenção
-    const totalAlunos = data.alunos.length;
-    const alunosAtivos = data.alunos.filter((a: any) => a.status === 'ativo').length;
-    const taxaRetencao = totalAlunos > 0 ? (alunosAtivos / totalAlunos) * 100 : 0;
-
-    if (taxaRetencao < 80) {
+    // Insights
+    const insights = { retencao: [] as any[], crescimento: [] as any[], otimizacao: [] as any[] };
+    
+    if (metrics.taxaRetencao < 80 && metrics.totalAlunos > 0) {
       insights.retencao.push({
-        tipo: 'alerta',
-        titulo: 'Taxa de Retenção Baixa',
-        descricao: `Taxa atual: ${taxaRetencao.toFixed(1)}%. Recomendamos implementar programa de fidelidade.`,
-        acao: 'Criar campanha de engajamento',
-        prioridade: 'alta'
+        tipo: 'alerta', titulo: 'Taxa de Retenção Baixa',
+        descricao: `Taxa atual: ${metrics.taxaRetencao.toFixed(1)}%. Recomendamos programa de fidelidade.`,
+        acao: 'Criar campanha de engajamento', prioridade: 'alta'
       });
     }
 
-    // Insights de crescimento
-    const receitaTotal = data.pagamentos
-      .filter((p: any) => p.status === 'pago')
-      .reduce((sum: number, p: any) => sum + (p.valor || 0), 0);
-    
-    const metaReceita = totalAlunos * 150; // Meta de R$ 150 por aluno
-    if (receitaTotal < metaReceita) {
+    if (metrics.crescimentoReceita < 0) {
       insights.crescimento.push({
-        tipo: 'oportunidade',
-        titulo: 'Potencial de Crescimento',
-        descricao: `Receita atual: R$ ${receitaTotal.toLocaleString('pt-BR')}. Meta: R$ ${metaReceita.toLocaleString('pt-BR')}.`,
-        acao: 'Criar upsell para planos premium',
-        prioridade: 'média'
+        tipo: 'alerta', titulo: 'Queda na Receita',
+        descricao: `Receita caiu ${Math.abs(metrics.crescimentoReceita).toFixed(1)}% vs mês anterior.`,
+        acao: 'Analisar causas e criar promoções', prioridade: 'alta'
       });
     }
 
-    // Insights de otimização
-    const planosComPoucosAlunos = Object.entries(data.alunosPorPlano)
-      .filter(([_, count]) => (count as number) < 5);
-    
-    if (planosComPoucosAlunos.length > 0) {
+    const planosComPoucos = Object.entries(alunosPorPlano).filter(([, count]) => count < 5);
+    if (planosComPoucos.length > 0) {
       insights.otimizacao.push({
-        tipo: 'sugestao',
-        titulo: 'Otimização de Planos',
-        descricao: `Planos com poucos alunos: ${planosComPoucosAlunos.map(([nome]) => nome).join(', ')}`,
-        acao: 'Revisar estratégia de preços ou consolidar planos',
-        prioridade: 'baixa'
+        tipo: 'sugestao', titulo: 'Otimização de Planos',
+        descricao: `Planos com poucos alunos: ${planosComPoucos.map(([n]) => n).join(', ')}`,
+        acao: 'Revisar preços ou consolidar', prioridade: 'baixa'
       });
     }
 
-    return insights;
-  };
+    return { alunosPorPlano, faturamentoPorPlano, conversaoLeadsPorCampanha, produtosPorStatus, insights };
+  }, [alunos, planos, pagamentos, campanhas, produtos, metrics]);
 
   const refetchAll = () => {
-    refetchStudents();
-    refetchPlans();
-    refetchPayments(); 
-    refetchClasses();
-    refetchProdutos();
-    refetchCampaigns();
+    refetchStudents(); refetchPlans(); refetchPayments(); refetchClasses();
+    refetchProdutos(); refetchCampaigns(); refetchCheckins(); refetchAvaliacoes();
+    refetchExperimentais(); refetchFrequencias(); refetchFuncionarios(); refetchNotificacoes();
+    refetchLeads();
   };
 
   const contextValue: IntegratedData = {
@@ -185,13 +177,19 @@ export function DataIntegrationProvider({ children }: { children: React.ReactNod
     aulas: aulas || [],
     produtos: produtos || [],
     campanhas: campanhas || [],
-    alunosPorPlano: integratedData.alunosPorPlano || {},
-    faturamentoPorPlano: integratedData.faturamentoPorPlano || {},
-    conversaoLeadsPorCampanha: integratedData.conversaoLeadsPorCampanha || {},
-    produtosPorStatus: integratedData.produtosPorStatus || {},
-    insights: integratedData.insights || { retencao: [], crescimento: [], otimizacao: [] },
+    checkins: checkins || [],
+    avaliacoes: avaliacoes || [],
+    treinos,
+    experimentais: experimentais || [],
+    funcionarios: funcionarios || [],
+    notificacoes: notificacoes || [],
+    leads: leads || [],
+    frequencias: frequencias || [],
+    metrics,
+    alerts,
+    ...legacyMetrics,
     loading,
-    refetchAll
+    refetchAll,
   };
 
   return (
