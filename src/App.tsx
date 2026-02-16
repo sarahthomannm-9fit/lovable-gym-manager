@@ -35,6 +35,13 @@ import { Produtos } from "./pages/Produtos";
 import { Automacao } from "./pages/marketing/Automacao";
 import { AgenteIA } from "./pages/AgenteIA";
 import Dashboard9FIT from "./pages/9fit/Dashboard9FIT";
+import CEODashboard from "./pages/9fit/CEODashboard";
+import ConsultoriaDashboard from "./pages/9fit/ConsultoriaDashboard";
+import ConciergeDashboard from "./pages/9fit/ConciergeDashboard";
+import TrustDashboard from "./pages/9fit/TrustDashboard";
+import NetworkDashboard from "./pages/9fit/NetworkDashboard";
+import AutomationDashboard from "./pages/9fit/AutomationDashboard";
+import StoreDashboard from "./pages/9fit/StoreDashboard";
 import { DemoModeProvider } from "./contexts/DemoModeContext";
 import { Funcionarios } from "./pages/Funcionarios";
 import { AvaliacoesFisicas } from "./pages/AvaliacoesFisicas";
@@ -100,6 +107,13 @@ const App = () => (
                   <Route path="/agente-ia" element={<MainLayout><AgenteIA /></MainLayout>} />
                   <Route path="/produtos" element={<MainLayout><Produtos /></MainLayout>} />
                   <Route path="/9fit" element={<MainLayout><Dashboard9FIT /></MainLayout>} />
+                  <Route path="/9fit/ceo" element={<MainLayout><CEODashboard /></MainLayout>} />
+                  <Route path="/9fit/consultoria" element={<MainLayout><ConsultoriaDashboard /></MainLayout>} />
+                  <Route path="/9fit/concierge" element={<MainLayout><ConciergeDashboard /></MainLayout>} />
+                  <Route path="/9fit/trust" element={<MainLayout><TrustDashboard /></MainLayout>} />
+                  <Route path="/9fit/network" element={<MainLayout><NetworkDashboard /></MainLayout>} />
+                  <Route path="/9fit/automation" element={<MainLayout><AutomationDashboard /></MainLayout>} />
+                  <Route path="/9fit/store" element={<MainLayout><StoreDashboard /></MainLayout>} />
                   <Route path="/funcionarios" element={<MainLayout><Funcionarios /></MainLayout>} />
                   <Route path="/avaliacoes" element={<MainLayout><AvaliacoesFisicas /></MainLayout>} />
                   <Route path="/experimentais" element={<MainLayout><AulasExperimentais /></MainLayout>} />
