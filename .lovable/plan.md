@@ -1,349 +1,199 @@
 
-# Analise Completa do Sistema FitManage Pro / 9FIT OS
 
-## Resumo Executivo
+# Plano Completo: Cruzamento de Dados e Fluxos Integrados
 
-Apos analise profunda do codigo-fonte, identifiquei **duplicidades criticas**, **telas faltantes**, **fluxos incompletos** e **oportunidades de otimizacao** que precisam ser resolvidas para um sistema coeso e funcional.
+## Diagnostico Atual
 
----
-
-## 1. DUPLICIDADES IDENTIFICADAS (Remover/Unificar)
-
-### 1.1 Contextos Duplicados de Dados
-
-| Problema | Arquivos | Impacto |
-|----------|----------|---------|
-| Dois contextos de dados competindo | `GymDataContext.tsx` (localStorage) vs `SupabaseGymDataContext.tsx` (Supabase) | Dados inconsistentes, confusao de qual fonte usar |
-| DataIntegrationProvider redundante | `DataIntegrationProvider.tsx` | Duplica logica ja presente no SupabaseGymDataContext |
-
-**Acao:** Remover `GymDataContext.tsx` e usar apenas `SupabaseGymDataContext.tsx` como fonte unica de verdade.
-
-### 1.2 Componentes Wrapper Desnecessarios
-
-| Wrapper | Componente Real | Observacao |
-|---------|-----------------|------------|
-| `Students.tsx` | `SupabaseStudents.tsx` | Wrapper vazio, pode ser removido |
-| `Classes.tsx` | `SupabaseClasses.tsx` | Wrapper vazio, pode ser removido |
-| `Plans.tsx` | `SupabasePlans.tsx` | Wrapper vazio, pode ser removido |
-| `Payments.tsx` | `SupabasePayments.tsx` | Wrapper vazio, pode ser removido |
-| `CheckIn.tsx` | `SupabaseCheckIn.tsx` | Wrapper vazio, pode ser removido |
-
-### 1.3 Hooks de Notificacao Duplicados
-
-| Hook | Localizacao | Tipo de Dados |
-|------|-------------|---------------|
-| `useNotificacoes.ts` | Conectado ao Supabase | Persistente |
-| `useNotifications.ts` | Estado local com dados mockados | Efemero |
-
-**Acao:** Remover `useNotifications.ts` e usar apenas `useNotificacoes.ts`.
-
-### 1.4 Tipos Duplicados/Conflitantes
-
-| Tipo Antigo (`src/types/gym.ts`) | Tipo Supabase | Conflito |
-|----------------------------------|---------------|----------|
-| `Student` (id: number) | `SupabaseStudent` (id: uuid) | IDs incompativeis |
-| `Payment.method: 'pix'|'card'|'cash'` | `metodo_pagamento: 'pix'|'cartao'|'dinheiro'` | Valores diferentes |
-
-**Acao:** Deprecar `src/types/gym.ts` e usar tipos gerados do Supabase.
+O sistema tem modulos funcionais mas **isolados** -- cada tela consulta seus proprios dados sem cruzar informacoes. O `DataIntegrationProvider` existe mas e subutilizado (apenas Painel, IntegratedInsights e AIMarketingInsights o consomem). O Dashboard 9FIT usa dados 100% mockados (hardcoded "R$ 47.5K", "142 alunos", etc). O `StudentProfile` ainda usa tipos legados (`Student` com `id: number`) com dados mockados de performance.
 
 ---
 
-## 2. TELAS/PAGINAS FALTANTES
+## O QUE FALTA (Organizacao por Prioridade)
 
-### 2.1 Rotas Definidas mas sem Funcionalidade Completa
+### BLOCO 1: Eliminar Dados Mockados e Conectar ao Real
 
-| Rota | Status | O que Falta |
-|------|--------|-------------|
-| `/treinos` | Parcial | Falta dialog para criar novo treino (botao existe mas nao funciona) |
-| Check-in | Nao e rota | Nao tem rota propria, so existe dentro do Painel |
+**1.1 Dashboard 9FIT com dados reais**
+- As metricas "R$ 47.5K", "142 alunos", "94% retencao" sao hardcoded
+- As "Atividades Recentes" sao hardcoded
+- Os sub-dashboards (CEO, Consultoria, Trust, etc.) nao existem como rotas -- clicando vai para 404
+- **Acao:** Conectar ao `useDataIntegration` + criar rotas para cada sub-dashboard
 
-### 2.2 Telas que Deveriam Existir
+**1.2 StudentProfile com dados reais do Supabase**
+- Ainda importa `Student` de `types/gym.ts` (id: number)
+- Graficos de evolucao usam dados mockados
+- Nao mostra historico de pagamentos, frequencia, avaliacoes fisicas ou treinos
+- **Acao:** Reescrever para aceitar `SupabaseStudent` e cruzar com `avaliacoes_fisicas`, `pagamentos`, `checkins`, `treinos`
 
-| Tela | Justificativa | Prioridade |
-|------|---------------|------------|
-| `/checkin` | Check-in merece rota propria, e funcionalidade core | Alta |
-| `/pagamentos` | Pagamentos nao tem rota, so existe como componente | Alta |
-| `/equipamentos` | Existe componente `Equipment.tsx` mas sem rota | Media |
-| `/perfil-aluno/:id` | Perfil do aluno deveria ser rota, nao overlay | Media |
-| `/configuracoes` | Sistema precisa de tela de configuracoes | Baixa |
-| `/notificacoes` | Listagem de todas notificacoes do sistema | Baixa |
+**1.3 SupabaseClasses com estado local redundante**
+- Mantem `localClasses` (estado local) separado das `classes` do Supabase
+- Confirmar/Cancelar aula so altera estado local, nao persiste
+- **Acao:** Remover estado local, usar `updateClass` do contexto para persistir
 
----
+### BLOCO 2: Cruzamento de Dados (Informacao Transitando)
 
-## 3. ESTADOS E FLUXOS INCOMPLETOS
+**2.1 Expandir DataIntegrationProvider como hub central**
+Atualmente cruza: alunos x planos, pagamentos x planos, campanhas (simulado), produtos por status.
 
-### 3.1 Fluxo de Treinos (Criticidade: ALTA)
+Falta cruzar:
+- **Alunos x Checkins** = frequencia real por aluno (quem esta inativo)
+- **Alunos x Avaliacoes Fisicas** = evolucao corporal, proximas avaliacoes pendentes
+- **Alunos x Treinos** = treinos vencidos/ativos por aluno
+- **Alunos x Aulas Experimentais** = funil de conversao real (lead -> aluno)
+- **Pagamentos x Notificacoes** = cobranças que geraram lembrete vs que nao geraram
+- **Campanhas x Leads x Aulas Experimentais** = ROI real de campanha (campanha -> lead -> experimental -> aluno -> receita)
+- **Funcionarios x Aulas** = carga horaria por professor, performance
 
-```text
-ESTADO ATUAL:
-[Lista Treinos] --> [Botao "Novo Treino"] --> (nada acontece)
+**2.2 Metricas cruzadas disponiveis globalmente**
 
-DEVERIA SER:
-[Lista Treinos] --> [Botao "Novo Treino"] --> [Dialog/Form] --> [Selecionar Aluno] --> [Definir Exercicios] --> [Salvar]
-```
+Novas metricas a calcular:
+- `alunosInativos`: alunos sem checkin nos ultimos 15 dias
+- `alunosComTreinoVencido`: treino com data_fim < hoje
+- `alunosComAvaliacaoPendente`: proxima_avaliacao < hoje
+- `taxaConversaoExperimental`: aulas_experimentais convertidas / total
+- `receitaPorFuncionario`: pagamentos dos alunos de cada professor
+- `ltv_medio`: receita total / total de alunos ativos
+- `cac_estimado`: orcamento campanhas / conversoes
+- `churnRisk`: alunos inativos + pagamento atrasado
 
-**Itens Faltando:**
-- Dialog de criacao de treino
-- Selecao de exercicios
-- Templates de treino (existe hook mas nao e usado)
-- Edicao de treino existente
-- Exclusao de treino
+**2.3 Contexto de alertas e acoes sugeridas**
 
-### 3.2 Fluxo de Aulas (Criticidade: ALTA)
+O sistema deve gerar alertas automaticos que aparecem no Painel:
+- "5 alunos sem treino ha mais de 30 dias"
+- "3 aulas experimentais sem follow-up"
+- "R$ 2.400 em cobranças vencidas ha mais de 15 dias"
+- "Campanha 'Verao Fitness' terminou -- gerar relatorio?"
 
-```text
-ESTADO ATUAL:
-[Adicionar Aula] --> [Salva no DB] --> (lista nao atualiza em tempo real)
-[Lista de Aulas] --> (nao mostra inscritos)
+Cada alerta leva a uma acao (navegar para a tela certa com filtro pre-aplicado).
 
-DEVERIA SER:
-[Adicionar Aula] --> [Escolher tipo/recorrencia] --> [Salvar] --> [Ver inscritos] --> [Gerenciar presenca]
-```
+### BLOCO 3: Telas e Estados Faltantes
 
-**Itens Faltando:**
-- ClassEnrollmentManager existe mas nao esta integrado na UI principal
-- Lista de espera automatica (logica existe mas nao e visivel)
-- Controle de presenca por aula
-- Cancelamento de aula com notificacao aos inscritos
+**3.1 Sub-dashboards 9FIT (atualmente 404)**
+Criar 7 rotas reais com dados cruzados:
 
-### 3.3 Fluxo de Pagamentos (Criticidade: ALTA)
+| Rota | Dados Cruzados |
+|------|---------------|
+| `/9fit/ceo` | MRR real, alunos ativos, receita por plano, retencao, churn, LTV, CAC |
+| `/9fit/consultoria` | Alunos com treino, evolucao, aderencia, risco de saida |
+| `/9fit/concierge` | Alunos premium, satisfacao, LTV individual |
+| `/9fit/trust` | Avaliacoes posturais/fisicas, scores, tendencias |
+| `/9fit/network` | Leads, campanhas, funis, ROI por canal |
+| `/9fit/automation` | Fluxos de automacao, notificacoes disparadas, taxas |
+| `/9fit/store` | Produtos, vendas, ticket medio |
 
-```text
-ESTADO ATUAL:
-[Criar Cobranca] --> [Status Pendente] --> [Marcar Pago Manual]
+**3.2 Tela de Configuracoes/Notificacoes**
+- UI para `config_notificacoes` (ativar/desativar, definir templates, canais)
+- Listagem de `notificacoes` enviadas com status
 
-DEVERIA SER:
-[Criar Cobranca] --> [Gerar Link/PIX] --> [Enviar para Aluno] --> [Confirmacao Automatica] --> [Atualizar Status Aluno]
-```
+**3.3 Perfil do Aluno completo (micro-estados)**
+Tabs com dados cruzados:
+- **Resumo**: dados pessoais + status do plano + ultimo checkin
+- **Financeiro**: historico de pagamentos, inadimplencia, metodo preferido
+- **Treinos**: treino atual, historico, status (em dia/vencido)
+- **Evolucao**: graficos de avaliacoes fisicas reais (peso, gordura, muscular)
+- **Frequencia**: calendario de checkins, media mensal
+- **Aulas**: aulas inscritas, presenca, lista de espera
 
-**Itens Faltando:**
-- Integracao com gateway de pagamento (Stripe foi removido)
-- Geracao de QR Code PIX
-- Envio automatico de cobranca por WhatsApp/Email
-- Recorrencia automatica de cobrancas mensais
-- Vinculo entre status de pagamento e status do aluno
+### BLOCO 4: Micro-estados das Telas
 
-### 3.4 Fluxo de Avaliacao Fisica (Criticidade: MEDIA)
+**4.1 Estados de criacao com pre-preenchimento**
+- Ao criar cobranca: preencher valor automatico do plano do aluno
+- Ao criar treino: sugerir baseado no ultimo treino do aluno
+- Ao criar campanha: sugerir publico baseado em alunos inativos ou leads nao convertidos
+- Ao criar promocao: sugerir desconto baseado em analise de churn
 
-```text
-ESTADO ATUAL:
-[Nova Avaliacao] --> [Preencher dados basicos] --> [Salvar]
+**4.2 Estados de filtro e busca**
+- Alunos: filtrar por status, plano, inadimplencia, frequencia
+- Pagamentos: filtrar por status, periodo, metodo
+- Aulas: filtrar por professor, tipo, ocupacao
+- Treinos: filtrar por status (em dia, vencendo, vencido)
 
-DEVERIA SER:
-[Nova Avaliacao] --> [Preencher tudo] --> [Comparar com anterior] --> [Gerar PDF] --> [Enviar ao aluno]
-```
+**4.3 Estados de confirmacao**
+- Confirmar exclusao de aluno (com aviso de dados vinculados)
+- Confirmar cancelamento de aula (com contagem de inscritos afetados)
+- Confirmar finalizacao de campanha
 
-**Itens Faltando:**
-- Comparativo visual entre avaliacoes
-- Exportar PDF da avaliacao
-- Graficos de evolucao no perfil do aluno
-- Alertas de proxima avaliacao agendada
+**4.4 Empty states com acao**
+- Aulas sem dados: "Nenhuma aula agendada. Criar primeira aula"
+- Treinos sem dados: botao funcional (atualmente o botao "Novo Treino" nao abre nada)
+- Notificacoes: "Nenhuma notificacao configurada. Configurar agora"
 
-### 3.5 Fluxo de Aula Experimental (Criticidade: MEDIA)
+### BLOCO 5: Fluxos de Transicao de Dados
 
-```text
-ESTADO ATUAL:
-[Agendar] --> [Confirmar] --> [Marcar Realizada] --> [Converter para Aluno]
+**5.1 Aula Experimental -> Aluno**
+Quando marcar "Convertido" em aula experimental:
+- Pre-preencher dialog de novo aluno com nome/email/telefone do lead
+- Criar vinculo com plano selecionado na conversao
+- Gerar primeira cobranca automaticamente
+- Registrar fonte de aquisicao
 
-O QUE FALTA:
-- Envio de lembrete automatico (dia anterior)
-- Follow-up para quem nao compareceu
-- Formulario de feedback pos-aula
-- Registro da avaliacao (1-5 estrelas) com persistencia
-```
+**5.2 Campanha -> Lead -> Experimental -> Aluno -> Receita**
+Rastreio completo do funil:
+- Campanha gera leads (com fonte identificada)
+- Lead agenda experimental
+- Experimental converte em aluno
+- Aluno gera receita
+- Dashboard mostra ROI real: receita gerada / investimento da campanha
 
----
+**5.3 Pagamento atrasado -> Notificacao -> Cobranca**
+- Detectar pagamentos vencidos
+- Gerar notificacao automatica (tabela notificacoes)
+- Marcar como enviada quando processada
+- Mostrar no Painel quantas cobranças tiveram follow-up
 
-## 4. FUNCIONALIDADES INCOMPLETAS
-
-### 4.1 Sistema de Notificacoes
-
-| Componente | Status | Problema |
-|------------|--------|----------|
-| `config_notificacoes` | Tabela existe | Nao tem UI para configurar |
-| `notificacoes` | Tabela existe | Nao tem disparo automatico |
-| `useNotificacoes` | Hook existe | Nao esta sendo usado em lugar nenhum |
-| Envio WhatsApp | Hook existe | Nao ha integracao real |
-| Envio Email | Nao existe | Falta implementar |
-
-**Acao:** Criar tela de configuracao de notificacoes e implementar edge functions para disparo automatico.
-
-### 4.2 Perfil do Aluno
-
-| Funcionalidade | Status |
-|----------------|--------|
-| Dados basicos | OK |
-| Graficos de evolucao | Usa dados mockados do `GymDataContext` |
-| Historico de pagamentos | Nao existe |
-| Historico de frequencia | Nao existe |
-| Historico de avaliacoes | Nao existe |
-| Treinos vinculados | Nao existe |
-
-### 4.3 Dashboard 9FIT
-
-| Funcionalidade | Status |
-|----------------|--------|
-| Visualizacao das 7 camadas | Parcial |
-| RPC functions | Apenas `dashboard_trust` existe |
-| Dados reais | Maioria usa dados mockados |
-
----
-
-## 5. INTERACOES FALTANTES
-
-### 5.1 Acoes sem Feedback
-
-| Acao | Problema |
-|------|----------|
-| Deletar aluno | Nao pede confirmacao |
-| Deletar funcionario | Nao pede confirmacao |
-| Cancelar aula | Nao notifica inscritos |
-
-### 5.2 Loading States Inconsistentes
-
-| Componente | Loading State |
-|------------|---------------|
-| Funcionarios | OK (texto "Carregando...") |
-| Avaliacoes Fisicas | OK |
-| Treinos | OK |
-| Dashboard | OK (skeleton) |
-| Aulas | Nao tem |
-| Pagamentos | Nao tem |
-
-### 5.3 Estados Vazios (Empty States)
-
-| Componente | Empty State |
-|------------|-------------|
-| Treinos | OK |
-| Aulas | Nao tem (lista fica em branco) |
-| Pagamentos | OK |
-| Avaliacoes | OK |
-
----
-
-## 6. PLANO DE ACAO RECOMENDADO
-
-### Fase 1: Limpeza e Unificacao (1-2 dias)
-
-1. Remover `GymDataContext.tsx` e migrar todos os usos para `SupabaseGymDataContext`
-2. Remover componentes wrapper vazios (Students, Classes, Plans, etc.)
-3. Remover `useNotifications.ts` duplicado
-4. Atualizar `StudentProfile.tsx` para usar dados do Supabase
-5. Deprecar `src/types/gym.ts`
-
-### Fase 2: Rotas Faltantes (1 dia)
-
-1. Criar rota `/checkin` apontando para `SupabaseCheckIn`
-2. Criar rota `/pagamentos` apontando para `SupabasePayments`
-3. Criar rota `/equipamentos` para gestao de equipamentos
-4. Adicionar as rotas no sidebar
-
-### Fase 3: Completar Fluxos Criticos (3-5 dias)
-
-1. **Treinos:**
-   - Criar `AddTrainingDialog.tsx`
-   - Implementar edicao e exclusao
-   - Vincular treino ao aluno no perfil
-
-2. **Aulas:**
-   - Integrar `ClassEnrollmentManager` na tela principal
-   - Adicionar controle de presenca
-   - Implementar cancelamento com notificacao
-
-3. **Pagamentos:**
-   - Criar cobranca recorrente automatica
-   - Implementar link de pagamento (PIX QR Code)
-   - Vincular status de pagamento ao status do aluno
-
-### Fase 4: Sistema de Notificacoes (2-3 dias)
-
-1. Criar tela de configuracao de notificacoes
-2. Criar edge function para disparo automatico
-3. Integrar com lembretes de pagamento
-4. Integrar com lembretes de aula experimental
-
-### Fase 5: Melhorias de UX (1-2 dias)
-
-1. Adicionar dialogs de confirmacao para exclusoes
-2. Padronizar loading states
-3. Adicionar empty states consistentes
-4. Implementar feedback visual para todas acoes
-
----
-
-## 7. ARQUIVOS A REMOVER
-
-```text
-src/contexts/GymDataContext.tsx
-src/hooks/useNotifications.ts
-src/components/Students.tsx (wrapper)
-src/components/Classes.tsx (wrapper)
-src/components/Plans.tsx (wrapper)
-src/components/Payments.tsx (wrapper)
-src/components/CheckIn.tsx (wrapper)
-```
-
-## 8. ARQUIVOS A ATUALIZAR
-
-```text
-src/App.tsx - Remover GymDataProvider, adicionar novas rotas
-src/components/StudentProfile.tsx - Usar dados do Supabase
-src/components/AppSidebar.tsx - Adicionar novas rotas
-src/pages/Treinos.tsx - Adicionar dialog de criacao
-```
+**5.4 Treino vencido -> Alerta -> Renovacao**
+- Detectar treinos com data_fim passada
+- Alertar no perfil do aluno e no dashboard
+- Sugerir novo treino baseado no anterior
 
 ---
 
 ## Secao Tecnica
 
-### Dependencias entre Componentes
+### Arquivos a remover
+- `src/types/gym.ts` (substituir todos os usos por tipos Supabase)
+- `src/utils/dataConverters.ts` (converter diretamente para tipos Supabase)
 
-```text
-App.tsx
-  |-- SupabaseGymDataProvider (MANTER)
-  |-- GymDataProvider (REMOVER)
-  |-- DataIntegrationProvider (AVALIAR - pode ser simplificado)
-  |-- DemoModeProvider (MANTER para testes)
-```
+### Arquivos a criar
 
-### Hooks Ativos vs Mortos
+| Arquivo | Descricao |
+|---------|-----------|
+| `src/pages/9fit/CEODashboard.tsx` | Dashboard CEO com metricas reais cruzadas |
+| `src/pages/9fit/ConsultoriaDashboard.tsx` | Gestao de alunos e treinos |
+| `src/pages/9fit/ConciergeDashboard.tsx` | Clientes premium |
+| `src/pages/9fit/TrustDashboard.tsx` | Avaliacoes posturais/fisicas |
+| `src/pages/9fit/NetworkDashboard.tsx` | Marketing e leads |
+| `src/pages/9fit/AutomationDashboard.tsx` | Fluxos e notificacoes |
+| `src/pages/9fit/StoreDashboard.tsx` | Produtos e vendas |
+| `src/pages/Configuracoes.tsx` | Tela de configuracoes e notificacoes |
+| `src/components/training/AddTrainingDialog.tsx` | Dialog para criar treino |
+| `src/hooks/useCrossMetrics.ts` | Hook de metricas cruzadas globais |
+| `src/hooks/useSmartAlerts.ts` | Hook de alertas inteligentes baseados em cruzamento |
 
-| Hook | Status | Acao |
-|------|--------|------|
-| useSupabaseStudents | Ativo | Manter |
-| useSupabasePlans | Ativo | Manter |
-| useSupabasePayments | Ativo | Manter |
-| useSupabaseClasses | Ativo | Manter |
-| useSupabaseCheckIns | Ativo | Manter |
-| useFuncionarios | Ativo | Manter |
-| useAvaliacoesFisicas | Ativo | Manter |
-| useAulasExperimentais | Ativo | Manter |
-| useNotificacoes | Criado mas NAO usado | Integrar |
-| useAssinaturas | Criado mas NAO usado | Integrar |
-| useFrequencia | Criado mas NAO usado | Integrar |
-| useAulasInscritos | Criado mas parcialmente usado | Completar integracao |
-| useGymMetrics | Usa tipos antigos | Atualizar |
-| useLocalStorage | Usado pelo GymDataContext | Remover junto |
-| useNotifications | Duplicado | Remover |
+### Arquivos a atualizar
 
-### Tabelas do Banco vs Uso na UI
+| Arquivo | Mudanca |
+|---------|---------|
+| `src/components/DataIntegrationProvider.tsx` | Adicionar checkins, treinos, avaliacoes, experimentais, funcionarios, notificacoes ao contexto; calcular metricas cruzadas |
+| `src/components/StudentProfile.tsx` | Reescrever para usar tipos Supabase com abas (financeiro, treinos, evolucao, frequencia) |
+| `src/components/SupabaseStudents.tsx` | Remover conversao para tipos antigos, usar tipos Supabase direto |
+| `src/components/SupabaseClasses.tsx` | Remover estado local, persistir confirmar/cancelar no Supabase |
+| `src/pages/9fit/Dashboard9FIT.tsx` | Conectar a dados reais via DataIntegration |
+| `src/pages/Treinos.tsx` | Adicionar dialog funcional para criar treino |
+| `src/App.tsx` | Adicionar rotas /9fit/ceo, /9fit/consultoria, etc. e /configuracoes |
+| `src/components/AppSidebar.tsx` | Adicionar rota Configuracoes |
+| `src/pages/AulasExperimentais.tsx` | Adicionar fluxo de conversao que pre-preenche novo aluno |
 
-| Tabela | Hook | UI Component | Status |
-|--------|------|--------------|--------|
-| alunos | useSupabaseStudents | SupabaseStudents | OK |
-| planos | useSupabasePlans | SupabasePlans | OK |
-| pagamentos | useSupabasePayments | SupabasePayments | OK |
-| aulas | useSupabaseClasses | SupabaseClasses | OK |
-| checkins | useSupabaseCheckIns | SupabaseCheckIn | OK |
-| funcionarios | useFuncionarios | Funcionarios | OK |
-| avaliacoes_fisicas | useAvaliacoesFisicas | AvaliacoesFisicas | OK |
-| aulas_experimentais | useAulasExperimentais | AulasExperimentais | OK |
-| aulas_inscritos | useAulasInscritos | ClassEnrollmentManager | Parcial |
-| notificacoes | useNotificacoes | Nenhum | Criar UI |
-| config_notificacoes | Nenhum | Nenhum | Criar hook e UI |
-| assinaturas | useAssinaturas | Nenhum | Criar UI |
-| frequencia_alunos | useFrequencia | Nenhum | Integrar no perfil |
-| treinos | Direto no componente | Treinos | OK mas incompleto |
-| produtos | useSupabaseProdutos | Produtos | OK |
-| leads | useSupabaseLeads | Captacao | OK |
-| campanhas_marketing | useSupabaseCampaigns | Campanhas | OK |
+### Sequencia de implementacao
+
+1. **Expandir DataIntegrationProvider** com todos os hooks e metricas cruzadas
+2. **Criar useCrossMetrics e useSmartAlerts** 
+3. **Reescrever StudentProfile** com dados reais e abas
+4. **Remover tipos legados** (gym.ts + dataConverters.ts) e atualizar SupabaseStudents
+5. **Corrigir SupabaseClasses** (remover estado local)
+6. **Conectar Dashboard 9FIT** a dados reais
+7. **Criar sub-dashboards 9FIT** (7 rotas)
+8. **Criar AddTrainingDialog** funcional
+9. **Criar tela de Configuracoes/Notificacoes**
+10. **Implementar fluxo Experimental -> Aluno**
+11. **Adicionar micro-estados** (filtros, confirmacoes, empty states, pre-preenchimento)
+
