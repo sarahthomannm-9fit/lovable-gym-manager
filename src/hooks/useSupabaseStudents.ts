@@ -20,6 +20,9 @@ export interface SupabaseStudent {
   observacoes_medicas?: string;
   aulas_disponiveis?: number;
   aulas_por_mes?: number;
+  dias_aula?: string[];
+  dia_pagamento?: number;
+  categoria_aluno?: 'fixo' | 'variavel' | 'experimental';
   created_at?: string;
   updated_at?: string;
 }

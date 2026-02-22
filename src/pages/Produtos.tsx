@@ -7,7 +7,7 @@ import { AddProductDialog } from '@/components/AddProductDialog';
 import { ProductAnalysisDialog } from '@/components/ProductAnalysisDialog';
 import { CreateCampaignDialog } from '@/components/CreateCampaignDialog';
 import { 
-  Smartphone, Monitor, Users, Package, TrendingUp, 
+  Package, TrendingUp, 
   Target, BarChart3, Lightbulb, AlertCircle, CheckCircle 
 } from 'lucide-react';
 import { useSupabaseProdutos, Produto } from '@/hooks/useSupabaseProdutos';
@@ -20,19 +20,21 @@ export function Produtos() {
 
   const getTipoIcon = (tipo: string) => {
     switch (tipo) {
-      case 'aplicativo_mobile': return Smartphone;
-      case 'software': return Monitor;
-      case 'servicos': return Users;
+      case 'suplemento': return Package;
+      case 'acessorio_fitness': return Package;
+      case 'roupa_vestuario': return Package;
+      case 'equipamento': return Package;
       default: return Package;
     }
   };
 
   const getTipoLabel = (tipo: string) => {
     switch (tipo) {
-      case 'aplicativo_mobile': return 'App Mobile';
-      case 'software': return 'Software';
-      case 'servicos': return 'Serviços';
-      default: return 'Produtos';
+      case 'suplemento': return 'Suplemento';
+      case 'acessorio_fitness': return 'Acessório Fitness';
+      case 'roupa_vestuario': return 'Roupa/Vestuário';
+      case 'equipamento': return 'Equipamento';
+      default: return tipo;
     }
   };
 

@@ -18,10 +18,13 @@ export type Database = {
         Row: {
           aulas_disponiveis: number | null
           aulas_por_mes: number | null
+          categoria_aluno: string | null
           contato_emergencia: string | null
           created_at: string | null
           data_matricula: string | null
           data_nascimento: string | null
+          dia_pagamento: number | null
+          dias_aula: string[] | null
           email: string
           endereco: string | null
           forma_pagamento: string | null
@@ -38,10 +41,13 @@ export type Database = {
         Insert: {
           aulas_disponiveis?: number | null
           aulas_por_mes?: number | null
+          categoria_aluno?: string | null
           contato_emergencia?: string | null
           created_at?: string | null
           data_matricula?: string | null
           data_nascimento?: string | null
+          dia_pagamento?: number | null
+          dias_aula?: string[] | null
           email: string
           endereco?: string | null
           forma_pagamento?: string | null
@@ -58,10 +64,13 @@ export type Database = {
         Update: {
           aulas_disponiveis?: number | null
           aulas_por_mes?: number | null
+          categoria_aluno?: string | null
           contato_emergencia?: string | null
           created_at?: string | null
           data_matricula?: string | null
           data_nascimento?: string | null
+          dia_pagamento?: number | null
+          dias_aula?: string[] | null
           email?: string
           endereco?: string | null
           forma_pagamento?: string | null
@@ -473,6 +482,8 @@ export type Database = {
           circunferencia_quadril: number | null
           created_at: string | null
           data_avaliacao: string
+          data_entrega: string | null
+          data_programa: string | null
           dobra_abdominal: number | null
           dobra_biceps: number | null
           dobra_coxa: number | null
@@ -511,6 +522,8 @@ export type Database = {
           circunferencia_quadril?: number | null
           created_at?: string | null
           data_avaliacao?: string
+          data_entrega?: string | null
+          data_programa?: string | null
           dobra_abdominal?: number | null
           dobra_biceps?: number | null
           dobra_coxa?: number | null
@@ -549,6 +562,8 @@ export type Database = {
           circunferencia_quadril?: number | null
           created_at?: string | null
           data_avaliacao?: string
+          data_entrega?: string | null
+          data_programa?: string | null
           dobra_abdominal?: number | null
           dobra_biceps?: number | null
           dobra_coxa?: number | null
@@ -790,6 +805,7 @@ export type Database = {
         Row: {
           ativo: boolean | null
           cargo: string
+          comissao_percentual: number | null
           created_at: string | null
           data_contratacao: string | null
           email: string | null
@@ -805,6 +821,7 @@ export type Database = {
         Insert: {
           ativo?: boolean | null
           cargo: string
+          comissao_percentual?: number | null
           created_at?: string | null
           data_contratacao?: string | null
           email?: string | null
@@ -820,6 +837,7 @@ export type Database = {
         Update: {
           ativo?: boolean | null
           cargo?: string
+          comissao_percentual?: number | null
           created_at?: string | null
           data_contratacao?: string | null
           email?: string | null
