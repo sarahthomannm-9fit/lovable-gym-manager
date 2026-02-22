@@ -60,12 +60,25 @@ export function useSmartAlerts(metrics: CrossMetrics): SmartAlert[] {
     if (metrics.alunosComAvaliacaoPendente > 0) {
       alerts.push({
         id: 'avaliacoes-pendentes',
-        tipo: 'info',
+        tipo: 'atencao',
         titulo: `${metrics.alunosComAvaliacaoPendente} avaliação(ões) pendente(s)`,
-        descricao: 'Avaliações físicas com data de retorno ultrapassada',
+        descricao: 'Avaliações físicas com data de retorno ultrapassada ou próxima (7 dias)',
         acao: 'Ver avaliações',
         rota: '/avaliacoes',
         quantidade: metrics.alunosComAvaliacaoPendente,
+      });
+    }
+
+    // Alerta de cobrança 2 dias antes do pagamento
+    if (metrics.cobrancasProximas && metrics.cobrancasProximas > 0) {
+      alerts.push({
+        id: 'cobrancas-proximas',
+        tipo: 'info',
+        titulo: `${metrics.cobrancasProximas} cobrança(s) nos próximos 2 dias`,
+        descricao: 'Alunos com dia de pagamento se aproximando',
+        acao: 'Ver alunos',
+        rota: '/alunos',
+        quantidade: metrics.cobrancasProximas,
       });
     }
 

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Smartphone, Monitor, Users, Package } from 'lucide-react';
+import { Plus, Pill, Dumbbell, Shirt, Package } from 'lucide-react';
 import { useSupabaseProdutos, Produto } from '@/hooks/useSupabaseProdutos';
 
 export function AddProductDialog() {
@@ -23,10 +23,10 @@ export function AddProductDialog() {
   });
 
   const tiposProduto = [
-    { value: 'aplicativo_mobile', label: 'Aplicativo Mobile', icon: Smartphone },
-    { value: 'software', label: 'Software/SaaS', icon: Monitor },
-    { value: 'servicos', label: 'Serviços', icon: Users },
-    { value: 'produtos', label: 'Produtos Físicos', icon: Package }
+    { value: 'suplemento', label: 'Suplemento', icon: Pill },
+    { value: 'acessorio_fitness', label: 'Acessório Fitness', icon: Dumbbell },
+    { value: 'roupa_vestuario', label: 'Roupa/Vestuário', icon: Shirt },
+    { value: 'equipamento', label: 'Equipamento', icon: Package },
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -47,14 +47,7 @@ export function AddProductDialog() {
 
       await addProduto(produto);
       setOpen(false);
-      setFormData({
-        nome: '',
-        tipo: '' as Produto['tipo'],
-        descricao: '',
-        preco: '',
-        target_publico: '',
-        orcamento_marketing: ''
-      });
+      setFormData({ nome: '', tipo: '' as Produto['tipo'], descricao: '', preco: '', target_publico: '', orcamento_marketing: '' });
     } catch (error) {
       console.error('Erro ao criar produto:', error);
     } finally {
@@ -77,21 +70,13 @@ export function AddProductDialog() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="nome">Nome do Produto *</Label>
-            <Input
-              id="nome"
-              value={formData.nome}
-              onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-              placeholder="Ex: App de Treinos Premium"
-              required
-            />
+            <Input id="nome" value={formData.nome} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} placeholder="Ex: Whey Protein 1kg" required />
           </div>
 
           <div>
             <Label>Tipo de Produto *</Label>
             <Select value={formData.tipo} onValueChange={(value) => setFormData({ ...formData, tipo: value as Produto['tipo'] })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o tipo" />
-              </SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Selecione o tipo" /></SelectTrigger>
               <SelectContent>
                 {tiposProduto.map((tipo) => {
                   const Icon = tipo.icon;
@@ -110,57 +95,28 @@ export function AddProductDialog() {
 
           <div>
             <Label htmlFor="descricao">Descrição</Label>
-            <Textarea
-              id="descricao"
-              value={formData.descricao}
-              onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
-              placeholder="Descreva o produto e seus benefícios..."
-              rows={3}
-            />
+            <Textarea id="descricao" value={formData.descricao} onChange={(e) => setFormData({ ...formData, descricao: e.target.value })} placeholder="Descreva o produto..." rows={3} />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="preco">Preço (R$)</Label>
-              <Input
-                id="preco"
-                type="number"
-                step="0.01"
-                value={formData.preco}
-                onChange={(e) => setFormData({ ...formData, preco: e.target.value })}
-                placeholder="99.90"
-              />
+              <Input id="preco" type="number" step="0.01" value={formData.preco} onChange={(e) => setFormData({ ...formData, preco: e.target.value })} placeholder="99.90" />
             </div>
             <div>
               <Label htmlFor="orcamento">Orçamento Marketing (R$)</Label>
-              <Input
-                id="orcamento"
-                type="number"
-                step="0.01"
-                value={formData.orcamento_marketing}
-                onChange={(e) => setFormData({ ...formData, orcamento_marketing: e.target.value })}
-                placeholder="5000.00"
-              />
+              <Input id="orcamento" type="number" step="0.01" value={formData.orcamento_marketing} onChange={(e) => setFormData({ ...formData, orcamento_marketing: e.target.value })} placeholder="5000.00" />
             </div>
           </div>
 
           <div>
             <Label htmlFor="target_publico">Público-Alvo</Label>
-            <Input
-              id="target_publico"
-              value={formData.target_publico}
-              onChange={(e) => setFormData({ ...formData, target_publico: e.target.value })}
-              placeholder="Ex: Pessoas de 25-45 anos interessadas em fitness"
-            />
+            <Input id="target_publico" value={formData.target_publico} onChange={(e) => setFormData({ ...formData, target_publico: e.target.value })} placeholder="Ex: Praticantes de musculação" />
           </div>
 
           <div className="flex gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)} className="flex-1">
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={loading} className="flex-1">
-              {loading ? "Criando..." : "Criar e Analisar"}
-            </Button>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} className="flex-1">Cancelar</Button>
+            <Button type="submit" disabled={loading} className="flex-1">{loading ? "Criando..." : "Criar Produto"}</Button>
           </div>
         </form>
       </DialogContent>

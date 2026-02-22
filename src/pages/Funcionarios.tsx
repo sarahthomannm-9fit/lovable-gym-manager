@@ -31,6 +31,7 @@ const cargos = [
   { value: 'gerente', label: 'Gerente' },
   { value: 'nutricionista', label: 'Nutricionista' },
   { value: 'fisioterapeuta', label: 'Fisioterapeuta' },
+  { value: 'agente_comercial', label: 'Agente Comercial' },
 ];
 
 const especialidadesOptions = [
@@ -51,6 +52,7 @@ export function Funcionarios() {
     especialidades: [] as string[],
     salario: '',
     observacoes: '',
+    comissao_percentual: '',
   });
 
   const filteredFuncionarios = funcionarios.filter(f =>
@@ -78,6 +80,7 @@ export function Funcionarios() {
       horarios: {},
       ativo: true,
       data_contratacao: new Date().toISOString().split('T')[0],
+      comissao_percentual: formData.comissao_percentual ? parseFloat(formData.comissao_percentual) : null,
     };
 
     if (editingFuncionario) {
@@ -99,6 +102,7 @@ export function Funcionarios() {
       especialidades: [],
       salario: '',
       observacoes: '',
+      comissao_percentual: '',
     });
     setEditingFuncionario(null);
   };
@@ -113,6 +117,7 @@ export function Funcionarios() {
       especialidades: funcionario.especialidades || [],
       salario: funcionario.salario?.toString() || '',
       observacoes: funcionario.observacoes || '',
+      comissao_percentual: funcionario.comissao_percentual?.toString() || '',
     });
     setIsDialogOpen(true);
   };
@@ -129,6 +134,7 @@ export function Funcionarios() {
       gerente: 'bg-orange-500',
       nutricionista: 'bg-teal-500',
       fisioterapeuta: 'bg-pink-500',
+      agente_comercial: 'bg-yellow-500',
     };
     return colors[cargo] || 'bg-gray-500';
   };
@@ -240,6 +246,20 @@ export function Funcionarios() {
                   ))}
                 </div>
               </div>
+
+              {(formData.cargo === 'agente_comercial' || formData.cargo === 'personal') && (
+                <div>
+                  <Label htmlFor="comissao">Comissão (%)</Label>
+                  <Input
+                    id="comissao"
+                    type="number"
+                    step="0.1"
+                    value={formData.comissao_percentual}
+                    onChange={(e) => setFormData(prev => ({ ...prev, comissao_percentual: e.target.value }))}
+                    placeholder="Ex: 10"
+                  />
+                </div>
+              )}
 
               <div>
                 <Label htmlFor="observacoes">Observações</Label>

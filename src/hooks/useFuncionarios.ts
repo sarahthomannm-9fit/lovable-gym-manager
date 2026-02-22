@@ -7,7 +7,8 @@ export interface Funcionario {
   nome: string;
   email: string | null;
   telefone: string | null;
-  cargo: 'professor' | 'recepcionista' | 'personal' | 'nutricionista' | 'fisioterapeuta' | 'gerente';
+  cargo: 'professor' | 'recepcionista' | 'personal' | 'nutricionista' | 'fisioterapeuta' | 'gerente' | 'agente_comercial';
+  comissao_percentual: number | null;
   especialidades: string[] | null;
   horarios: Record<string, any>;
   salario: number | null;

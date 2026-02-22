@@ -37,6 +37,8 @@ export interface AvaliacaoFisica {
   observacoes: string | null;
   metas: any[];
   proxima_avaliacao: string | null;
+  data_entrega: string | null;
+  data_programa: string | null;
   created_at: string;
   updated_at: string;
 }

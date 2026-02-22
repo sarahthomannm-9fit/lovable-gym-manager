@@ -44,6 +44,9 @@ export interface CrossMetrics {
 
   // Churn
   churnRisk: { id: string; nome: string; motivos: string[] }[];
+
+  // Cobranças próximas (2 dias antes do dia_pagamento)
+  cobrancasProximas: number;
 }
 
 interface CrossMetricsInput {
@@ -159,6 +162,14 @@ export function useCrossMetrics(data: CrossMetricsInput): CrossMetrics {
       .filter(a => a.motivos.length > 0)
       .sort((a, b) => b.motivos.length - a.motivos.length);
 
+    // Cobranças próximas (2 dias antes do dia_pagamento)
+    const diaHoje = hoje.getDate();
+    const cobrancasProximas = alunos.filter(a => {
+      if (a.status !== 'ativo' || !a.dia_pagamento) return false;
+      const diff = a.dia_pagamento - diaHoje;
+      return diff >= 0 && diff <= 2;
+    }).length;
+
     return {
       totalAlunos,
       alunosAtivos,
@@ -185,6 +196,7 @@ export function useCrossMetrics(data: CrossMetricsInput): CrossMetrics {
       professoresAtivos,
       cargaHorariaPorProfessor,
       churnRisk,
+      cobrancasProximas,
     };
   }, [data]);
 }

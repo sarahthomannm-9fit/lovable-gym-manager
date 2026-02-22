@@ -48,6 +48,9 @@ export function AvaliacoesFisicas() {
     circunferencia_braco_direito: '',
     circunferencia_coxa_direita: '',
     observacoes: '',
+    data_entrega: '',
+    data_programa: '',
+    proxima_avaliacao: '',
   });
 
   const professores = getProfessores();
@@ -92,7 +95,9 @@ export function AvaliacoesFisicas() {
       teste_resistencia: {},
       observacoes: formData.observacoes || null,
       metas: [],
-      proxima_avaliacao: null,
+      proxima_avaliacao: formData.proxima_avaliacao || null,
+      data_entrega: formData.data_entrega || null,
+      data_programa: formData.data_programa || null,
     });
 
     setIsDialogOpen(false);
@@ -109,6 +114,9 @@ export function AvaliacoesFisicas() {
       circunferencia_braco_direito: '',
       circunferencia_coxa_direita: '',
       observacoes: '',
+      data_entrega: '',
+      data_programa: '',
+      proxima_avaliacao: '',
     });
   };
 
@@ -295,6 +303,21 @@ export function AvaliacoesFisicas() {
                   </div>
                 </TabsContent>
               </Tabs>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label>Data de Entrega</Label>
+                  <Input type="date" value={formData.data_entrega} onChange={(e) => setFormData(prev => ({ ...prev, data_entrega: e.target.value }))} />
+                </div>
+                <div>
+                  <Label>Data do Programa</Label>
+                  <Input type="date" value={formData.data_programa} onChange={(e) => setFormData(prev => ({ ...prev, data_programa: e.target.value }))} />
+                </div>
+                <div>
+                  <Label>Próxima Avaliação</Label>
+                  <Input type="date" value={formData.proxima_avaliacao} onChange={(e) => setFormData(prev => ({ ...prev, proxima_avaliacao: e.target.value }))} />
+                </div>
+              </div>
 
               <div>
                 <Label>Observações</Label>
