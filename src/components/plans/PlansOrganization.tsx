@@ -4,18 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Building2, Folder, FolderOpen } from "lucide-react";
+import { Tables } from "@/integrations/supabase/types";
 
-interface Plan {
-  id: number;
-  name: string;
-  price: number;
-  duration: number;
-  benefits: string[];
-  active: boolean;
-}
+type SupabasePlan = Tables<'planos'>;
 
 interface PlansOrganizationProps {
-  plans: Plan[];
+  plans: SupabasePlan[];
   onSelectOrganization?: (orgId: string) => void;
 }
 
@@ -23,111 +17,92 @@ interface PlanOrganization {
   id: string;
   name: string;
   description: string;
-  plansCount: number;
-  plans: Plan[];
+  plans: SupabasePlan[];
 }
 
 export function PlansOrganization({ plans, onSelectOrganization }: PlansOrganizationProps) {
   const [selectedOrg, setSelectedOrg] = useState<string | null>(null);
 
-  // Organizações fictícias para demonstração
   const organizations: PlanOrganization[] = [
     {
-      id: "individual",
-      name: "Planos Individuais",
-      description: "Planos para treino individual e consultoria",
-      plansCount: plans.filter(p => p.name.toLowerCase().includes('individual') || p.name.toLowerCase().includes('mensal')).length,
-      plans: plans.filter(p => p.name.toLowerCase().includes('individual') || p.name.toLowerCase().includes('mensal'))
+      id: "mensal",
+      name: "Planos Mensais",
+      description: "Planos com recorrência mensal",
+      plans: plans.filter(p => p.tipo === 'mensal' || !p.tipo)
     },
     {
-      id: "grupo",
-      name: "Planos em Grupo",
-      description: "Planos para aulas em grupo e turmas",
-      plansCount: plans.filter(p => p.name.toLowerCase().includes('grupo') || p.name.toLowerCase().includes('turma')).length,
-      plans: plans.filter(p => p.name.toLowerCase().includes('grupo') || p.name.toLowerCase().includes('turma'))
+      id: "pacote",
+      name: "Pacotes de Aulas",
+      description: "Pacotes com quantidade fixa de aulas",
+      plans: plans.filter(p => p.tipo === 'pacote_aulas' && (p.quantidade_aulas || 0) > 0)
     },
     {
-      id: "premium",
-      name: "Planos Premium",
-      description: "Planos diferenciados com benefícios exclusivos",
-      plansCount: plans.filter(p => p.price > 200).length,
-      plans: plans.filter(p => p.price > 200)
+      id: "consultoria",
+      name: "Consultoria Online",
+      description: "Planos de acompanhamento remoto",
+      plans: plans.filter(p => p.tipo === 'consultoria')
     },
     {
-      id: "basicos",
-      name: "Planos Básicos",
-      description: "Planos de entrada com preços acessíveis",
-      plansCount: plans.filter(p => p.price <= 200).length,
-      plans: plans.filter(p => p.price <= 200)
+      id: "outros",
+      name: "Outros Planos",
+      description: "Trimestral, semestral, anual e avulso",
+      plans: plans.filter(p => ['trimestral', 'semestral', 'anual', 'avulso'].includes(p.tipo || ''))
     }
   ];
 
   const handleSelectOrganization = (orgId: string) => {
     setSelectedOrg(selectedOrg === orgId ? null : orgId);
-    if (onSelectOrganization) {
-      onSelectOrganization(orgId);
-    }
+    onSelectOrganization?.(orgId);
   };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center space-x-2 mb-6">
-        <Building2 className="w-6 h-6 text-blue-600" />
+        <Building2 className="w-6 h-6 text-primary" />
         <h2 className="text-2xl font-bold">Organização de Planos</h2>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {organizations.map((org) => (
           <Card key={org.id} className="cursor-pointer hover:shadow-lg transition-shadow">
-            <CardHeader 
-              className="pb-3"
-              onClick={() => handleSelectOrganization(org.id)}
-            >
+            <CardHeader className="pb-3" onClick={() => handleSelectOrganization(org.id)}>
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   {selectedOrg === org.id ? (
-                    <FolderOpen className="w-5 h-5 text-blue-600" />
+                    <FolderOpen className="w-5 h-5 text-primary" />
                   ) : (
-                    <Folder className="w-5 h-5 text-gray-600" />
+                    <Folder className="w-5 h-5 text-muted-foreground" />
                   )}
                   <span>{org.name}</span>
                 </div>
-                <Badge variant="secondary">
-                  {org.plansCount} planos
-                </Badge>
+                <Badge variant="secondary">{org.plans.length} planos</Badge>
               </CardTitle>
-              <p className="text-sm text-gray-600">{org.description}</p>
+              <p className="text-sm text-muted-foreground">{org.description}</p>
             </CardHeader>
 
             {selectedOrg === org.id && (
               <CardContent>
                 <div className="space-y-3">
-                  <h4 className="font-semibold text-sm text-gray-800 mb-3">
-                    Planos desta organização:
-                  </h4>
-                  
                   {org.plans.length > 0 ? (
                     <div className="space-y-2">
                       {org.plans.map((plan) => (
-                        <div 
-                          key={plan.id} 
-                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                        >
+                        <div key={plan.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                           <div className="flex-1">
-                            <div className="font-medium">{plan.name}</div>
-                            <div className="text-sm text-gray-600">
-                              R$ {plan.price.toFixed(2)} - {plan.duration} {plan.duration === 1 ? 'mês' : 'meses'}
+                            <div className="font-medium">{plan.nome}</div>
+                            <div className="text-sm text-muted-foreground">
+                              R$ {Number(plan.preco).toFixed(2)}
+                              {plan.duracao_meses && ` - ${plan.duracao_meses} ${plan.duracao_meses === 1 ? 'mês' : 'meses'}`}
                             </div>
                           </div>
-                          <Badge variant={plan.active ? "default" : "secondary"}>
-                            {plan.active ? "Ativo" : "Inativo"}
+                          <Badge variant={(plan.ativo ?? true) ? "default" : "secondary"}>
+                            {(plan.ativo ?? true) ? "Ativo" : "Inativo"}
                           </Badge>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-4 text-gray-500">
-                      <p className="text-sm">Nenhum plano encontrado nesta organização</p>
+                    <div className="text-center py-4 text-muted-foreground">
+                      <p className="text-sm">Nenhum plano nesta categoria</p>
                     </div>
                   )}
                 </div>
@@ -139,12 +114,7 @@ export function PlansOrganization({ plans, onSelectOrganization }: PlansOrganiza
 
       {selectedOrg && (
         <div className="flex justify-center">
-          <Button 
-            variant="outline" 
-            onClick={() => setSelectedOrg(null)}
-          >
-            Fechar Visualização
-          </Button>
+          <Button variant="outline" onClick={() => setSelectedOrg(null)}>Fechar Visualização</Button>
         </div>
       )}
     </div>

@@ -6,6 +6,7 @@ import { EditStudentDialog } from "./students/EditStudentDialog";
 import { StudentsList } from "./students/StudentsList";
 import { useSupabaseGymData } from "@/contexts/SupabaseGymDataContext";
 import { SupabaseStudent } from "@/hooks/useSupabaseStudents";
+import { StudentCardData } from "./students/StudentCard";
 
 export function SupabaseStudents() {
   const { 
@@ -44,17 +45,19 @@ export function SupabaseStudents() {
     );
   }
 
-  // Convert for StudentsList compatibility
-  const studentsForList = supabaseStudents.map(s => ({
-    id: s.id as any,
-    name: s.nome,
+  // Map directly using Supabase fields (no legacy conversion)
+  const studentsForList: StudentCardData[] = supabaseStudents.map(s => ({
+    id: s.id,
+    nome: s.nome,
     email: s.email || '',
-    phone: s.telefone || '',
-    plan: s.tipo || 'presencial',
-    registrationDate: s.data_matricula || '',
-    status: (s.status === 'ativo' ? 'active' : s.status === 'inativo' ? 'inactive' : 'suspended') as any,
-    monthlyPayment: s.valor_mensalidade || 0,
-    paymentStatus: 'up-to-date' as any,
+    telefone: s.telefone,
+    tipo: s.tipo,
+    status: s.status,
+    data_matricula: s.data_matricula,
+    valor_mensalidade: s.valor_mensalidade,
+    categoria_aluno: s.categoria_aluno,
+    dias_aula: s.dias_aula,
+    dia_pagamento: s.dia_pagamento,
     _original: s,
   }));
 
@@ -72,7 +75,10 @@ export function SupabaseStudents() {
         students={studentsForList}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        onViewProfile={(student: any) => setSelectedStudent(student._original || supabaseStudents.find(s => s.nome === student.name) || null)}
+        onViewProfile={(student) => {
+          const original = student._original || supabaseStudents.find(s => s.id === student.id);
+          setSelectedStudent(original || null);
+        }}
         onEditStudent={setEditingStudent}
       />
 
