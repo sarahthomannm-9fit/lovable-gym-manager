@@ -7,8 +7,6 @@ import { PlansStats } from "./plans/PlansStats";
 import { PlanCard } from "./plans/PlanCard";
 import { PlansOrganization } from "./plans/PlansOrganization";
 import { useSupabaseGymData } from "@/contexts/SupabaseGymDataContext";
-import { convertSupabasePlanToOld } from "@/utils/dataConverters";
-import { convertSupabaseStudentToOld } from "@/utils/dataConverters";
 
 export function SupabasePlans() {
   const { 
@@ -24,30 +22,18 @@ export function SupabasePlans() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'cards' | 'organization'>('cards');
 
-  // Convert Supabase plans to old format for UI compatibility
-  const plans = supabasePlans.map(convertSupabasePlanToOld);
-  
-  // Convert students to old format and create simplified version for stats
-  const students = supabaseStudents.map(convertSupabaseStudentToOld);
-  const studentsForStats = students.map(student => ({
-    id: student.id,
-    name: student.name,
-    plan: student.plan
-  }));
-
   const handleAddPlan = async (newPlan: any) => {
     try {
-      console.log('Adding new plan:', newPlan);
-      
       const planData = {
         nome: newPlan.name,
         preco: newPlan.price,
         valor: newPlan.price,
         duracao_meses: newPlan.duration,
         beneficios: newPlan.benefits || [],
-        ativo: true
+        ativo: true,
+        tipo: newPlan.tipo || 'mensal',
+        quantidade_aulas: newPlan.quantidade_aulas || 0,
       };
-
       await addPlan(planData);
       setIsAddDialogOpen(false);
     } catch (error) {
@@ -55,35 +41,23 @@ export function SupabasePlans() {
     }
   };
 
-  const togglePlanStatus = async (planId: number) => {
+  const togglePlanStatus = async (planId: string) => {
     try {
-      console.log('Toggling plan status:', planId);
-      
-      // Find the original supabase plan
-      const supabasePlan = supabasePlans.find(p => 
-        parseInt(p.id.slice(-8), 16) === planId
-      );
-      
-      if (supabasePlan) {
-        await updatePlan(supabasePlan.id, {
-          ativo: !supabasePlan.ativo
-        });
+      const plan = supabasePlans.find(p => p.id === planId);
+      if (plan) {
+        await updatePlan(plan.id, { ativo: !(plan.ativo ?? true) });
       }
     } catch (error) {
       console.error('Failed to toggle plan status:', error);
     }
   };
 
-  const getStudentsForPlan = (planName: string) => {
-    return studentsForStats.filter(s => s.plan === planName).length;
+  const getStudentsForPlan = (planId: string) => {
+    return supabaseStudents.filter(s => s.plano_id === planId).length;
   };
 
   if (plansLoading || studentsLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-lg">Carregando planos...</div>
-      </div>
-    );
+    return <div className="flex items-center justify-center h-64"><div className="text-lg">Carregando planos...</div></div>;
   }
 
   return (
@@ -91,52 +65,42 @@ export function SupabasePlans() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Planos e Mensalidades (Supabase)
+            Planos e Mensalidades
           </h1>
-          <p className="text-gray-600 mt-1">Gerencie os planos da sua academia conectados ao banco de dados</p>
+          <p className="text-muted-foreground mt-1">Gerencie os planos da sua academia</p>
         </div>
         
         <div className="flex space-x-2">
-          <Button 
-            variant={viewMode === 'cards' ? 'default' : 'outline'}
-            onClick={() => setViewMode('cards')}
-          >
-            Visualização em Cards
-          </Button>
-          <Button 
-            variant={viewMode === 'organization' ? 'default' : 'outline'}
-            onClick={() => setViewMode('organization')}
-          >
-            Organização
-          </Button>
-          <Button onClick={() => setIsAddDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700">
+          <Button variant={viewMode === 'cards' ? 'default' : 'outline'} onClick={() => setViewMode('cards')}>Cards</Button>
+          <Button variant={viewMode === 'organization' ? 'default' : 'outline'} onClick={() => setViewMode('organization')}>Organização</Button>
+          <Button onClick={() => setIsAddDialogOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Novo Plano
           </Button>
         </div>
       </div>
 
-      <PlansStats plans={plans} students={studentsForStats} />
+      <PlansStats plans={supabasePlans} studentsCount={supabaseStudents.length} />
 
       {viewMode === 'organization' ? (
-        <PlansOrganization plans={plans} />
+        <PlansOrganization plans={supabasePlans} />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {plans.map((plan) => (
+          {supabasePlans.map((plan) => (
             <PlanCard 
               key={plan.id} 
               plan={plan}
-              studentsCount={getStudentsForPlan(plan.name)}
+              studentsCount={getStudentsForPlan(plan.id)}
               onToggleStatus={togglePlanStatus}
             />
           ))}
         </div>
       )}
 
-      {plans.length === 0 && (
+      {supabasePlans.length === 0 && (
         <div className="text-center py-12">
-          <p className="text-gray-500">Nenhum plano cadastrado</p>
-          <p className="text-sm text-gray-400 mt-1">Crie seu primeiro plano para começar</p>
+          <p className="text-muted-foreground">Nenhum plano cadastrado</p>
+          <p className="text-sm text-muted-foreground mt-1">Crie seu primeiro plano para começar</p>
         </div>
       )}
 

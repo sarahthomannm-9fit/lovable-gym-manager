@@ -1,16 +1,14 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Search, Wrench, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Plus, Search, Wrench } from "lucide-react";
 import { AddEquipmentDialog } from "./equipment/AddEquipmentDialog";
 import { EquipmentStats } from "./equipment/EquipmentStats";
-import { EquipmentCard } from "./equipment/EquipmentCard";
-import { Equipment as EquipmentType } from "@/types/gym";
+import { EquipmentCard, EquipmentItem } from "./equipment/EquipmentCard";
 
-// Local state for equipment management (could be migrated to Supabase later)
 export function Equipment() {
-  const [equipment, setEquipment] = useState<EquipmentType[]>([]);
+  const [equipment, setEquipment] = useState<EquipmentItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
@@ -20,8 +18,8 @@ export function Equipment() {
   );
 
   const handleAddEquipment = (newEquipment: any) => {
-    const equipmentItem: EquipmentType = {
-      id: Date.now(),
+    const equipmentItem: EquipmentItem = {
+      id: crypto.randomUUID(),
       name: newEquipment.name,
       type: newEquipment.category || newEquipment.type,
       status: 'working',
@@ -31,7 +29,7 @@ export function Equipment() {
     setEquipment(prev => [...prev, equipmentItem]);
   };
 
-  const handleUpdateEquipment = (id: number, updates: Partial<EquipmentType>) => {
+  const handleUpdateEquipment = (id: string, updates: Partial<EquipmentItem>) => {
     setEquipment(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
   };
 
@@ -44,8 +42,7 @@ export function Equipment() {
           </h1>
           <p className="text-muted-foreground mt-1">Controle e manutenção dos equipamentos</p>
         </div>
-        
-        <Button onClick={() => setIsAddDialogOpen(true)} className="bg-purple-600 hover:bg-purple-700">
+        <Button onClick={() => setIsAddDialogOpen(true)}>
           <Plus className="w-4 h-4 mr-2" />
           Novo Equipamento
         </Button>
@@ -53,27 +50,16 @@ export function Equipment() {
 
       <EquipmentStats equipment={equipment} />
 
-      {/* Busca */}
       <div className="flex items-center space-x-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-          <Input
-            placeholder="Buscar equipamentos..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+          <Input placeholder="Buscar equipamentos..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
         </div>
       </div>
 
-      {/* Lista de Equipamentos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {filteredEquipment.map((item) => (
-          <EquipmentCard 
-            key={item.id} 
-            equipment={item} 
-            onUpdateEquipment={handleUpdateEquipment}
-          />
+          <EquipmentCard key={item.id} equipment={item} onUpdateEquipment={handleUpdateEquipment} />
         ))}
       </div>
 
@@ -91,11 +77,7 @@ export function Equipment() {
         </Card>
       )}
 
-      <AddEquipmentDialog
-        open={isAddDialogOpen}
-        onOpenChange={setIsAddDialogOpen}
-        onAddEquipment={handleAddEquipment}
-      />
+      <AddEquipmentDialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} onAddEquipment={handleAddEquipment} />
     </div>
   );
 }
