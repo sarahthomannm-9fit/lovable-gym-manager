@@ -46,7 +46,7 @@ import { DemoModeProvider } from "./contexts/DemoModeContext";
 import { Funcionarios } from "./pages/Funcionarios";
 import { AvaliacoesFisicas } from "./pages/AvaliacoesFisicas";
 import { AulasExperimentais } from "./pages/AulasExperimentais";
-
+import { Login } from "./pages/Login";
 // Configuração otimizada do QueryClient
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -63,8 +63,8 @@ const queryClient = new QueryClient({
 const MainLayout = ({ children }: { children: React.ReactNode }) => (
   <SidebarProvider>
     <div className="flex min-h-screen w-full">
-      <AppSidebar activeView="" onViewChange={() => {}} />
-      <main className="flex-1">{children}</main>
+      <AppSidebar />
+      <main className="flex-1 overflow-auto">{children}</main>
     </div>
   </SidebarProvider>
 );
@@ -81,6 +81,7 @@ const App = () => (
               <BrowserRouter>
                 <Routes>
                   <Route path="/" element={<Navigate to="/painel" replace />} />
+                  <Route path="/login" element={<Login />} />
                   <Route path="/painel" element={<MainLayout><Painel /></MainLayout>} />
                   <Route path="/alunos" element={<MainLayout><SupabaseStudents /></MainLayout>} />
                   <Route path="/planos" element={<MainLayout><SupabasePlans /></MainLayout>} />

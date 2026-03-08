@@ -1,15 +1,13 @@
-import { ResponsiveLayout } from "@/components/layout/ResponsiveLayout";
 import { AutomationFlows } from "@/components/marketing/AutomationFlows";
 
 export function Automacao() {
   return (
-    <ResponsiveLayout 
-      activeView="automacao" 
-      onViewChange={() => {}} 
-      title="Automação de Marketing"
-      subtitle="Gerencie fluxos automáticos de comunicação"
-    >
+    <div className="space-y-6 p-6">
+      <div>
+        <h2 className="text-2xl font-bold">Automação de Marketing</h2>
+        <p className="text-muted-foreground">Gerencie fluxos automáticos de comunicação</p>
+      </div>
       <AutomationFlows />
-    </ResponsiveLayout>
+    </div>
   );
 }

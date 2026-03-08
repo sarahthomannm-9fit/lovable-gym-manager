@@ -128,7 +128,11 @@ export function Painel() {
           <CardContent>
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {alerts.slice(0, 8).map((alert, i) => (
-                <div key={i} className="flex items-start gap-3 p-2 rounded-lg bg-muted/50">
+                <div 
+                  key={i} 
+                  className="flex items-start gap-3 p-2 rounded-lg bg-muted/50 cursor-pointer hover:bg-muted transition-colors"
+                  onClick={() => alert.rota && navigate(alert.rota)}
+                >
                   <Badge variant={alert.tipo === 'urgente' ? 'destructive' : alert.tipo === 'atencao' ? 'default' : 'secondary'} className="text-xs shrink-0">
                     {alert.tipo === 'urgente' ? 'Urgente' : alert.tipo === 'atencao' ? 'Atenção' : 'Info'}
                   </Badge>
