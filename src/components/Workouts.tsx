@@ -42,7 +42,7 @@ export function Workouts() {
           <p className="text-muted-foreground mt-1">Gerencie treinos e acompanhe o progresso</p>
         </div>
         
-        <Button className="bg-orange-600 hover:bg-orange-700">
+        <Button className="bg-orange-600 hover:bg-orange-700" onClick={() => setActiveTab("templates")}>
           <Plus className="w-4 h-4 mr-2" />
           Novo Treino
         </Button>

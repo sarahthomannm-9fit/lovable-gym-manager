@@ -63,8 +63,8 @@ const queryClient = new QueryClient({
 const MainLayout = ({ children }: { children: React.ReactNode }) => (
   <SidebarProvider>
     <div className="flex min-h-screen w-full">
-      <AppSidebar activeView="" onViewChange={() => {}} />
-      <main className="flex-1">{children}</main>
+      <AppSidebar />
+      <main className="flex-1 overflow-auto">{children}</main>
     </div>
   </SidebarProvider>
 );

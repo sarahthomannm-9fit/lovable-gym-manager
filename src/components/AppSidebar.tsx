@@ -37,225 +37,89 @@ import {
   Briefcase,
   Activity,
   UserCheck,
+  Crown,
+  HeartHandshake,
+  Shield,
+  Network,
+  Settings,
+  Store,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
-interface AppSidebarProps {
-  activeView: string;
-  onViewChange: (view: string) => void;
-}
-
-export function AppSidebar({ activeView, onViewChange }: AppSidebarProps) {
+export function AppSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
+
   const menuItems = [
     {
       category: "Principal",
       items: [
-        {
-          title: "Painel",
-          icon: Home,
-          key: "painel",
-          path: "/painel",
-        },
-        {
-          title: "Alunos",
-          icon: Users,
-          key: "alunos",
-          path: "/alunos",
-        },
-        {
-          title: "Check-in",
-          icon: UserCheck,
-          key: "checkin",
-          path: "/checkin",
-        },
-        {
-          title: "Planos",
-          icon: CreditCard,
-          key: "planos",
-          path: "/planos",
-        },
-        {
-          title: "Pagamentos",
-          icon: Receipt,
-          key: "pagamentos",
-          path: "/pagamentos",
-        },
-        {
-          title: "Aulas",
-          icon: Calendar,
-          key: "aulas",
-          path: "/aulas",
-        },
-        {
-          title: "Equipamentos",
-          icon: Dumbbell,
-          key: "equipamentos",
-          path: "/equipamentos",
-        },
-        {
-          title: "Produtos",
-          icon: Package,
-          key: "produtos",
-          path: "/produtos",
-        },
+        { title: "Painel", icon: Home, path: "/painel" },
+        { title: "Alunos", icon: Users, path: "/alunos" },
+        { title: "Check-in", icon: UserCheck, path: "/checkin" },
+        { title: "Planos", icon: CreditCard, path: "/planos" },
+        { title: "Pagamentos", icon: Receipt, path: "/pagamentos" },
+        { title: "Aulas", icon: Calendar, path: "/aulas" },
+        { title: "Equipamentos", icon: Dumbbell, path: "/equipamentos" },
+        { title: "Produtos", icon: Package, path: "/produtos" },
       ],
     },
     {
       category: "Equipe & Avaliações",
       items: [
-        {
-          title: "Funcionários",
-          icon: Briefcase,
-          key: "funcionarios",
-          path: "/funcionarios",
-        },
-        {
-          title: "Avaliações Físicas",
-          icon: Activity,
-          key: "avaliacoes",
-          path: "/avaliacoes",
-        },
-        {
-          title: "Aulas Experimentais",
-          icon: UserCheck,
-          key: "experimentais",
-          path: "/experimentais",
-        },
+        { title: "Funcionários", icon: Briefcase, path: "/funcionarios" },
+        { title: "Avaliações Físicas", icon: Activity, path: "/avaliacoes" },
+        { title: "Aulas Experimentais", icon: UserCheck, path: "/experimentais" },
       ],
     },
     {
       category: "Treinos",
       items: [
-        {
-          title: "Treinos",
-          icon: Dumbbell,
-          key: "treinos",
-          path: "/treinos",
-        },
+        { title: "Treinos", icon: Dumbbell, path: "/treinos" },
       ],
     },
     {
       category: "Relatórios Financeiros 💰",
       items: [
-        {
-          title: "Dashboard",
-          icon: BarChart3,
-          key: "relatorios",
-          path: "/relatorios",
-        },
-        {
-          title: "Fluxo de Pagamentos",
-          icon: ArrowDownCircle,
-          key: "fluxo-pagamentos",
-          path: "/relatorios/pagamentos",
-        },
-        {
-          title: "Fluxo de Recebimentos",
-          icon: ArrowUpCircle,
-          key: "fluxo-recebimentos",
-          path: "/relatorios/recebimentos",
-        },
-        {
-          title: "Cobranças",
-          icon: Receipt,
-          key: "cobrancas",
-          path: "/relatorios/cobrancas",
-        },
-        {
-          title: "Estratégias & IA",
-          icon: Brain,
-          key: "estrategias-ia",
-          path: "/relatorios/estrategias",
-        },
-        {
-          title: "Promoções & Cupons",
-          icon: Percent,
-          key: "promocoes-cupons",
-          path: "/relatorios/promocoes-cupons",
-        },
+        { title: "Dashboard", icon: BarChart3, path: "/relatorios" },
+        { title: "Fluxo de Pagamentos", icon: ArrowDownCircle, path: "/relatorios/pagamentos" },
+        { title: "Fluxo de Recebimentos", icon: ArrowUpCircle, path: "/relatorios/recebimentos" },
+        { title: "Cobranças", icon: Receipt, path: "/relatorios/cobrancas" },
+        { title: "Estratégias & IA", icon: Brain, path: "/relatorios/estrategias" },
+        { title: "Promoções & Cupons", icon: Percent, path: "/relatorios/promocoes-cupons" },
       ],
     },
     {
       category: "Marketing",
       items: [
-        {
-          title: "Campanhas",
-          icon: Target,
-          key: "campanhas",
-          path: "/marketing/campanhas",
-        },
-        {
-          title: "Captação",
-          icon: UserPlus,
-          key: "captacao",
-          path: "/marketing/captacao",
-        },
-        {
-          title: "Comunicação",
-          icon: MessageSquare,
-          key: "comunicacao",
-          path: "/marketing/comunicacao",
-        },
-        {
-          title: "Conversão",
-          icon: TrendingUp,
-          key: "conversao",
-          path: "/marketing/conversao",
-        },
-        {
-          title: "Funis",
-          icon: Target,
-          key: "funis",
-          path: "/marketing/funis",
-        },
-        {
-          title: "E-mail Marketing",
-          icon: Mail,
-          key: "email-marketing",
-          path: "/marketing/email",
-        },
-        {
-          title: "Promoções",
-          icon: Gift,
-          key: "promocoes",
-          path: "/marketing/promocoes",
-        },
-        {
-          title: "Automação",
-          icon: Zap,
-          key: "automacao",
-          path: "/marketing/automacao",
-        },
-        {
-          title: "Insights IA",
-          icon: Sparkles,
-          key: "insights-ia",
-          path: "/marketing/insights-ia",
-        },
+        { title: "Campanhas", icon: Target, path: "/marketing/campanhas" },
+        { title: "Captação", icon: UserPlus, path: "/marketing/captacao" },
+        { title: "Comunicação", icon: MessageSquare, path: "/marketing/comunicacao" },
+        { title: "Conversão", icon: TrendingUp, path: "/marketing/conversao" },
+        { title: "Funis", icon: Target, path: "/marketing/funis" },
+        { title: "E-mail Marketing", icon: Mail, path: "/marketing/email" },
+        { title: "Promoções", icon: Gift, path: "/marketing/promocoes" },
+        { title: "Automação", icon: Zap, path: "/marketing/automacao" },
+        { title: "Insights IA", icon: Sparkles, path: "/marketing/insights-ia" },
       ],
     },
     {
       category: "Inteligência Artificial",
       items: [
-        {
-          title: "Agente IA",
-          icon: Bot,
-          key: "agente-ia",
-          path: "/agente-ia",
-        },
+        { title: "Agente IA", icon: Bot, path: "/agente-ia" },
       ],
     },
     {
       category: "9FIT OS 🚀",
       items: [
-        {
-          title: "Dashboard 9FIT",
-          icon: Rocket,
-          key: "9fit",
-          path: "/9fit",
-        },
+        { title: "Dashboard 9FIT", icon: Rocket, path: "/9fit" },
+        { title: "CEO", icon: Crown, path: "/9fit/ceo" },
+        { title: "Consultoria", icon: HeartHandshake, path: "/9fit/consultoria" },
+        { title: "Concierge", icon: Users, path: "/9fit/concierge" },
+        { title: "Trust", icon: Shield, path: "/9fit/trust" },
+        { title: "Network", icon: Network, path: "/9fit/network" },
+        { title: "Automação", icon: Settings, path: "/9fit/automation" },
+        { title: "Store", icon: Store, path: "/9fit/store" },
       ],
     },
   ];
@@ -279,7 +143,7 @@ export function AppSidebar({ activeView, onViewChange }: AppSidebarProps) {
             <SidebarGroupContent>
               <SidebarMenu>
                 {category.items.map((item) => (
-                  <SidebarMenuItem key={item.key}>
+                  <SidebarMenuItem key={item.path}>
                     <SidebarMenuButton
                       onClick={() => navigate(item.path)}
                       isActive={location.pathname === item.path}
