@@ -12,8 +12,9 @@ export interface SmartAlert {
   valor?: number;
 }
 
-export function useSmartAlerts(metrics: CrossMetrics): SmartAlert[] {
+export function useSmartAlerts(metrics: CrossMetrics | undefined): SmartAlert[] {
   return useMemo(() => {
+    if (!metrics) return [];
     const alerts: SmartAlert[] = [];
 
     // Inadimplência
