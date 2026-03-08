@@ -8,7 +8,7 @@ import { DataIntegrationProvider } from "@/components/DataIntegrationProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
+
 import NotFound from "./pages/NotFound";
 import { Painel } from "./pages/Painel";
 import { Treinos } from "./pages/Treinos";
