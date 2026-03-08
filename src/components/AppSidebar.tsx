@@ -8,6 +8,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarHeader,
+  SidebarFooter,
 } from "@/components/ui/sidebar";
 
 import {
@@ -43,33 +44,57 @@ import {
   Network,
   Settings,
   Store,
+  LogOut,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useCurrentUserRole, AppRole } from "@/hooks/useCurrentUserRole";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+
+type MenuItem = {
+  title: string;
+  icon: any;
+  path: string;
+  roles?: AppRole[];
+};
+
+type MenuCategory = {
+  category: string;
+  roles?: AppRole[];
+  items: MenuItem[];
+};
 
 export function AppSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { role } = useCurrentUserRole();
 
-  const menuItems = [
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/login');
+  };
+
+  const menuItems: MenuCategory[] = [
     {
       category: "Principal",
       items: [
         { title: "Painel", icon: Home, path: "/painel" },
-        { title: "Alunos", icon: Users, path: "/alunos" },
-        { title: "Check-in", icon: UserCheck, path: "/checkin" },
-        { title: "Planos", icon: CreditCard, path: "/planos" },
-        { title: "Pagamentos", icon: Receipt, path: "/pagamentos" },
-        { title: "Aulas", icon: Calendar, path: "/aulas" },
-        { title: "Equipamentos", icon: Dumbbell, path: "/equipamentos" },
-        { title: "Produtos", icon: Package, path: "/produtos" },
+        { title: "Alunos", icon: Users, path: "/alunos", roles: ['admin', 'manager'] },
+        { title: "Check-in", icon: UserCheck, path: "/checkin", roles: ['admin', 'manager'] },
+        { title: "Planos", icon: CreditCard, path: "/planos", roles: ['admin'] },
+        { title: "Pagamentos", icon: Receipt, path: "/pagamentos", roles: ['admin'] },
+        { title: "Aulas", icon: Calendar, path: "/aulas", roles: ['admin', 'manager'] },
+        { title: "Equipamentos", icon: Dumbbell, path: "/equipamentos", roles: ['admin'] },
+        { title: "Produtos", icon: Package, path: "/produtos", roles: ['admin'] },
       ],
     },
     {
       category: "Equipe & Avaliações",
+      roles: ['admin', 'manager'],
       items: [
-        { title: "Funcionários", icon: Briefcase, path: "/funcionarios" },
-        { title: "Avaliações Físicas", icon: Activity, path: "/avaliacoes" },
-        { title: "Aulas Experimentais", icon: UserCheck, path: "/experimentais" },
+        { title: "Funcionários", icon: Briefcase, path: "/funcionarios", roles: ['admin'] },
+        { title: "Avaliações Físicas", icon: Activity, path: "/avaliacoes", roles: ['admin', 'manager'] },
+        { title: "Aulas Experimentais", icon: UserCheck, path: "/experimentais", roles: ['admin', 'manager'] },
       ],
     },
     {
@@ -80,6 +105,7 @@ export function AppSidebar() {
     },
     {
       category: "Relatórios Financeiros 💰",
+      roles: ['admin'],
       items: [
         { title: "Dashboard", icon: BarChart3, path: "/relatorios" },
         { title: "Fluxo de Pagamentos", icon: ArrowDownCircle, path: "/relatorios/pagamentos" },
@@ -91,6 +117,7 @@ export function AppSidebar() {
     },
     {
       category: "Marketing",
+      roles: ['admin'],
       items: [
         { title: "Campanhas", icon: Target, path: "/marketing/campanhas" },
         { title: "Captação", icon: UserPlus, path: "/marketing/captacao" },
@@ -111,6 +138,7 @@ export function AppSidebar() {
     },
     {
       category: "9FIT OS 🚀",
+      roles: ['admin'],
       items: [
         { title: "Dashboard 9FIT", icon: Rocket, path: "/9fit" },
         { title: "CEO", icon: Crown, path: "/9fit/ceo" },
@@ -123,6 +151,12 @@ export function AppSidebar() {
       ],
     },
   ];
+
+  const canSee = (roles?: AppRole[]) => {
+    if (!roles) return true; // no restriction
+    if (!role) return true; // role not loaded yet, show all (will be filtered on next render)
+    return roles.includes(role);
+  };
 
   return (
     <Sidebar>
@@ -137,28 +171,42 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
       <SidebarContent>
-        {menuItems.map((category) => (
-          <SidebarGroup key={category.category}>
-            <SidebarGroupLabel>{category.category}</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {category.items.map((item) => (
-                  <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton
-                      onClick={() => navigate(item.path)}
-                      isActive={location.pathname === item.path}
-                      className="w-full justify-start"
-                    >
-                      <item.icon className="mr-2 h-4 w-4" />
-                      <span>{item.title}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ))}
+        {menuItems
+          .filter(cat => canSee(cat.roles))
+          .map((category) => {
+            const visibleItems = category.items.filter(item => canSee(item.roles));
+            if (visibleItems.length === 0) return null;
+            return (
+              <SidebarGroup key={category.category}>
+                <SidebarGroupLabel>{category.category}</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {visibleItems.map((item) => (
+                      <SidebarMenuItem key={item.path}>
+                        <SidebarMenuButton
+                          onClick={() => navigate(item.path)}
+                          isActive={location.pathname === item.path}
+                          className="w-full justify-start"
+                        >
+                          <item.icon className="mr-2 h-4 w-4" />
+                          <span>{item.title}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            );
+          })}
       </SidebarContent>
+      <SidebarFooter>
+        <div className="px-4 py-3">
+          <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground hover:text-foreground" onClick={handleLogout}>
+            <LogOut className="mr-2 h-4 w-4" />
+            Sair
+          </Button>
+        </div>
+      </SidebarFooter>
     </Sidebar>
   );
 }

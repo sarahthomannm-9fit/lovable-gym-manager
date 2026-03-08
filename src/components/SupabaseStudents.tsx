@@ -4,6 +4,7 @@ import { StudentProfile } from "./StudentProfile";
 import { AddStudentDialog } from "./students/AddStudentDialog";
 import { EditStudentDialog } from "./students/EditStudentDialog";
 import { StudentsList } from "./students/StudentsList";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { useSupabaseGymData } from "@/contexts/SupabaseGymDataContext";
 import { SupabaseStudent } from "@/hooks/useSupabaseStudents";
 import { StudentCardData } from "./students/StudentCard";
@@ -14,6 +15,7 @@ export function SupabaseStudents() {
     studentsLoading, 
     addStudent, 
     updateStudent,
+    deleteStudent,
     plans: supabasePlans,
     plansLoading
   } = useSupabaseGymData();
@@ -21,6 +23,7 @@ export function SupabaseStudents() {
   const [selectedStudent, setSelectedStudent] = useState<SupabaseStudent | null>(null);
   const [editingStudent, setEditingStudent] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const handleAddStudent = async (studentData: any) => {
     try { await addStudent(studentData); } catch (error) { console.error('Failed to add student:', error); }
@@ -28,6 +31,12 @@ export function SupabaseStudents() {
 
   const handleUpdateStudent = async (id: string, updates: any) => {
     try { await updateStudent(id, updates); setEditingStudent(null); } catch (error) { console.error('Failed to update student:', error); }
+  };
+
+  const handleDeleteStudent = async () => {
+    if (!deletingId) return;
+    try { await deleteStudent(deletingId); } catch (error) { console.error('Failed to delete student:', error); }
+    setDeletingId(null);
   };
 
   if (studentsLoading || plansLoading) {
@@ -45,7 +54,6 @@ export function SupabaseStudents() {
     );
   }
 
-  // Map directly using Supabase fields (no legacy conversion)
   const studentsForList: StudentCardData[] = supabaseStudents.map(s => ({
     id: s.id,
     nome: s.nome,
@@ -80,6 +88,7 @@ export function SupabaseStudents() {
           setSelectedStudent(original || null);
         }}
         onEditStudent={setEditingStudent}
+        onDeleteStudent={(student) => setDeletingId(student.id)}
       />
 
       <EditStudentDialog
@@ -88,6 +97,16 @@ export function SupabaseStudents() {
         onClose={() => setEditingStudent(null)}
         onUpdateStudent={handleUpdateStudent}
         plans={supabasePlans}
+      />
+
+      <ConfirmDialog
+        open={!!deletingId}
+        onOpenChange={(open) => !open && setDeletingId(null)}
+        title="Excluir Aluno"
+        description="Tem certeza que deseja excluir este aluno? Esta ação não pode ser desfeita e todos os dados associados serão perdidos."
+        onConfirm={handleDeleteStudent}
+        confirmLabel="Excluir"
+        variant="destructive"
       />
     </div>
   );
