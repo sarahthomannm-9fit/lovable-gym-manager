@@ -7,8 +7,6 @@ import { Dashboard } from '@/components/Dashboard';
 import { IntegratedInsights } from '@/components/IntegratedInsights';
 import { IntelligentFinancialDashboard } from '@/components/reports/IntelligentFinancialDashboard';
 import { useDataIntegration } from '@/components/DataIntegrationProvider';
-import { useSmartAlerts } from '@/hooks/useSmartAlerts';
-import { useCrossMetrics } from '@/hooks/useCrossMetrics';
 import { 
   Users, CreditCard, TrendingUp, 
   BarChart3, Target, AlertCircle, CheckCircle,
