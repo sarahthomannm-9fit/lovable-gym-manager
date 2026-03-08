@@ -34,7 +34,7 @@ export function PlansOrganization({ plans, onSelectOrganization }: PlansOrganiza
       id: "pacote",
       name: "Pacotes de Aulas",
       description: "Pacotes com quantidade fixa de aulas",
-      plans: plans.filter(p => p.tipo === 'pacote_aulas' && (p.quantidade_aulas || 0) > 0)
+      plans: plans.filter(p => (p.tipo as string) === 'pacote_aulas' && (p.quantidade_aulas || 0) > 0)
     },
     {
       id: "consultoria",
