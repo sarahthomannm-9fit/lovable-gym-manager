@@ -40,7 +40,7 @@ export function PlansOrganization({ plans, onSelectOrganization }: PlansOrganiza
       id: "consultoria",
       name: "Consultoria Online",
       description: "Planos de acompanhamento remoto",
-      plans: plans.filter(p => p.tipo === 'consultoria')
+      plans: plans.filter(p => (p.tipo as string) === 'consultoria')
     },
     {
       id: "outros",
