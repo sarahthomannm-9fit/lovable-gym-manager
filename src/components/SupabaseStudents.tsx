@@ -87,8 +87,9 @@ export function SupabaseStudents() {
           const original = student._original || supabaseStudents.find(s => s.id === student.id);
           setSelectedStudent(original || null);
         }}
-        onEditStudent={setEditingStudent}
-        onDeleteStudent={(student) => setDeletingId(student.id)}
+        onEditStudent={(student) => {
+          setEditingStudent(student);
+        }}
       />
 
       <EditStudentDialog
