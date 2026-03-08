@@ -46,7 +46,7 @@ import { DemoModeProvider } from "./contexts/DemoModeContext";
 import { Funcionarios } from "./pages/Funcionarios";
 import { AvaliacoesFisicas } from "./pages/AvaliacoesFisicas";
 import { AulasExperimentais } from "./pages/AulasExperimentais";
-
+import { Login } from "./pages/Login";
 // Configuração otimizada do QueryClient
 const queryClient = new QueryClient({
   defaultOptions: {
