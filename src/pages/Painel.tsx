@@ -24,8 +24,7 @@ export function Painel() {
     insights, loading, refetchAll 
   } = useDataIntegration();
 
-  const { alerts } = useSmartAlerts();
-  const { metrics } = useCrossMetrics();
+  const { alerts, metrics } = useDataIntegration();
 
   const quickStats = [
     {
