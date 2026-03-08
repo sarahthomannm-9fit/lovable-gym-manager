@@ -129,12 +129,12 @@ export function Painel() {
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {alerts.slice(0, 8).map((alert, i) => (
                 <div key={i} className="flex items-start gap-3 p-2 rounded-lg bg-muted/50">
-                  <Badge variant={alert.priority === 'high' ? 'destructive' : alert.priority === 'medium' ? 'default' : 'secondary'} className="text-xs shrink-0">
-                    {alert.priority === 'high' ? 'Urgente' : alert.priority === 'medium' ? 'Atenção' : 'Info'}
+                  <Badge variant={alert.tipo === 'urgente' ? 'destructive' : alert.tipo === 'atencao' ? 'default' : 'secondary'} className="text-xs shrink-0">
+                    {alert.tipo === 'urgente' ? 'Urgente' : alert.tipo === 'atencao' ? 'Atenção' : 'Info'}
                   </Badge>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">{alert.title}</p>
-                    <p className="text-xs text-muted-foreground truncate">{alert.description}</p>
+                    <p className="text-sm font-medium">{alert.titulo}</p>
+                    <p className="text-xs text-muted-foreground truncate">{alert.descricao}</p>
                   </div>
                 </div>
               ))}
