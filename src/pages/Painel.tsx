@@ -43,8 +43,8 @@ export function Painel() {
     },
     {
       title: "Inadimplência",
-      value: metrics?.taxaInadimplencia ? `${metrics.taxaInadimplencia.toFixed(0)}%` : '0%',
-      subtitle: `${alerts.filter(a => a.type === 'payment').length} cobranças em atraso`,
+      value: metrics?.inadimplencia ? `${metrics.inadimplencia}` : '0',
+      subtitle: `${alerts.filter(a => a.tipo === 'urgente').length} cobranças em atraso`,
       icon: AlertTriangle,
       color: "text-red-600",
       onClick: () => navigate('/pagamentos')
