@@ -1,10 +1,8 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ResponsiveLayout } from "@/components/layout/ResponsiveLayout";
-import { Plus, Target, Users, TrendingUp, Eye, X, BarChart } from "lucide-react";
+import { Target, Users, TrendingUp, Eye, X, BarChart } from "lucide-react";
 import { useSupabaseCampaigns, Campaign } from "@/hooks/marketing/useSupabaseCampaigns";
 import { AddCampaignDialog } from "@/components/marketing/AddCampaignDialog";
 import { MarketingSuggestions } from "@/components/marketing/MarketingSuggestions";
@@ -24,21 +22,11 @@ export function Campanhas() {
         .from('campanhas_marketing')
         .update({ status: 'finalizada' })
         .eq('id', campaignId);
-
       if (error) throw error;
-
-      toast({
-        title: "Campanha Finalizada",
-        description: "A campanha foi marcada como finalizada!",
-      });
-
+      toast({ title: "Campanha Finalizada", description: "A campanha foi marcada como finalizada!" });
       refetchCampaigns();
     } catch (error: any) {
-      toast({
-        title: "Erro",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
     }
   };
 
@@ -62,144 +50,103 @@ export function Campanhas() {
   const taxaConversao = alcanceTotal > 0 ? ((conversoesTotal / alcanceTotal) * 100).toFixed(1) + "%" : "-";
 
   return (
-    <ResponsiveLayout 
-      activeView="campanhas" 
-      onViewChange={() => {}} 
-      title="Campanhas de Marketing"
-      subtitle="Gerencie suas campanhas de captação e conversão"
-    >
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h2 className="text-2xl font-bold">Campanhas</h2>
-            <p className="text-muted-foreground">Baseadas nos seus registros</p>
-          </div>
-          <AddCampaignDialog triggerLabel="Nova Campanha" />
+    <div className="space-y-6 p-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold">Campanhas de Marketing</h2>
+          <p className="text-muted-foreground">Gerencie suas campanhas de captação e conversão</p>
         </div>
-
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Campanhas Ativas</CardTitle>
-              <Target className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{campaignsLoading ? "..." : ativas.length}</div>
-              <p className="text-xs text-muted-foreground">Total no momento</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Alcance Total</CardTitle>
-              <Eye className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{campaignsLoading ? "..." : alcanceTotal.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">Soma do campo alcance</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Conversões</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{campaignsLoading ? "..." : conversoesTotal}</div>
-              <p className="text-xs text-muted-foreground">Soma do campo conversões</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Taxa de Conversão</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{campaignsLoading ? "..." : taxaConversao}</div>
-              <p className="text-xs text-muted-foreground">Conversões / alcance</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid gap-4">
-          {campaignsLoading ? (
-            <p className="text-sm text-muted-foreground">Carregando...</p>
-          ) : campaigns.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhuma campanha cadastrada.</p>
-          ) : (
-            campaigns.map((campaign) => (
-              <Card key={campaign.id}>
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        {campaign.titulo}
-                        <Badge className={getStatusColor(campaign.status)}>
-                          {campaign.status}
-                        </Badge>
-                      </CardTitle>
-                      <CardDescription>
-                        {campaign.categoria} • {campaign.data_inicio || "-"} até {campaign.data_fim || "-"}
-                      </CardDescription>
-                    </div>
-                    <div className="flex gap-2">
-                      {campaign.status === 'ativa' && (
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleFinalizeCampaign(campaign.id)}
-                        >
-                          <X className="h-4 w-4 mr-1" />
-                          Finalizar
-                        </Button>
-                      )}
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleViewReport(campaign)}
-                      >
-                        <BarChart className="h-4 w-4 mr-1" />
-                        Relatório
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-3 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Alcance</p>
-                      <p className="font-semibold">{(campaign.alcance || 0).toLocaleString()}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Conversões</p>
-                      <p className="font-semibold">{campaign.conversoes || 0}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Orçamento</p>
-                      <p className="font-semibold">{campaign.orcamento ? `R$ ${campaign.orcamento}` : "-"}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </div>
-
-        <MarketingSuggestions
-          context="campanhas"
-          onCreateFromSuggestion={(s) => {
-            console.log("[Suggestion] campanhas", s);
-          }}
-        />
+        <AddCampaignDialog triggerLabel="Nova Campanha" />
       </div>
 
-      <CampaignReportDialog
-        campaign={selectedCampaign}
-        open={reportOpen}
-        onOpenChange={setReportOpen}
-      />
-    </ResponsiveLayout>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Campanhas Ativas</CardTitle>
+            <Target className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{campaignsLoading ? "..." : ativas.length}</div>
+            <p className="text-xs text-muted-foreground">Total no momento</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Alcance Total</CardTitle>
+            <Eye className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{campaignsLoading ? "..." : alcanceTotal.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">Soma do campo alcance</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Conversões</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{campaignsLoading ? "..." : conversoesTotal}</div>
+            <p className="text-xs text-muted-foreground">Soma do campo conversões</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Taxa de Conversão</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{campaignsLoading ? "..." : taxaConversao}</div>
+            <p className="text-xs text-muted-foreground">Conversões / alcance</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4">
+        {campaignsLoading ? (
+          <p className="text-sm text-muted-foreground">Carregando...</p>
+        ) : campaigns.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhuma campanha cadastrada.</p>
+        ) : (
+          campaigns.map((campaign) => (
+            <Card key={campaign.id}>
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      {campaign.titulo}
+                      <Badge className={getStatusColor(campaign.status)}>{campaign.status}</Badge>
+                    </CardTitle>
+                    <CardDescription>
+                      {campaign.categoria} • {campaign.data_inicio || "-"} até {campaign.data_fim || "-"}
+                    </CardDescription>
+                  </div>
+                  <div className="flex gap-2">
+                    {campaign.status === 'ativa' && (
+                      <Button variant="outline" size="sm" onClick={() => handleFinalizeCampaign(campaign.id)}>
+                        <X className="h-4 w-4 mr-1" />Finalizar
+                      </Button>
+                    )}
+                    <Button variant="outline" size="sm" onClick={() => handleViewReport(campaign)}>
+                      <BarChart className="h-4 w-4 mr-1" />Relatório
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div><p className="text-muted-foreground">Alcance</p><p className="font-semibold">{(campaign.alcance || 0).toLocaleString()}</p></div>
+                  <div><p className="text-muted-foreground">Conversões</p><p className="font-semibold">{campaign.conversoes || 0}</p></div>
+                  <div><p className="text-muted-foreground">Orçamento</p><p className="font-semibold">{campaign.orcamento ? `R$ ${campaign.orcamento}` : "-"}</p></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+
+      <MarketingSuggestions context="campanhas" onCreateFromSuggestion={(s) => { console.log("[Suggestion] campanhas", s); }} />
+      <CampaignReportDialog campaign={selectedCampaign} open={reportOpen} onOpenChange={setReportOpen} />
+    </div>
   );
 }
