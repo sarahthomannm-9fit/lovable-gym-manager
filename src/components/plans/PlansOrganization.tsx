@@ -4,9 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Building2, Folder, FolderOpen } from "lucide-react";
-import { Tables } from "@/integrations/supabase/types";
+import { SupabasePlan } from "@/hooks/useSupabasePlans";
 
-type SupabasePlan = Tables<'planos'>;
+type PlanType = SupabasePlan;
 
 interface PlansOrganizationProps {
   plans: SupabasePlan[];
@@ -34,13 +34,13 @@ export function PlansOrganization({ plans, onSelectOrganization }: PlansOrganiza
       id: "pacote",
       name: "Pacotes de Aulas",
       description: "Pacotes com quantidade fixa de aulas",
-      plans: plans.filter(p => p.tipo === 'pacote_aulas' && (p.quantidade_aulas || 0) > 0)
+      plans: plans.filter(p => (p.tipo as string) === 'pacote_aulas' && (p.quantidade_aulas || 0) > 0)
     },
     {
       id: "consultoria",
       name: "Consultoria Online",
       description: "Planos de acompanhamento remoto",
-      plans: plans.filter(p => p.tipo === 'consultoria')
+      plans: plans.filter(p => (p.tipo as string) === 'consultoria')
     },
     {
       id: "outros",

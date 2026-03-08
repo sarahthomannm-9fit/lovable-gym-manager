@@ -40,14 +40,17 @@ export function SupabaseClasses() {
   };
 
   // Map Supabase classes to DailyClassView format
-  const classItems = classes.map(c => ({
-    id: c.id,
+  const classItems = classes.map((c, idx) => ({
+    id: idx + 1,
     student: c.nome || 'N/A',
     date: c.data_aula,
     time: c.horario_inicio,
     type: c.tipo || c.nome,
-    status: c.status === 'confirmada' ? 'Confirmada' : c.status === 'cancelada' ? 'Cancelada' : 'Agendada',
+    status: (c as any).status === 'confirmada' ? 'Confirmada' : (c as any).status === 'cancelada' ? 'Cancelada' : 'Agendada',
   }));
+
+  // Map numeric index back to real class id
+  const classIdMap = classes.map(c => c.id);
 
   const renderContent = () => {
     switch (view) {
@@ -60,8 +63,8 @@ export function SupabaseClasses() {
         return (
           <DailyClassView 
             classes={classItems}
-            onConfirmClass={(id: any) => handleConfirmClass(String(id))}
-            onCancelClass={(id: any) => handleCancelClass(String(id))}
+            onConfirmClass={(id: number) => handleConfirmClass(classIdMap[id - 1])}
+            onCancelClass={(id: number) => handleCancelClass(classIdMap[id - 1])}
           />
         );
     }

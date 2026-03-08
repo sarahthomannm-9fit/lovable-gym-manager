@@ -15,6 +15,7 @@ export interface SupabaseClass {
   capacidade_maxima?: number;
   plano_id?: string;
   dia_semana?: string;
+  status?: string;
   created_at?: string;
   updated_at?: string;
 }

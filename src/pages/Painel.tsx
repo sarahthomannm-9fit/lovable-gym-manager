@@ -7,8 +7,6 @@ import { Dashboard } from '@/components/Dashboard';
 import { IntegratedInsights } from '@/components/IntegratedInsights';
 import { IntelligentFinancialDashboard } from '@/components/reports/IntelligentFinancialDashboard';
 import { useDataIntegration } from '@/components/DataIntegrationProvider';
-import { useSmartAlerts } from '@/hooks/useSmartAlerts';
-import { useCrossMetrics } from '@/hooks/useCrossMetrics';
 import { 
   Users, CreditCard, TrendingUp, 
   BarChart3, Target, AlertCircle, CheckCircle,
@@ -24,8 +22,7 @@ export function Painel() {
     insights, loading, refetchAll 
   } = useDataIntegration();
 
-  const { alerts } = useSmartAlerts();
-  const { metrics } = useCrossMetrics();
+  const { alerts, metrics } = useDataIntegration();
 
   const quickStats = [
     {
@@ -46,8 +43,8 @@ export function Painel() {
     },
     {
       title: "Inadimplência",
-      value: metrics?.taxaInadimplencia ? `${metrics.taxaInadimplencia.toFixed(0)}%` : '0%',
-      subtitle: `${alerts.filter(a => a.type === 'payment').length} cobranças em atraso`,
+      value: metrics?.inadimplencia ? `${metrics.inadimplencia}` : '0',
+      subtitle: `${alerts.filter(a => a.tipo === 'urgente').length} cobranças em atraso`,
       icon: AlertTriangle,
       color: "text-red-600",
       onClick: () => navigate('/pagamentos')
@@ -63,7 +60,7 @@ export function Painel() {
   ];
 
   const totalInsights = insights.retencao.length + insights.crescimento.length + insights.otimizacao.length;
-  const criticalAlerts = alerts.filter(a => a.priority === 'high');
+  const criticalAlerts = alerts.filter(a => a.tipo === 'urgente');
 
   if (loading) {
     return (
@@ -132,12 +129,12 @@ export function Painel() {
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {alerts.slice(0, 8).map((alert, i) => (
                 <div key={i} className="flex items-start gap-3 p-2 rounded-lg bg-muted/50">
-                  <Badge variant={alert.priority === 'high' ? 'destructive' : alert.priority === 'medium' ? 'default' : 'secondary'} className="text-xs shrink-0">
-                    {alert.priority === 'high' ? 'Urgente' : alert.priority === 'medium' ? 'Atenção' : 'Info'}
+                  <Badge variant={alert.tipo === 'urgente' ? 'destructive' : alert.tipo === 'atencao' ? 'default' : 'secondary'} className="text-xs shrink-0">
+                    {alert.tipo === 'urgente' ? 'Urgente' : alert.tipo === 'atencao' ? 'Atenção' : 'Info'}
                   </Badge>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">{alert.title}</p>
-                    <p className="text-xs text-muted-foreground truncate">{alert.description}</p>
+                    <p className="text-sm font-medium">{alert.titulo}</p>
+                    <p className="text-xs text-muted-foreground truncate">{alert.descricao}</p>
                   </div>
                 </div>
               ))}
