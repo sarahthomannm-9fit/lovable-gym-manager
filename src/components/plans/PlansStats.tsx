@@ -1,9 +1,9 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Users, Calendar } from "lucide-react";
-import { Tables } from "@/integrations/supabase/types";
+import { SupabasePlan } from "@/hooks/useSupabasePlans";
 
-type SupabasePlan = Tables<'planos'>;
+type PlanType = SupabasePlan;
 
 interface PlansStatsProps {
   plans: SupabasePlan[];

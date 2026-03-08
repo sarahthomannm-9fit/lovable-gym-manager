@@ -4,9 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Building2, Folder, FolderOpen } from "lucide-react";
-import { Tables } from "@/integrations/supabase/types";
+import { SupabasePlan } from "@/hooks/useSupabasePlans";
 
-type SupabasePlan = Tables<'planos'>;
+type PlanType = SupabasePlan;
 
 interface PlansOrganizationProps {
   plans: SupabasePlan[];
