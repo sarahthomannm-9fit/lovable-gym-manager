@@ -742,6 +742,42 @@ export type Database = {
         }
         Relationships: []
       }
+      equipamentos: {
+        Row: {
+          created_at: string | null
+          custo: number | null
+          data_aquisicao: string | null
+          id: string
+          nome: string
+          observacoes: string | null
+          status: string
+          tipo: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          custo?: number | null
+          data_aquisicao?: string | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          custo?: number | null
+          data_aquisicao?: string | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       formas_pagamento: {
         Row: {
           created_at: string | null
