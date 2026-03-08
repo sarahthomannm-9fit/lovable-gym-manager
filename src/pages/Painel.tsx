@@ -60,7 +60,7 @@ export function Painel() {
   ];
 
   const totalInsights = insights.retencao.length + insights.crescimento.length + insights.otimizacao.length;
-  const criticalAlerts = alerts.filter(a => a.priority === 'high');
+  const criticalAlerts = alerts.filter(a => a.tipo === 'urgente');
 
   if (loading) {
     return (
