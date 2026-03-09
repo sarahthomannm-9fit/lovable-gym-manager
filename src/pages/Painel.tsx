@@ -7,12 +7,14 @@ import { Dashboard } from '@/components/Dashboard';
 import { IntegratedInsights } from '@/components/IntegratedInsights';
 import { IntelligentFinancialDashboard } from '@/components/reports/IntelligentFinancialDashboard';
 import { PainelAluno } from '@/components/PainelAluno';
+import { EventsTimeline } from '@/components/EventsTimeline';
 import { useDataIntegration } from '@/components/DataIntegrationProvider';
 import { useCurrentUserRole } from '@/hooks/useCurrentUserRole';
 import { 
   Users, CreditCard, TrendingUp, 
   BarChart3, Target, AlertCircle, CheckCircle,
-  Package, RefreshCw, AlertTriangle, DollarSign, UserCheck
+  Package, RefreshCw, AlertTriangle, DollarSign, UserCheck,
+  Activity, Percent
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -31,11 +33,17 @@ export function Painel() {
     return <PainelAluno />;
   }
 
+  // MRR calculation (Monthly Recurring Revenue)
+  const mrr = metrics?.receitaMensal || 0;
+  const churnRate = metrics?.totalAlunos ? ((metrics?.alunosInativos || 0) / metrics.totalAlunos * 100) : 0;
+
   const quickStats = [
+    { title: "MRR", value: `R$ ${mrr.toLocaleString('pt-BR')}`, subtitle: metrics?.crescimentoReceita ? `${metrics.crescimentoReceita > 0 ? '+' : ''}${metrics.crescimentoReceita.toFixed(1)}%` : undefined, icon: DollarSign, color: "text-green-600", onClick: () => navigate('/relatorios') },
     { title: "Alunos Ativos", value: alunos.filter(a => a.status === 'ativo').length, total: alunos.length, icon: Users, color: "text-blue-600", onClick: () => navigate('/alunos') },
-    { title: "Receita Mensal", value: `R$ ${(metrics?.receitaMensal || 0).toLocaleString('pt-BR')}`, subtitle: metrics?.crescimentoReceita ? `${metrics.crescimentoReceita > 0 ? '+' : ''}${metrics.crescimentoReceita.toFixed(1)}% vs mês anterior` : undefined, icon: DollarSign, color: "text-green-600", onClick: () => navigate('/relatorios') },
-    { title: "Inadimplência", value: metrics?.inadimplencia ? `${metrics.inadimplencia}` : '0', subtitle: `${alerts.filter(a => a.tipo === 'urgente').length} cobranças em atraso`, icon: AlertTriangle, color: "text-red-600", onClick: () => navigate('/pagamentos') },
-    { title: "Taxa Conversão", value: metrics?.taxaConversaoExperimental ? `${metrics.taxaConversaoExperimental.toFixed(0)}%` : '0%', subtitle: "Experimental → Aluno", icon: UserCheck, color: "text-emerald-600", onClick: () => navigate('/experimentais') },
+    { title: "Churn", value: `${churnRate.toFixed(1)}%`, subtitle: `${metrics?.alunosInativos || 0} inativos`, icon: Percent, color: churnRate > 10 ? "text-red-600" : "text-amber-600", onClick: () => navigate('/alunos') },
+    { title: "Inadimplência", value: `R$ ${(metrics?.totalInadimplente || 0).toLocaleString('pt-BR')}`, subtitle: `${metrics?.inadimplencia || 0} vencido(s)`, icon: AlertTriangle, color: "text-red-600", onClick: () => navigate('/pagamentos') },
+    { title: "Conversão", value: metrics?.taxaConversaoExperimental ? `${metrics.taxaConversaoExperimental.toFixed(0)}%` : '0%', subtitle: "Experimental → Aluno", icon: UserCheck, color: "text-emerald-600", onClick: () => navigate('/experimentais') },
+    { title: "LTV Médio", value: `R$ ${(metrics?.ltvMedio || 0).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`, subtitle: `Ticket: R$ ${(metrics?.ticketMedio || 0).toFixed(0)}`, icon: TrendingUp, color: "text-purple-600", onClick: () => navigate('/relatorios') },
   ];
 
   const totalInsights = insights.retencao.length + insights.crescimento.length + insights.otimizacao.length;
@@ -56,8 +64,8 @@ export function Painel() {
     <div className="space-y-6 p-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Painel de Controle</h1>
-          <p className="text-muted-foreground">Visão integrada com métricas cruzadas e alertas inteligentes</p>
+          <h1 className="text-3xl font-bold">Control Plane</h1>
+          <p className="text-muted-foreground">Centro de comando — métricas executivas e alertas inteligentes</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={refetchAll} className="gap-2"><RefreshCw className="h-4 w-4" />Atualizar</Button>
@@ -65,7 +73,7 @@ export function Painel() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {quickStats.map((stat, index) => {
           const Icon = stat.icon;
           return (
@@ -96,6 +104,9 @@ export function Painel() {
           </CardContent>
         </Card>
       )}
+
+      {/* Events Timeline */}
+      <EventsTimeline limit={15} />
 
       <Tabs defaultValue="dashboard" className="space-y-4">
         <TabsList className="grid w-full grid-cols-4">

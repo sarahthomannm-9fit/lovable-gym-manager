@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
-import { ArrowLeft, TrendingUp, Weight, Ruler, Calendar, MessageCircle, FileText, DollarSign, Dumbbell, Activity } from "lucide-react";
+import { ArrowLeft, TrendingUp, Weight, Ruler, Calendar, MessageCircle, FileText, DollarSign, Dumbbell, Activity, Shield } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
 import { useAvaliacoesFisicas } from "@/hooks/useAvaliacoesFisicas";
 import { useSupabasePayments } from "@/hooks/useSupabasePayments";
@@ -12,6 +12,7 @@ import { useFrequencia } from "@/hooks/useFrequencia";
 import { useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
+import { StudentLifecycleTimeline } from "@/components/StudentLifecycleTimeline";
 
 type SupabaseStudent = Tables<"alunos">;
 
@@ -124,8 +125,9 @@ export function StudentProfile({ student, onBack, planName }: StudentProfileProp
 
       {/* Tabs */}
       <Tabs defaultValue="resumo" className="space-y-4">
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="resumo">Resumo</TabsTrigger>
+          <TabsTrigger value="lifecycle">Lifecycle</TabsTrigger>
           <TabsTrigger value="evolucao">Evolução</TabsTrigger>
           <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
           <TabsTrigger value="treinos">Treinos</TabsTrigger>
@@ -147,6 +149,10 @@ export function StudentProfile({ student, onBack, planName }: StudentProfileProp
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="lifecycle">
+          <StudentLifecycleTimeline alunoId={student.id} lifecycleStatus={(student as any).lifecycle_status || 'ativo'} />
         </TabsContent>
 
         <TabsContent value="evolucao">

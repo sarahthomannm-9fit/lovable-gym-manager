@@ -29,6 +29,8 @@ export type Database = {
           endereco: string | null
           forma_pagamento: string | null
           id: string
+          lead_id: string | null
+          lifecycle_status: Database["public"]["Enums"]["pessoa_status"]
           nome: string
           observacoes_medicas: string | null
           plano_id: string | null
@@ -52,6 +54,8 @@ export type Database = {
           endereco?: string | null
           forma_pagamento?: string | null
           id?: string
+          lead_id?: string | null
+          lifecycle_status?: Database["public"]["Enums"]["pessoa_status"]
           nome: string
           observacoes_medicas?: string | null
           plano_id?: string | null
@@ -75,6 +79,8 @@ export type Database = {
           endereco?: string | null
           forma_pagamento?: string | null
           id?: string
+          lead_id?: string | null
+          lifecycle_status?: Database["public"]["Enums"]["pessoa_status"]
           nome?: string
           observacoes_medicas?: string | null
           plano_id?: string | null
@@ -85,6 +91,13 @@ export type Database = {
           valor_mensalidade?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "alunos_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "alunos_plano_id_fkey"
             columns: ["plano_id"]
@@ -742,6 +755,54 @@ export type Database = {
         }
         Relationships: []
       }
+      entitlements: {
+        Row: {
+          aluno_id: string
+          created_at: string
+          data_fim: string | null
+          data_inicio: string
+          id: string
+          sku_id: string
+          status: Database["public"]["Enums"]["entitlement_status"]
+          updated_at: string
+        }
+        Insert: {
+          aluno_id: string
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string
+          id?: string
+          sku_id: string
+          status?: Database["public"]["Enums"]["entitlement_status"]
+          updated_at?: string
+        }
+        Update: {
+          aluno_id?: string
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string
+          id?: string
+          sku_id?: string
+          status?: Database["public"]["Enums"]["entitlement_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entitlements_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entitlements_sku_id_fkey"
+            columns: ["sku_id"]
+            isOneToOne: false
+            referencedRelation: "skus"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       equipamentos: {
         Row: {
           created_at: string | null
@@ -1130,6 +1191,44 @@ export type Database = {
           },
         ]
       }
+      pessoa_eventos: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          dados: Json | null
+          descricao: string | null
+          id: string
+          pessoa_id: string
+          tipo_evento: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          dados?: Json | null
+          descricao?: string | null
+          id?: string
+          pessoa_id: string
+          tipo_evento: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          dados?: Json | null
+          descricao?: string | null
+          id?: string
+          pessoa_id?: string
+          tipo_evento?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pessoa_eventos_pessoa_id_fkey"
+            columns: ["pessoa_id"]
+            isOneToOne: false
+            referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       planos: {
         Row: {
           ativo: boolean | null
@@ -1289,6 +1388,127 @@ export type Database = {
           updated_at?: string
           usado?: number | null
           valido_ate?: string | null
+        }
+        Relationships: []
+      }
+      sku_permissions: {
+        Row: {
+          created_at: string
+          id: string
+          modulo: string
+          nivel_acesso: string
+          sku_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          modulo: string
+          nivel_acesso?: string
+          sku_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          modulo?: string
+          nivel_acesso?: string
+          sku_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sku_permissions_sku_id_fkey"
+            columns: ["sku_id"]
+            isOneToOne: false
+            referencedRelation: "skus"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      skus: {
+        Row: {
+          ativo: boolean
+          beneficios: Json | null
+          capacidade: number | null
+          created_at: string
+          descricao: string | null
+          entregas: Json | null
+          id: string
+          modulos_liberados: string[] | null
+          nome: string
+          plano_id: string | null
+          preco: number
+          recorrencia: Database["public"]["Enums"]["sku_recorrencia"]
+          tipo: Database["public"]["Enums"]["sku_tipo"]
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          beneficios?: Json | null
+          capacidade?: number | null
+          created_at?: string
+          descricao?: string | null
+          entregas?: Json | null
+          id?: string
+          modulos_liberados?: string[] | null
+          nome: string
+          plano_id?: string | null
+          preco?: number
+          recorrencia?: Database["public"]["Enums"]["sku_recorrencia"]
+          tipo?: Database["public"]["Enums"]["sku_tipo"]
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          beneficios?: Json | null
+          capacidade?: number | null
+          created_at?: string
+          descricao?: string | null
+          entregas?: Json | null
+          id?: string
+          modulos_liberados?: string[] | null
+          nome?: string
+          plano_id?: string | null
+          preco?: number
+          recorrencia?: Database["public"]["Enums"]["sku_recorrencia"]
+          tipo?: Database["public"]["Enums"]["sku_tipo"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "skus_plano_id_fkey"
+            columns: ["plano_id"]
+            isOneToOne: false
+            referencedRelation: "planos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      system_events: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          event_type: string
+          id: string
+          metadata: Json | null
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
         }
         Relationships: []
       }
@@ -1472,6 +1692,23 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "manager" | "user"
+      entitlement_status: "ativo" | "suspenso" | "expirado"
+      pessoa_status:
+        | "lead"
+        | "lead_aquecido"
+        | "experimental"
+        | "ativo"
+        | "recorrente"
+        | "inativo"
+        | "ex_aluno"
+      sku_recorrencia: "mensal" | "trimestral" | "semestral" | "anual" | "unico"
+      sku_tipo:
+        | "plano"
+        | "consultoria"
+        | "programa"
+        | "produto_digital"
+        | "produto_fisico"
+        | "academy"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1600,6 +1837,25 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "manager", "user"],
+      entitlement_status: ["ativo", "suspenso", "expirado"],
+      pessoa_status: [
+        "lead",
+        "lead_aquecido",
+        "experimental",
+        "ativo",
+        "recorrente",
+        "inativo",
+        "ex_aluno",
+      ],
+      sku_recorrencia: ["mensal", "trimestral", "semestral", "anual", "unico"],
+      sku_tipo: [
+        "plano",
+        "consultoria",
+        "programa",
+        "produto_digital",
+        "produto_fisico",
+        "academy",
+      ],
     },
   },
 } as const
