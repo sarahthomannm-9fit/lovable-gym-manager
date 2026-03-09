@@ -66,11 +66,6 @@ export function AppSidebar() {
   const location = useLocation();
   const { role } = useCurrentUserRole();
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate('/login');
-  };
-
   const menuItems: MenuCategory[] = [
     {
       category: "Principal",
