@@ -43,7 +43,7 @@ export function useSupabaseSKUs() {
 
   const addSKU = async (skuData: Omit<SKU, 'id' | 'created_at' | 'updated_at'>) => {
     try {
-      const { data, error } = await supabase.from('skus').insert([skuData]).select().single();
+      const { data, error } = await supabase.from('skus').insert([skuData as any]).select().single();
       if (error) throw error;
       const newSku = data as SKU;
       setSKUs(prev => [newSku, ...prev]);
