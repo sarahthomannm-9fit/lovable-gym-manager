@@ -151,6 +151,10 @@ export function StudentProfile({ student, onBack, planName }: StudentProfileProp
           </Card>
         </TabsContent>
 
+        <TabsContent value="lifecycle">
+          <StudentLifecycleTimeline alunoId={student.id} lifecycleStatus={(student as any).lifecycle_status || 'ativo'} />
+        </TabsContent>
+
         <TabsContent value="evolucao">
           {evolucaoData.length > 0 ? (
             <Card>
