@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
-import { ArrowLeft, TrendingUp, Weight, Ruler, Calendar, MessageCircle, FileText, DollarSign, Dumbbell, Activity } from "lucide-react";
+import { ArrowLeft, TrendingUp, Weight, Ruler, Calendar, MessageCircle, FileText, DollarSign, Dumbbell, Activity, Shield } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
 import { useAvaliacoesFisicas } from "@/hooks/useAvaliacoesFisicas";
 import { useSupabasePayments } from "@/hooks/useSupabasePayments";
@@ -12,6 +12,7 @@ import { useFrequencia } from "@/hooks/useFrequencia";
 import { useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
+import { StudentLifecycleTimeline } from "@/components/StudentLifecycleTimeline";
 
 type SupabaseStudent = Tables<"alunos">;
 
