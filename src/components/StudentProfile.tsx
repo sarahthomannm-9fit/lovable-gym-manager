@@ -125,8 +125,9 @@ export function StudentProfile({ student, onBack, planName }: StudentProfileProp
 
       {/* Tabs */}
       <Tabs defaultValue="resumo" className="space-y-4">
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="resumo">Resumo</TabsTrigger>
+          <TabsTrigger value="lifecycle">Lifecycle</TabsTrigger>
           <TabsTrigger value="evolucao">Evolução</TabsTrigger>
           <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
           <TabsTrigger value="treinos">Treinos</TabsTrigger>
