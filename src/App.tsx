@@ -33,6 +33,7 @@ import { EmailMarketing } from "./pages/marketing/EmailMarketing";
 import { Promocoes } from "./pages/marketing/Promocoes";
 import { InsightsIA } from "./pages/marketing/InsightsIA";
 import { Produtos } from "./pages/Produtos";
+import { Catalogo } from "./pages/Catalogo";
 import { Automacao } from "./pages/marketing/Automacao";
 import { AgenteIA } from "./pages/AgenteIA";
 import Dashboard9FIT from "./pages/9fit/Dashboard9FIT";
