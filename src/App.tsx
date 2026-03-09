@@ -105,6 +105,7 @@ const App = () => (
                   <Route path="/marketing/insights-ia" element={<MainLayout><InsightsIA /></MainLayout>} />
                   <Route path="/marketing/automacao" element={<MainLayout><Automacao /></MainLayout>} />
                   <Route path="/agente-ia" element={<MainLayout><AgenteIA /></MainLayout>} />
+                  <Route path="/catalogo" element={<MainLayout><Catalogo /></MainLayout>} />
                   <Route path="/produtos" element={<MainLayout><Produtos /></MainLayout>} />
                   <Route path="/9fit" element={<MainLayout><Dashboard9FIT /></MainLayout>} />
                   <Route path="/9fit/ceo" element={<MainLayout><CEODashboard /></MainLayout>} />

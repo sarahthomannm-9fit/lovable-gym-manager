@@ -105,6 +105,9 @@ export function Painel() {
         </Card>
       )}
 
+      {/* Events Timeline */}
+      <EventsTimeline limit={15} />
+
       <Tabs defaultValue="dashboard" className="space-y-4">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>

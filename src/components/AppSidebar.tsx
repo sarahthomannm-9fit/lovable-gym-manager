@@ -70,10 +70,11 @@ export function AppSidebar() {
     {
       category: "Principal",
       items: [
-        { title: "Painel", icon: Home, path: "/painel" },
+        { title: "Control Plane", icon: Home, path: "/painel" },
         { title: "Alunos", icon: Users, path: "/alunos", roles: ['admin', 'manager'] },
         { title: "Check-in", icon: UserCheck, path: "/checkin", roles: ['admin', 'manager'] },
         { title: "Planos", icon: CreditCard, path: "/planos", roles: ['admin'] },
+        { title: "Catálogo (SKUs)", icon: Package, path: "/catalogo", roles: ['admin'] },
         { title: "Pagamentos", icon: Receipt, path: "/pagamentos", roles: ['admin'] },
         { title: "Aulas", icon: Calendar, path: "/aulas", roles: ['admin', 'manager'] },
         { title: "Equipamentos", icon: Dumbbell, path: "/equipamentos", roles: ['admin'] },
