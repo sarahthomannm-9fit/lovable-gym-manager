@@ -58,7 +58,7 @@ export function useSupabaseSKUs() {
 
   const updateSKU = async (id: string, updates: Partial<SKU>) => {
     try {
-      const { data, error } = await supabase.from('skus').update(updates).eq('id', id).select().single();
+      const { data, error } = await supabase.from('skus').update(updates as any).eq('id', id).select().single();
       if (error) throw error;
       const updated = data as SKU;
       setSKUs(prev => prev.map(s => s.id === id ? updated : s));
