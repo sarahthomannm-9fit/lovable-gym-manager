@@ -33,11 +33,17 @@ export function Painel() {
     return <PainelAluno />;
   }
 
+  // MRR calculation (Monthly Recurring Revenue)
+  const mrr = metrics?.receitaMensal || 0;
+  const churnRate = metrics?.totalAlunos ? ((metrics?.alunosInativos || 0) / metrics.totalAlunos * 100) : 0;
+
   const quickStats = [
+    { title: "MRR", value: `R$ ${mrr.toLocaleString('pt-BR')}`, subtitle: metrics?.crescimentoReceita ? `${metrics.crescimentoReceita > 0 ? '+' : ''}${metrics.crescimentoReceita.toFixed(1)}%` : undefined, icon: DollarSign, color: "text-green-600", onClick: () => navigate('/relatorios') },
     { title: "Alunos Ativos", value: alunos.filter(a => a.status === 'ativo').length, total: alunos.length, icon: Users, color: "text-blue-600", onClick: () => navigate('/alunos') },
-    { title: "Receita Mensal", value: `R$ ${(metrics?.receitaMensal || 0).toLocaleString('pt-BR')}`, subtitle: metrics?.crescimentoReceita ? `${metrics.crescimentoReceita > 0 ? '+' : ''}${metrics.crescimentoReceita.toFixed(1)}% vs mês anterior` : undefined, icon: DollarSign, color: "text-green-600", onClick: () => navigate('/relatorios') },
-    { title: "Inadimplência", value: metrics?.inadimplencia ? `${metrics.inadimplencia}` : '0', subtitle: `${alerts.filter(a => a.tipo === 'urgente').length} cobranças em atraso`, icon: AlertTriangle, color: "text-red-600", onClick: () => navigate('/pagamentos') },
-    { title: "Taxa Conversão", value: metrics?.taxaConversaoExperimental ? `${metrics.taxaConversaoExperimental.toFixed(0)}%` : '0%', subtitle: "Experimental → Aluno", icon: UserCheck, color: "text-emerald-600", onClick: () => navigate('/experimentais') },
+    { title: "Churn", value: `${churnRate.toFixed(1)}%`, subtitle: `${metrics?.alunosInativos || 0} inativos`, icon: Percent, color: churnRate > 10 ? "text-red-600" : "text-amber-600", onClick: () => navigate('/alunos') },
+    { title: "Inadimplência", value: `R$ ${(metrics?.totalInadimplente || 0).toLocaleString('pt-BR')}`, subtitle: `${metrics?.inadimplencia || 0} vencido(s)`, icon: AlertTriangle, color: "text-red-600", onClick: () => navigate('/pagamentos') },
+    { title: "Conversão", value: metrics?.taxaConversaoExperimental ? `${metrics.taxaConversaoExperimental.toFixed(0)}%` : '0%', subtitle: "Experimental → Aluno", icon: UserCheck, color: "text-emerald-600", onClick: () => navigate('/experimentais') },
+    { title: "LTV Médio", value: `R$ ${(metrics?.ltvMedio || 0).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`, subtitle: `Ticket: R$ ${(metrics?.ticketMedio || 0).toFixed(0)}`, icon: TrendingUp, color: "text-purple-600", onClick: () => navigate('/relatorios') },
   ];
 
   const totalInsights = insights.retencao.length + insights.crescimento.length + insights.otimizacao.length;
