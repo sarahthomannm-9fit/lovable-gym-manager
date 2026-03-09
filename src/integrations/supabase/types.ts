@@ -29,6 +29,8 @@ export type Database = {
           endereco: string | null
           forma_pagamento: string | null
           id: string
+          lead_id: string | null
+          lifecycle_status: Database["public"]["Enums"]["pessoa_status"]
           nome: string
           observacoes_medicas: string | null
           plano_id: string | null
@@ -52,6 +54,8 @@ export type Database = {
           endereco?: string | null
           forma_pagamento?: string | null
           id?: string
+          lead_id?: string | null
+          lifecycle_status?: Database["public"]["Enums"]["pessoa_status"]
           nome: string
           observacoes_medicas?: string | null
           plano_id?: string | null
@@ -75,6 +79,8 @@ export type Database = {
           endereco?: string | null
           forma_pagamento?: string | null
           id?: string
+          lead_id?: string | null
+          lifecycle_status?: Database["public"]["Enums"]["pessoa_status"]
           nome?: string
           observacoes_medicas?: string | null
           plano_id?: string | null
@@ -85,6 +91,13 @@ export type Database = {
           valor_mensalidade?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "alunos_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "alunos_plano_id_fkey"
             columns: ["plano_id"]
@@ -1130,6 +1143,44 @@ export type Database = {
           },
         ]
       }
+      pessoa_eventos: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          dados: Json | null
+          descricao: string | null
+          id: string
+          pessoa_id: string
+          tipo_evento: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          dados?: Json | null
+          descricao?: string | null
+          id?: string
+          pessoa_id: string
+          tipo_evento: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          dados?: Json | null
+          descricao?: string | null
+          id?: string
+          pessoa_id?: string
+          tipo_evento?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pessoa_eventos_pessoa_id_fkey"
+            columns: ["pessoa_id"]
+            isOneToOne: false
+            referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       planos: {
         Row: {
           ativo: boolean | null
@@ -1472,6 +1523,14 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "manager" | "user"
+      pessoa_status:
+        | "lead"
+        | "lead_aquecido"
+        | "experimental"
+        | "ativo"
+        | "recorrente"
+        | "inativo"
+        | "ex_aluno"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1600,6 +1659,15 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "manager", "user"],
+      pessoa_status: [
+        "lead",
+        "lead_aquecido",
+        "experimental",
+        "ativo",
+        "recorrente",
+        "inativo",
+        "ex_aluno",
+      ],
     },
   },
 } as const
