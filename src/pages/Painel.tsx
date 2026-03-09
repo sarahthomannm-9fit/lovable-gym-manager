@@ -64,8 +64,8 @@ export function Painel() {
     <div className="space-y-6 p-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Painel de Controle</h1>
-          <p className="text-muted-foreground">Visão integrada com métricas cruzadas e alertas inteligentes</p>
+          <h1 className="text-3xl font-bold">Control Plane</h1>
+          <p className="text-muted-foreground">Centro de comando — métricas executivas e alertas inteligentes</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={refetchAll} className="gap-2"><RefreshCw className="h-4 w-4" />Atualizar</Button>
