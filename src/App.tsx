@@ -47,7 +47,6 @@ import { DemoModeProvider } from "./contexts/DemoModeContext";
 import { Funcionarios } from "./pages/Funcionarios";
 import { AvaliacoesFisicas } from "./pages/AvaliacoesFisicas";
 import { AulasExperimentais } from "./pages/AulasExperimentais";
-import { Login } from "./pages/Login";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -81,7 +80,6 @@ const App = () => (
               <BrowserRouter>
                 <Routes>
                   <Route path="/" element={<Navigate to="/painel" replace />} />
-                  <Route path="/login" element={<Login />} />
                   <Route path="/painel" element={<MainLayout><Painel /></MainLayout>} />
                   <Route path="/alunos" element={<MainLayout><SupabaseStudents /></MainLayout>} />
                   <Route path="/planos" element={<MainLayout><SupabasePlans /></MainLayout>} />

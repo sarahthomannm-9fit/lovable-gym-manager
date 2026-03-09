@@ -44,12 +44,9 @@ import {
   Network,
   Settings,
   Store,
-  LogOut,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useCurrentUserRole, AppRole } from "@/hooks/useCurrentUserRole";
-import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 
 type MenuItem = {
   title: string;
@@ -68,11 +65,6 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { role } = useCurrentUserRole();
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate('/login');
-  };
 
   const menuItems: MenuCategory[] = [
     {
@@ -199,14 +191,6 @@ export function AppSidebar() {
             );
           })}
       </SidebarContent>
-      <SidebarFooter>
-        <div className="px-4 py-3">
-          <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground hover:text-foreground" onClick={handleLogout}>
-            <LogOut className="mr-2 h-4 w-4" />
-            Sair
-          </Button>
-        </div>
-      </SidebarFooter>
     </Sidebar>
   );
 }
