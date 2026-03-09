@@ -7,12 +7,14 @@ import { Dashboard } from '@/components/Dashboard';
 import { IntegratedInsights } from '@/components/IntegratedInsights';
 import { IntelligentFinancialDashboard } from '@/components/reports/IntelligentFinancialDashboard';
 import { PainelAluno } from '@/components/PainelAluno';
+import { EventsTimeline } from '@/components/EventsTimeline';
 import { useDataIntegration } from '@/components/DataIntegrationProvider';
 import { useCurrentUserRole } from '@/hooks/useCurrentUserRole';
 import { 
   Users, CreditCard, TrendingUp, 
   BarChart3, Target, AlertCircle, CheckCircle,
-  Package, RefreshCw, AlertTriangle, DollarSign, UserCheck
+  Package, RefreshCw, AlertTriangle, DollarSign, UserCheck,
+  Activity, Percent
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
