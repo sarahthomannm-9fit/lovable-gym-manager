@@ -191,14 +191,6 @@ export function AppSidebar() {
             );
           })}
       </SidebarContent>
-      <SidebarFooter>
-        <div className="px-4 py-3">
-          <Button variant="ghost" size="sm" className="w-full justify-start text-muted-foreground hover:text-foreground" onClick={handleLogout}>
-            <LogOut className="mr-2 h-4 w-4" />
-            Sair
-          </Button>
-        </div>
-      </SidebarFooter>
     </Sidebar>
   );
 }
