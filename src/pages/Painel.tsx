@@ -8,6 +8,7 @@ import { IntegratedInsights } from '@/components/IntegratedInsights';
 import { IntelligentFinancialDashboard } from '@/components/reports/IntelligentFinancialDashboard';
 import { PainelAluno } from '@/components/PainelAluno';
 import { EventsTimeline } from '@/components/EventsTimeline';
+import { DailyActionRecommendations } from '@/components/DailyActionRecommendations';
 import { useDataIntegration } from '@/components/DataIntegrationProvider';
 import { useCurrentUserRole } from '@/hooks/useCurrentUserRole';
 import { 
