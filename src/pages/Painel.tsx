@@ -8,6 +8,7 @@ import { IntegratedInsights } from '@/components/IntegratedInsights';
 import { IntelligentFinancialDashboard } from '@/components/reports/IntelligentFinancialDashboard';
 import { PainelAluno } from '@/components/PainelAluno';
 import { EventsTimeline } from '@/components/EventsTimeline';
+import { DailyActionRecommendations } from '@/components/DailyActionRecommendations';
 import { useDataIntegration } from '@/components/DataIntegrationProvider';
 import { useCurrentUserRole } from '@/hooks/useCurrentUserRole';
 import { 
@@ -72,6 +73,9 @@ export function Painel() {
           {criticalAlerts.length > 0 && <Badge variant="destructive" className="gap-1"><AlertCircle className="h-3 w-3" />{criticalAlerts.length} alertas críticos</Badge>}
         </div>
       </div>
+
+      {/* Daily Action Recommendations */}
+      <DailyActionRecommendations />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {quickStats.map((stat, index) => {
