@@ -47,6 +47,11 @@ export interface CrossMetrics {
 
   // Cobranças próximas (2 dias antes do dia_pagamento)
   cobrancasProximas: number;
+
+  // War Room extras
+  aulasSemInstrutor: number;
+  assinaturasVencendo: number;
+  leadsSemFollowup: number;
 }
 
 interface CrossMetricsInput {
