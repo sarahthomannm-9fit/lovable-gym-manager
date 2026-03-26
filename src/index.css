@@ -51,6 +51,17 @@
     --sidebar-border: 220 13% 91%;
 
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    --urgency-critical: 0 84% 60%;
+    --urgency-critical-foreground: 0 0% 100%;
+    --urgency-attention: 38 92% 50%;
+    --urgency-attention-foreground: 0 0% 100%;
+    --urgency-opportunity: 142 71% 45%;
+    --urgency-opportunity-foreground: 0 0% 100%;
+    --urgency-info: 217 91% 60%;
+    --urgency-info-foreground: 0 0% 100%;
+    --warroom-banner-stable: 142 71% 45%;
+    --warroom-column-bg: 210 40% 98%;
   }
 
   .dark {
