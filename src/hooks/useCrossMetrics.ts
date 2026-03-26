@@ -47,6 +47,11 @@ export interface CrossMetrics {
 
   // Cobranças próximas (2 dias antes do dia_pagamento)
   cobrancasProximas: number;
+
+  // War Room extras
+  aulasSemInstrutor: number;
+  assinaturasVencendo: number;
+  leadsSemFollowup: number;
 }
 
 interface CrossMetricsInput {
@@ -170,6 +175,28 @@ export function useCrossMetrics(data: CrossMetricsInput): CrossMetrics {
       return diff >= 0 && diff <= 2;
     }).length;
 
+    // War Room: aulas sem instrutor (hoje e amanhã)
+    const amanha = new Date(hoje.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const aulasSemInstrutor = aulas.filter(a => 
+      (a.data_aula === hojeStr || a.data_aula === amanha) && !a.professor_id
+    ).length;
+
+    // War Room: assinaturas vencendo em 7 dias
+    const seteDiasFrente = new Date(hoje.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const assinaturasVencendo = alunos.filter(a => {
+      if (a.status !== 'ativo' || !a.dia_pagamento) return false;
+      // Simple: check if dia_pagamento is within next 7 days
+      const diaHojeN = hoje.getDate();
+      const diff = a.dia_pagamento - diaHojeN;
+      return diff >= 0 && diff <= 7;
+    }).length;
+
+    // War Room: leads sem follow-up (24h+)
+    const vintQuatroHAtras = new Date(hoje.getTime() - 24 * 60 * 60 * 1000).toISOString();
+    const leadsSemFollowup = leads.filter((l: any) => 
+      l.status === 'novo' && l.created_at && l.created_at < vintQuatroHAtras
+    ).length;
+
     return {
       totalAlunos,
       alunosAtivos,
@@ -197,6 +224,9 @@ export function useCrossMetrics(data: CrossMetricsInput): CrossMetrics {
       cargaHorariaPorProfessor,
       churnRisk,
       cobrancasProximas,
+      aulasSemInstrutor,
+      assinaturasVencendo,
+      leadsSemFollowup,
     };
   }, [data]);
 }
