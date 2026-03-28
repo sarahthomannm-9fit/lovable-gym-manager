@@ -18,6 +18,10 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				mono: ['"IBM Plex Mono"', '"Courier New"', 'monospace'],
+				sans: ['"Inter"', 'system-ui', 'sans-serif'],
+			},
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
@@ -61,7 +65,30 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+				navy: {
+					DEFAULT: 'hsl(var(--navy))',
+					dark: 'hsl(var(--navy-dark))',
+					mid: 'hsl(var(--navy-mid))',
+					light: 'hsl(var(--navy-light))',
+				},
+				urgency: {
+					critical: 'hsl(var(--urgency-critical))',
+					'critical-bg': 'hsl(var(--urgency-critical-bg))',
+					'critical-border': 'hsl(var(--urgency-critical-border))',
+					attention: 'hsl(var(--urgency-attention))',
+					'attention-bg': 'hsl(var(--urgency-attention-bg))',
+					'attention-border': 'hsl(var(--urgency-attention-border))',
+					opportunity: 'hsl(var(--urgency-opportunity))',
+					'opportunity-bg': 'hsl(var(--urgency-opportunity-bg))',
+					'opportunity-border': 'hsl(var(--urgency-opportunity-border))',
+					info: 'hsl(var(--urgency-info))',
+					'info-bg': 'hsl(var(--urgency-info-bg))',
+					'info-border': 'hsl(var(--urgency-info-border))',
+					purple: 'hsl(var(--urgency-purple))',
+					'purple-bg': 'hsl(var(--urgency-purple-bg))',
+					'purple-border': 'hsl(var(--urgency-purple-border))',
+				},
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -70,20 +97,12 @@ export default {
 			},
 			keyframes: {
 				'accordion-down': {
-					from: {
-						height: '0'
-					},
-					to: {
-						height: 'var(--radix-accordion-content-height)'
-					}
+					from: { height: '0' },
+					to: { height: 'var(--radix-accordion-content-height)' }
 				},
 				'accordion-up': {
-					from: {
-						height: 'var(--radix-accordion-content-height)'
-					},
-					to: {
-						height: '0'
-					}
+					from: { height: 'var(--radix-accordion-content-height)' },
+					to: { height: '0' }
 				}
 			},
 			animation: {
