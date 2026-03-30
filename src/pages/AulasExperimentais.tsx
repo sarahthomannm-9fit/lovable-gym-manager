@@ -10,9 +10,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAulasExperimentais, AulaExperimental } from '@/hooks/useAulasExperimentais';
 import { useSupabasePlans } from '@/hooks/useSupabasePlans';
 import { useNavigate } from 'react-router-dom';
+import { PageShell } from '@/components/warroom/PageShell';
 import { 
-  UserPlus, Plus, Search, Phone, Mail, Target, TrendingUp, UserCheck,
-  Clock, CheckCircle2, XCircle, Star, DollarSign
+  UserPlus, Plus, Search, Phone, Mail, Target,
+  CheckCircle2, XCircle, Star, DollarSign
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -39,10 +40,7 @@ const statusOptions = [
 ];
 
 export function AulasExperimentais() {
-  const { 
-    aulasExperimentais, loading, addAulaExperimental, updateAulaExperimental,
-    converterParaAluno, getMetricasFunil, getByFonte 
-  } = useAulasExperimentais();
+  const { aulasExperimentais, loading, addAulaExperimental, updateAulaExperimental, converterParaAluno, getMetricasFunil, getByFonte } = useAulasExperimentais();
   const { plans } = useSupabasePlans();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
@@ -51,31 +49,16 @@ export function AulasExperimentais() {
   const [selectedAula, setSelectedAula] = useState<AulaExperimental | null>(null);
   const [selectedPlano, setSelectedPlano] = useState('');
   const [converting, setConverting] = useState(false);
-  
-  const [formData, setFormData] = useState({
-    nome: '', email: '', telefone: '',
-    fonte: 'instagram' as AulaExperimental['fonte'],
-    data_agendada: '', horario_agendado: '', notas: '',
-  });
+  const [formData, setFormData] = useState({ nome: '', email: '', telefone: '', fonte: 'instagram' as AulaExperimental['fonte'], data_agendada: '', horario_agendado: '', notas: '' });
 
   const metricas = getMetricasFunil();
   const porFonte = getByFonte();
-  const filteredAulas = aulasExperimentais.filter(a =>
-    a.nome.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    a.email?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
+  const filteredAulas = aulasExperimentais.filter(a => a.nome.toLowerCase().includes(searchQuery.toLowerCase()) || a.email?.toLowerCase().includes(searchQuery.toLowerCase()));
   const selectedPlanData = plans.find(p => p.id === selectedPlano);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await addAulaExperimental({
-      nome: formData.nome, email: formData.email || null, telefone: formData.telefone || null,
-      fonte: formData.fonte, aula_id: null, data_agendada: formData.data_agendada,
-      horario_agendado: formData.horario_agendado || null, status: 'agendada',
-      notas: formData.notas || null, motivo_nao_conversao: null, data_conversao: null,
-      plano_convertido_id: null, avaliacao_experiencia: null, feedback: null, atendido_por: null,
-    });
+    await addAulaExperimental({ nome: formData.nome, email: formData.email || null, telefone: formData.telefone || null, fonte: formData.fonte, aula_id: null, data_agendada: formData.data_agendada, horario_agendado: formData.horario_agendado || null, status: 'agendada', notas: formData.notas || null, motivo_nao_conversao: null, data_conversao: null, plano_convertido_id: null, avaliacao_experiencia: null, feedback: null, atendido_por: null });
     setIsDialogOpen(false);
     setFormData({ nome: '', email: '', telefone: '', fonte: 'instagram', data_agendada: '', horario_agendado: '', notas: '' });
   };
@@ -83,134 +66,76 @@ export function AulasExperimentais() {
   const handleConvert = async () => {
     if (!selectedAula || !selectedPlano) return;
     setConverting(true);
-    try {
-      const result = await converterParaAluno(selectedAula.id, selectedPlano);
-      setConvertDialogOpen(false);
-      setSelectedAula(null);
-      setSelectedPlano('');
-      // Navigate to the new student profile
-      navigate('/alunos');
-    } catch (e) {
-      // error handled in hook
-    } finally {
-      setConverting(false);
-    }
+    try { await converterParaAluno(selectedAula.id, selectedPlano); setConvertDialogOpen(false); setSelectedAula(null); setSelectedPlano(''); navigate('/alunos'); } catch (e) {} finally { setConverting(false); }
   };
 
   const getStatusBadge = (status: string) => {
-    const statusInfo = statusOptions.find(s => s.value === status);
-    return <Badge className={statusInfo?.color || 'bg-gray-500'}>{statusInfo?.label || status}</Badge>;
+    const s = statusOptions.find(x => x.value === status);
+    return <Badge className={`${s?.color || 'bg-gray-500'} text-[10px]`}>{s?.label || status}</Badge>;
   };
 
+  const shellMetrics = [
+    { label: 'TOTAL', value: String(metricas.total) },
+    { label: 'AGENDADAS', value: String(metricas.agendadas + metricas.confirmadas), color: 'text-[hsl(var(--urgency-info))]' },
+    { label: 'CONVERTIDAS', value: String(metricas.convertidas), color: 'text-[hsl(var(--urgency-opportunity))]' },
+    { label: 'TAXA CONV.', value: `${metricas.taxaConversao}%`, color: metricas.taxaConversao > 0 ? 'text-[hsl(var(--urgency-opportunity))]' : undefined },
+    { label: 'COMPAREC.', value: `${metricas.taxaComparecimento}%` },
+  ];
+
+  if (loading) {
+    return <PageShell title="AULAS EXPERIMENTAIS" sub="Carregando..."><div className="space-y-3">{[1, 2, 3].map(i => <div key={i} className="h-24 bg-muted animate-pulse rounded" />)}</div></PageShell>;
+  }
+
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Aulas Experimentais</h1>
-          <p className="text-muted-foreground">Funil de conversão de novos alunos</p>
-        </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus className="w-4 h-4 mr-2" />Agendar Experimental</Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader><DialogTitle>Nova Aula Experimental</DialogTitle></DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div><Label>Nome Completo *</Label><Input value={formData.nome} onChange={(e) => setFormData(prev => ({ ...prev, nome: e.target.value }))} required /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><Label>E-mail</Label><Input type="email" value={formData.email} onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))} /></div>
-                <div><Label>Telefone</Label><Input value={formData.telefone} onChange={(e) => setFormData(prev => ({ ...prev, telefone: e.target.value }))} /></div>
-              </div>
-              <div>
-                <Label>Origem do Lead</Label>
-                <Select value={formData.fonte || ''} onValueChange={(value) => setFormData(prev => ({ ...prev, fonte: value as AulaExperimental['fonte'] }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{fontes.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><Label>Data *</Label><Input type="date" value={formData.data_agendada} onChange={(e) => setFormData(prev => ({ ...prev, data_agendada: e.target.value }))} required /></div>
-                <div><Label>Horário</Label><Input type="time" value={formData.horario_agendado} onChange={(e) => setFormData(prev => ({ ...prev, horario_agendado: e.target.value }))} /></div>
-              </div>
-              <div><Label>Observações</Label><Textarea value={formData.notas} onChange={(e) => setFormData(prev => ({ ...prev, notas: e.target.value }))} rows={3} /></div>
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
-                <Button type="submit">Agendar</Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {/* Métricas */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total</CardTitle></CardHeader><CardContent><div className="flex items-center gap-2"><Target className="w-5 h-5 text-primary" /><span className="text-2xl font-bold">{metricas.total}</span></div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Agendadas</CardTitle></CardHeader><CardContent><div className="flex items-center gap-2"><Clock className="w-5 h-5 text-blue-500" /><span className="text-2xl font-bold">{metricas.agendadas + metricas.confirmadas}</span></div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Convertidas</CardTitle></CardHeader><CardContent><div className="flex items-center gap-2"><UserCheck className="w-5 h-5 text-green-500" /><span className="text-2xl font-bold">{metricas.convertidas}</span></div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Taxa Conversão</CardTitle></CardHeader><CardContent><div className="flex items-center gap-2"><TrendingUp className="w-5 h-5 text-emerald-500" /><span className="text-2xl font-bold">{metricas.taxaConversao}%</span></div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Comparecimento</CardTitle></CardHeader><CardContent><div className="flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-cyan-500" /><span className="text-2xl font-bold">{metricas.taxaComparecimento}%</span></div></CardContent></Card>
-      </div>
-
+    <PageShell
+      title="AULAS EXPERIMENTAIS"
+      sub={`Funil de conversão · ${metricas.taxaConversao}% conversão`}
+      metrics={shellMetrics}
+      actions={
+        <button onClick={() => setIsDialogOpen(true)} className="px-2 py-1 text-[10px] font-mono rounded border border-white/20 text-white/60 hover:text-white transition-colors">
+          + AGENDAR
+        </button>
+      }
+    >
       {/* Por Fonte */}
-      <Card><CardHeader><CardTitle className="text-lg">Leads por Origem</CardTitle></CardHeader><CardContent><div className="flex flex-wrap gap-2">{Object.entries(porFonte).map(([fonte, qtd]) => <Badge key={fonte} variant="outline" className="text-sm py-1 px-3">{fontes.find(f => f.value === fonte)?.label || fonte}: {qtd}</Badge>)}</div></CardContent></Card>
+      {Object.keys(porFonte).length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-4">
+          {Object.entries(porFonte).map(([fonte, qtd]) => (
+            <Badge key={fonte} variant="outline" className="text-[10px] font-mono">{fontes.find(f => f.value === fonte)?.label || fonte}: {qtd}</Badge>
+          ))}
+        </div>
+      )}
 
       {/* Search */}
-      <div className="relative max-w-md">
+      <div className="relative max-w-md mb-4">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input placeholder="Buscar por nome ou email..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9" />
+        <Input placeholder="Buscar..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 h-8 text-sm" />
       </div>
 
       {/* List */}
-      {loading ? (
-        <div className="text-center py-10">Carregando...</div>
-      ) : filteredAulas.length === 0 ? (
-        <Card><CardContent className="py-10 text-center text-muted-foreground">Nenhuma aula experimental encontrada</CardContent></Card>
+      {filteredAulas.length === 0 ? (
+        <Card><CardContent className="py-12 text-center">
+          <Target className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <p className="text-muted-foreground">Nenhuma aula experimental</p>
+          <Button className="mt-4" onClick={() => setIsDialogOpen(true)}><Plus className="w-4 h-4 mr-2" />Agendar Primeira</Button>
+        </CardContent></Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {filteredAulas.map(aula => (
             <Card key={aula.id}>
-              <CardHeader className="pb-3">
+              <CardContent className="p-4 space-y-2">
                 <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-lg">{aula.nome}</CardTitle>
-                    <CardDescription>
-                      {format(new Date(aula.data_agendada), "dd/MM/yyyy", { locale: ptBR })}
-                      {aula.horario_agendado && ` às ${aula.horario_agendado.slice(0, 5)}`}
-                    </CardDescription>
-                  </div>
+                  <div><p className="font-medium text-sm">{aula.nome}</p><p className="text-xs text-muted-foreground font-mono">{format(new Date(aula.data_agendada), "dd/MM/yyyy", { locale: ptBR })}{aula.horario_agendado && ` · ${aula.horario_agendado.slice(0, 5)}`}</p></div>
                   {getStatusBadge(aula.status)}
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {aula.email && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Mail className="w-4 h-4" />{aula.email}</div>}
-                {aula.telefone && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Phone className="w-4 h-4" />{aula.telefone}</div>}
-                {aula.fonte && <Badge variant="outline">{fontes.find(f => f.value === aula.fonte)?.label || aula.fonte}</Badge>}
-                {aula.avaliacao_experiencia && (
-                  <div className="flex items-center gap-1">
-                    {[...Array(5)].map((_, i) => <Star key={i} className={`w-4 h-4 ${i < aula.avaliacao_experiencia! ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'}`} />)}
-                  </div>
-                )}
-                {aula.notas && <p className="text-sm text-muted-foreground italic">"{aula.notas}"</p>}
-
-                <div className="flex gap-2 pt-2 flex-wrap">
-                  {aula.status === 'agendada' && (
-                    <>
-                      <Button size="sm" variant="outline" onClick={() => updateAulaExperimental(aula.id, { status: 'confirmada' })}>Confirmar</Button>
-                      <Button size="sm" variant="destructive" onClick={() => updateAulaExperimental(aula.id, { status: 'cancelada' })}>Cancelar</Button>
-                    </>
-                  )}
-                  {(aula.status === 'confirmada' || aula.status === 'agendada') && (
-                    <>
-                      <Button size="sm" onClick={() => updateAulaExperimental(aula.id, { status: 'realizada' })}><CheckCircle2 className="w-3 h-3 mr-1" />Realizada</Button>
-                      <Button size="sm" variant="secondary" onClick={() => updateAulaExperimental(aula.id, { status: 'nao_compareceu' })}><XCircle className="w-3 h-3 mr-1" />Faltou</Button>
-                    </>
-                  )}
-                  {aula.status === 'realizada' && (
-                    <>
-                      <Button size="sm" onClick={() => { setSelectedAula(aula); setConvertDialogOpen(true); }}><UserPlus className="w-3 h-3 mr-1" />Converter</Button>
-                      <Button size="sm" variant="secondary" onClick={() => updateAulaExperimental(aula.id, { status: 'nao_convertida' })}>Não Converteu</Button>
-                    </>
-                  )}
+                {aula.email && <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><Mail className="w-3 h-3" />{aula.email}</div>}
+                {aula.telefone && <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><Phone className="w-3 h-3" />{aula.telefone}</div>}
+                {aula.fonte && <Badge variant="outline" className="text-[9px]">{fontes.find(f => f.value === aula.fonte)?.label || aula.fonte}</Badge>}
+                {aula.avaliacao_experiencia && <div className="flex items-center gap-0.5">{[...Array(5)].map((_, i) => <Star key={i} className={`w-3 h-3 ${i < aula.avaliacao_experiencia! ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'}`} />)}</div>}
+                <div className="flex gap-1.5 pt-1 flex-wrap">
+                  {aula.status === 'agendada' && <><Button size="sm" variant="outline" className="h-6 text-xs" onClick={() => updateAulaExperimental(aula.id, { status: 'confirmada' })}>Confirmar</Button><Button size="sm" variant="destructive" className="h-6 text-xs" onClick={() => updateAulaExperimental(aula.id, { status: 'cancelada' })}>Cancelar</Button></>}
+                  {['confirmada', 'agendada'].includes(aula.status) && <><Button size="sm" className="h-6 text-xs" onClick={() => updateAulaExperimental(aula.id, { status: 'realizada' })}><CheckCircle2 className="w-3 h-3 mr-1" />Realizada</Button><Button size="sm" variant="secondary" className="h-6 text-xs" onClick={() => updateAulaExperimental(aula.id, { status: 'nao_compareceu' })}>Faltou</Button></>}
+                  {aula.status === 'realizada' && <><Button size="sm" className="h-6 text-xs" onClick={() => { setSelectedAula(aula); setConvertDialogOpen(true); }}><UserPlus className="w-3 h-3 mr-1" />Converter</Button><Button size="sm" variant="secondary" className="h-6 text-xs" onClick={() => updateAulaExperimental(aula.id, { status: 'nao_convertida' })}>Não Converteu</Button></>}
                 </div>
               </CardContent>
             </Card>
@@ -218,62 +143,33 @@ export function AulasExperimentais() {
         </div>
       )}
 
-      {/* Convert Dialog with Preview */}
+      {/* Add Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Nova Aula Experimental</DialogTitle></DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div><Label>Nome *</Label><Input value={formData.nome} onChange={(e) => setFormData(p => ({ ...p, nome: e.target.value }))} required /></div>
+            <div className="grid grid-cols-2 gap-4"><div><Label>E-mail</Label><Input type="email" value={formData.email} onChange={(e) => setFormData(p => ({ ...p, email: e.target.value }))} /></div><div><Label>Telefone</Label><Input value={formData.telefone} onChange={(e) => setFormData(p => ({ ...p, telefone: e.target.value }))} /></div></div>
+            <div><Label>Origem</Label><Select value={formData.fonte || ''} onValueChange={(v) => setFormData(p => ({ ...p, fonte: v as any }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{fontes.map(f => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}</SelectContent></Select></div>
+            <div className="grid grid-cols-2 gap-4"><div><Label>Data *</Label><Input type="date" value={formData.data_agendada} onChange={(e) => setFormData(p => ({ ...p, data_agendada: e.target.value }))} required /></div><div><Label>Horário</Label><Input type="time" value={formData.horario_agendado} onChange={(e) => setFormData(p => ({ ...p, horario_agendado: e.target.value }))} /></div></div>
+            <div><Label>Observações</Label><Textarea value={formData.notas} onChange={(e) => setFormData(p => ({ ...p, notas: e.target.value }))} rows={2} /></div>
+            <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button><Button type="submit">Agendar</Button></div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Convert Dialog */}
       <Dialog open={convertDialogOpen} onOpenChange={setConvertDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>Converter para Aluno</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            {selectedAula && (
-              <Card className="bg-muted/50">
-                <CardContent className="pt-4 space-y-2">
-                  <p className="font-medium">{selectedAula.nome}</p>
-                  {selectedAula.email && <p className="text-sm text-muted-foreground">{selectedAula.email}</p>}
-                  {selectedAula.telefone && <p className="text-sm text-muted-foreground">{selectedAula.telefone}</p>}
-                  {selectedAula.fonte && <Badge variant="outline" className="text-xs">{fontes.find(f => f.value === selectedAula.fonte)?.label}</Badge>}
-                </CardContent>
-              </Card>
-            )}
-
-            <div>
-              <Label>Selecione o Plano</Label>
-              <Select value={selectedPlano} onValueChange={setSelectedPlano}>
-                <SelectTrigger><SelectValue placeholder="Selecione um plano" /></SelectTrigger>
-                <SelectContent>
-                  {plans.filter(p => p.ativo).map(plano => (
-                    <SelectItem key={plano.id} value={plano.id}>
-                      {plano.nome} - {Number(plano.preco).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {selectedPlanData && (
-              <Card className="border-green-200 bg-green-50 dark:bg-green-950/30">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <DollarSign className="w-4 h-4" />
-                    Preview da conversão
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-1 text-sm">
-                  <p>✅ Aluno será criado com status <strong>Ativo</strong></p>
-                  <p>✅ Plano: <strong>{selectedPlanData.nome}</strong></p>
-                  <p>✅ Mensalidade: <strong>R$ {Number(selectedPlanData.preco).toFixed(2)}</strong></p>
-                  <p>✅ Primeira cobrança será gerada automaticamente</p>
-                </CardContent>
-              </Card>
-            )}
-
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setConvertDialogOpen(false)}>Cancelar</Button>
-              <Button onClick={handleConvert} disabled={!selectedPlano || converting}>
-                {converting ? 'Convertendo...' : 'Confirmar Conversão'}
-              </Button>
-            </div>
+            {selectedAula && <Card className="bg-muted/50"><CardContent className="pt-4 space-y-1"><p className="font-medium">{selectedAula.nome}</p>{selectedAula.email && <p className="text-sm text-muted-foreground">{selectedAula.email}</p>}</CardContent></Card>}
+            <div><Label>Plano</Label><Select value={selectedPlano} onValueChange={setSelectedPlano}><SelectTrigger><SelectValue placeholder="Selecione um plano" /></SelectTrigger><SelectContent>{plans.filter(p => p.ativo).map(p => <SelectItem key={p.id} value={p.id}>{p.nome} - R$ {Number(p.preco).toFixed(2)}</SelectItem>)}</SelectContent></Select></div>
+            {selectedPlanData && <Card className="border-[hsl(var(--urgency-opportunity))]/40 bg-[hsl(var(--urgency-opportunity))]/5"><CardContent className="pt-4 space-y-1 text-sm"><p>✅ Status: <strong>Ativo</strong></p><p>✅ Plano: <strong>{selectedPlanData.nome}</strong></p><p>✅ Mensalidade: <strong>R$ {Number(selectedPlanData.preco).toFixed(2)}</strong></p></CardContent></Card>}
+            <div className="flex justify-end gap-2"><Button variant="outline" onClick={() => setConvertDialogOpen(false)}>Cancelar</Button><Button onClick={handleConvert} disabled={!selectedPlano || converting}>{converting ? 'Convertendo...' : 'Confirmar'}</Button></div>
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageShell>
   );
 }
