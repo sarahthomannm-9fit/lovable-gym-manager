@@ -27,6 +27,7 @@ export function SystemColumn({ metrics, alerts }: SystemColumnProps) {
     aulas: aulas || [],
     leads: leads || [],
     checkins: checkins || [],
+    experimentais: [],
   });
 
   const queue = useAutomationQueue({
