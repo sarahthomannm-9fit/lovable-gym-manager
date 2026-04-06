@@ -48,6 +48,7 @@ import { DemoModeProvider } from "./contexts/DemoModeContext";
 import { Funcionarios } from "./pages/Funcionarios";
 import { AvaliacoesFisicas } from "./pages/AvaliacoesFisicas";
 import { AulasExperimentais } from "./pages/AulasExperimentais";
+import { Anamnese } from "./pages/Anamnese";
 
 const queryClient = new QueryClient({
   defaultOptions: {
