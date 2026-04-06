@@ -206,6 +206,50 @@ export type Database = {
           },
         ]
       }
+      anamnese_respostas: {
+        Row: {
+          aluno_id: string
+          created_at: string | null
+          id: string
+          preenchido_em: string | null
+          respostas: Json | null
+          status: string | null
+          tipo: string
+          token: string
+          updated_at: string | null
+        }
+        Insert: {
+          aluno_id: string
+          created_at?: string | null
+          id?: string
+          preenchido_em?: string | null
+          respostas?: Json | null
+          status?: string | null
+          tipo?: string
+          token: string
+          updated_at?: string | null
+        }
+        Update: {
+          aluno_id?: string
+          created_at?: string | null
+          id?: string
+          preenchido_em?: string | null
+          respostas?: Json | null
+          status?: string | null
+          tipo?: string
+          token?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anamnese_respostas_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assinaturas: {
         Row: {
           aluno_id: string | null

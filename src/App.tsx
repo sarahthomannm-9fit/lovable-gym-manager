@@ -48,6 +48,7 @@ import { DemoModeProvider } from "./contexts/DemoModeContext";
 import { Funcionarios } from "./pages/Funcionarios";
 import { AvaliacoesFisicas } from "./pages/AvaliacoesFisicas";
 import { AulasExperimentais } from "./pages/AulasExperimentais";
+import { Anamnese } from "./pages/Anamnese";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -118,6 +119,7 @@ const App = () => (
                   <Route path="/funcionarios" element={<MainLayout><Funcionarios /></MainLayout>} />
                   <Route path="/avaliacoes" element={<MainLayout><AvaliacoesFisicas /></MainLayout>} />
                   <Route path="/experimentais" element={<MainLayout><AulasExperimentais /></MainLayout>} />
+                  <Route path="/anamnese/:token" element={<Anamnese />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </BrowserRouter>

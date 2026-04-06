@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SupabaseStudent } from "@/hooks/useSupabaseStudents";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AddStudentDialogProps {
   onAddStudent: (student: Omit<SupabaseStudent, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
@@ -89,7 +90,35 @@ export function AddStudentDialog({ onAddStudent, plans }: AddStudentDialogProps)
       };
 
       await onAddStudent(studentData);
-      
+
+      // Generate anamnese link
+      try {
+        // Find newly created student by email
+        const { data: newStudents } = await supabase
+          .from('alunos')
+          .select('id')
+          .eq('email', studentData.email)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (newStudents && newStudents.length > 0) {
+          const token = crypto.randomUUID();
+          await supabase.from('anamnese_respostas').insert({
+            aluno_id: newStudents[0].id,
+            token,
+            tipo: 'par_q',
+          });
+          const link = `${window.location.origin}/anamnese/${token}`;
+          await navigator.clipboard.writeText(link);
+          toast({
+            title: "Aluno cadastrado + Link PAR-Q copiado!",
+            description: `Link da anamnese copiado para a área de transferência. Envie ao aluno.`,
+          });
+        }
+      } catch (e) {
+        console.error('Error creating anamnese link:', e);
+      }
+
       setNewStudent({
         nome: "", email: "", telefone: "", plano_id: "", valor_mensalidade: "",
         forma_pagamento: "pix", contato_emergencia: "", observacoes_medicas: "",
