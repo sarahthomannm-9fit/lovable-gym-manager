@@ -4,9 +4,12 @@ import { SmartAlert } from '@/hooks/useSmartAlerts';
 import { ActionCard } from './ActionCard';
 import { useNavigate } from 'react-router-dom';
 import { useDataIntegration } from '@/components/DataIntegrationProvider';
+import { useMarketingIntelligence } from '@/hooks/useMarketingIntelligence';
+import { useFinancialIntelligence } from '@/hooks/useFinancialIntelligence';
 import { 
   DollarSign, Users, Percent, AlertTriangle, 
-  UserCheck, TrendingUp, BarChart3, Clock, CalendarCheck, Flame
+  UserCheck, TrendingUp, BarChart3, Clock, CalendarCheck, Flame,
+  Lightbulb, Heart
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CrossMetrics } from '@/hooks/useCrossMetrics';
@@ -18,8 +21,22 @@ interface BusinessColumnProps {
 
 export function BusinessColumn({ metrics, alerts }: BusinessColumnProps) {
   const navigate = useNavigate();
-  const { aulas, leads, experimentais } = useDataIntegration();
+  const { aulas, leads, experimentais, campanhas, alunos, pagamentos, planos } = useDataIntegration();
   const decisionAlerts = alerts.filter(a => a.coluna === 'decisao').slice(0, 5);
+
+  const marketing = useMarketingIntelligence({
+    campanhas: campanhas || [],
+    leads: leads || [],
+    experimentais: experimentais || [],
+    alunos: alunos || [],
+  });
+
+  const financial = useFinancialIntelligence({
+    pagamentos: pagamentos || [],
+    alunos: alunos || [],
+    assinaturas: [],
+    planos: planos || [],
+  });
 
   const mrr = metrics.receitaMensal || 0;
   const churnRate = metrics.totalAlunos ? ((metrics.alunosInativos || 0) / metrics.totalAlunos * 100) : 0;
@@ -30,18 +47,18 @@ export function BusinessColumn({ metrics, alerts }: BusinessColumnProps) {
     { label: 'Churn', value: `${churnRate.toFixed(1)}%`, warn: churnRate > 10, icon: Percent, route: '/alunos' },
     { label: 'Inadimpl.', value: `R$ ${(metrics.totalInadimplente || 0).toLocaleString('pt-BR')}`, warn: metrics.totalInadimplente > 0, icon: AlertTriangle, route: '/pagamentos' },
     { label: 'Conversão', value: `${metrics.taxaConversaoExperimental.toFixed(0)}%`, icon: UserCheck, route: '/experimentais' },
-    { label: 'LTV', value: `R$ ${(metrics.ltvMedio || 0).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`, icon: TrendingUp, route: '/relatorios' },
+    { label: 'Saúde', value: `${financial.healthScore}/100`, warn: financial.healthScore < 60, icon: Heart, route: '/relatorios' },
   ];
 
-  // Agenda do dia
   const hojeStr = new Date().toISOString().split('T')[0];
   const aulasHoje = (aulas || []).filter((a: any) => a.data_aula === hojeStr).slice(0, 4);
 
-  // Leads quentes (status novo/agendado, criados recentemente)
   const leadsQuentes = (leads || [])
     .filter((l: any) => ['novo', 'agendado'].includes(l.status))
     .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 3);
+
+  const topInsights = marketing.insights.slice(0, 3);
 
   return (
     <div className="space-y-3">
@@ -83,6 +100,51 @@ export function BusinessColumn({ metrics, alerts }: BusinessColumnProps) {
           );
         })}
       </div>
+
+      {/* Financial Alerts */}
+      {financial.alerts.length > 0 && (
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-1.5 px-1">
+            <DollarSign className="h-3 w-3 text-[hsl(var(--urgency-attention))]" />
+            <span className="text-[9px] font-mono tracking-wider text-muted-foreground uppercase">Alertas Financeiros</span>
+          </div>
+          {financial.alerts.slice(0, 2).map(alert => (
+            <Card key={alert.id} className={cn(
+              'cursor-pointer hover:bg-muted/50',
+              alert.severidade === 'critico' && 'border-destructive/30'
+            )} onClick={() => navigate('/relatorios')}>
+              <CardContent className="p-2">
+                <p className="text-[11px] font-medium">{alert.titulo}</p>
+                <p className="text-[10px] text-muted-foreground">{alert.descricao}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Marketing Intelligence */}
+      {topInsights.length > 0 && (
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-1.5 px-1">
+            <Lightbulb className="h-3 w-3 text-primary" />
+            <span className="text-[9px] font-mono tracking-wider text-muted-foreground uppercase">Insights Marketing</span>
+            <Badge variant="secondary" className="text-[8px] h-4 ml-auto">{marketing.altaPrioridade} urgente</Badge>
+          </div>
+          {topInsights.map(insight => (
+            <Card key={insight.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate('/marketing/insights-ia')}>
+              <CardContent className="p-2">
+                <div className="flex items-center gap-1.5">
+                  <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                    insight.prioridade === 'alta' ? 'bg-destructive' : 'bg-[hsl(var(--urgency-attention))]'
+                  }`} />
+                  <p className="text-[11px] font-medium truncate">{insight.titulo}</p>
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-0.5">{insight.acao}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {/* Agenda do Dia */}
       {aulasHoje.length > 0 && (
@@ -130,7 +192,6 @@ export function BusinessColumn({ metrics, alerts }: BusinessColumnProps) {
                   <p className="text-[11px] font-medium truncate">{lead.nome}</p>
                   <p className="text-[10px] text-muted-foreground font-mono">{lead.fonte || 'direto'} · {lead.status}</p>
                 </div>
-                {lead.telefone && <span className="text-[10px] text-muted-foreground font-mono shrink-0">{lead.telefone}</span>}
               </CardContent>
             </Card>
           ))}

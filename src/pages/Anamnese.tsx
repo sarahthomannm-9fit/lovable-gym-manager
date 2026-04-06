@@ -20,7 +20,7 @@ const PAR_Q_QUESTIONS = [
 
 export function Anamnese() {
   const { token } = useParams<{ token: string }>();
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState<'loading' | 'form' | 'done' | 'error' | 'already'>('loading');
   const [alunoNome, setAlunoNome] = useState('');

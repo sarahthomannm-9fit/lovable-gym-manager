@@ -4,6 +4,12 @@ import { ActionCard } from './ActionCard';
 import { SecHead } from './SecHead';
 import { ProgBar } from './ProgBar';
 import { useNavigate } from 'react-router-dom';
+import { useAutomationQueue, AutomationItem } from '@/hooks/useAutomationQueue';
+import { useActionExecutor } from '@/hooks/useActionExecutor';
+import { useBusinessEngine } from '@/hooks/useBusinessEngine';
+import { useDataIntegration } from '@/components/DataIntegrationProvider';
+import { Button } from '@/components/ui/button';
+import { Loader2, Check, Play, UserCheck } from 'lucide-react';
 
 interface SystemColumnProps {
   metrics: CrossMetrics;
@@ -13,15 +19,35 @@ interface SystemColumnProps {
 export function SystemColumn({ metrics, alerts }: SystemColumnProps) {
   const navigate = useNavigate();
   const systemAlerts = alerts.filter(a => a.coluna === 'sistema').slice(0, 5);
+  const { alunos, pagamentos, aulas, leads, checkins } = useDataIntegration();
+
+  const engine = useBusinessEngine({
+    alunos: alunos || [],
+    pagamentos: pagamentos || [],
+    aulas: aulas || [],
+    leads: leads || [],
+    checkins: checkins || [],
+  });
+
+  const queue = useAutomationQueue({
+    pagamentos: engine.pagamentos,
+    alunos: engine.alunos,
+    leads: engine.leads,
+  });
+
+  const { execute, executing, resolved } = useActionExecutor();
 
   const fmtR = (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}`;
 
   const automations = [
-    { label: 'Régua de cobrança', count: `${metrics.inadimplencia} alunos`, active: metrics.inadimplencia > 0 },
-    { label: 'Alertas frequência', count: `watchlist: ${metrics.alunosInativos}`, active: metrics.alunosInativos > 0 },
-    { label: 'Renovações prevent.', count: `${metrics.assinaturasVencendo} próximos`, active: metrics.assinaturasVencendo > 0 },
+    { label: 'Régua de cobrança', count: `${queue.items.filter(i => i.tipo === 'cobranca').length} alunos`, active: queue.items.some(i => i.tipo === 'cobranca') },
+    { label: 'Retenção ativa', count: `${queue.items.filter(i => i.tipo === 'retencao').length} alunos`, active: queue.items.some(i => i.tipo === 'retencao') },
+    { label: 'Remarketing', count: `${queue.items.filter(i => i.tipo === 'remarketing').length} leads`, active: queue.items.some(i => i.tipo === 'remarketing') },
     { label: 'Confirmação aulas', count: `${metrics.aulasHoje} hoje`, active: metrics.aulasHoje > 0 },
   ];
+
+  // Top items to show with actions
+  const topItems = queue.items.slice(0, 5);
 
   return (
     <div className="space-y-3">
@@ -35,6 +61,11 @@ export function SystemColumn({ metrics, alerts }: SystemColumnProps) {
       {/* Automações Ativas */}
       <div className="bg-card border border-border rounded-md p-4">
         <SecHead title="AUTOMAÇÕES ATIVAS" />
+        <div className="flex items-center gap-3 mb-2">
+          <span className="text-[10px] font-mono text-muted-foreground">
+            {queue.totalAuto} auto · {queue.totalHumano} humano
+          </span>
+        </div>
         {automations.map((a, i) => (
           <div key={i} className="border-t border-border py-2 flex items-center gap-2">
             <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${a.active ? 'bg-urgency-opportunity' : 'bg-muted-foreground'}`} />
@@ -49,6 +80,64 @@ export function SystemColumn({ metrics, alerts }: SystemColumnProps) {
         ))}
       </div>
 
+      {/* Régua de Cobrança */}
+      {Object.keys(queue.cobrancasPorEtapa).length > 0 && (
+        <div className="bg-card border border-border rounded-md p-4">
+          <SecHead title="RÉGUA DE COBRANÇA" />
+          {Object.entries(queue.cobrancasPorEtapa).map(([etapa, count]) => (
+            <div key={etapa} className="border-t border-border py-1.5 flex justify-between">
+              <span className="text-[11px] text-muted-foreground font-mono">{etapa}</span>
+              <span className="text-[11px] font-mono font-semibold">{count}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Fila de Ações */}
+      {topItems.length > 0 && (
+        <div className="bg-card border border-border rounded-md p-4">
+          <SecHead title="FILA DE AÇÕES" />
+          {topItems.map((item) => {
+            const isExecuting = executing.has(item.id);
+            const isResolved = resolved.has(item.id);
+            return (
+              <div key={item.id} className={`border-t border-border py-2.5 ${isResolved ? 'opacity-50' : ''}`}>
+                <div className="flex items-start gap-2">
+                  <div className={`w-1.5 h-1.5 rounded-full shrink-0 mt-1.5 ${
+                    item.tipo === 'cobranca' ? 'bg-destructive' :
+                    item.tipo === 'retencao' ? 'bg-[hsl(var(--urgency-attention))]' :
+                    'bg-primary'
+                  }`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] font-medium truncate">{item.alvo}</p>
+                    <p className="text-[10px] text-muted-foreground font-mono">{item.acao_sugerida}</p>
+                  </div>
+                  {isResolved ? (
+                    <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant={item.auto_executavel ? 'default' : 'outline'}
+                      className="h-6 text-[10px] px-2 shrink-0"
+                      disabled={isExecuting}
+                      onClick={() => execute(item)}
+                    >
+                      {isExecuting ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : item.auto_executavel ? (
+                        <><Play className="h-3 w-3 mr-1" />Executar</>
+                      ) : (
+                        <><UserCheck className="h-3 w-3 mr-1" />Aprovar</>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Projeção */}
       <div className="bg-card border border-border rounded-md p-4">
         <SecHead title="PROJEÇÃO PRÓXIMO MÊS" />
@@ -60,7 +149,7 @@ export function SystemColumn({ metrics, alerts }: SystemColumnProps) {
           <div key={i} className="border-t border-border py-2">
             <div className="flex justify-between mb-1">
               <span className="text-[11px] text-muted-foreground font-mono">{m.label}</span>
-              <span className={`text-[11px] font-mono font-semibold`}>{m.value}</span>
+              <span className="text-[11px] font-mono font-semibold">{m.value}</span>
             </div>
             <ProgBar value={m.p} max={100} color={m.color} />
           </div>
