@@ -34,9 +34,10 @@ const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/agent-chat`;
 export function AIAgent() {
   const { toast } = useToast();
   const {
-    students, payments, plans, classes: aulas, checkIns, leads, experimentais,
-    campaigns, assinaturas
+    alunos: students, pagamentos: payments, planos: plans, aulas,
+    checkins: checkIns, leads, experimentais, campanhas: campaigns,
   } = useDataIntegration();
+  const assinaturas: any[] = []; // loaded separately if needed
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
