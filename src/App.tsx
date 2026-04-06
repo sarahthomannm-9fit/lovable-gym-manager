@@ -118,6 +118,7 @@ const App = () => (
                   <Route path="/funcionarios" element={<MainLayout><Funcionarios /></MainLayout>} />
                   <Route path="/avaliacoes" element={<MainLayout><AvaliacoesFisicas /></MainLayout>} />
                   <Route path="/experimentais" element={<MainLayout><AulasExperimentais /></MainLayout>} />
+                  <Route path="/anamnese/:token" element={<Anamnese />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </BrowserRouter>

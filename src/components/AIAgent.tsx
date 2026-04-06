@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,15 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Bot, 
-  Send, 
-  Users, 
-  Briefcase, 
-  TrendingUp, 
-  Building,
-  Sparkles,
-  Loader2
+import { useDataIntegration } from "@/components/DataIntegrationProvider";
+import ReactMarkdown from "react-markdown";
+import {
+  Bot, Send, Users, Briefcase, TrendingUp, Building,
+  Sparkles, Loader2, DollarSign, Settings2
 } from "lucide-react";
 
 interface Message {
@@ -24,233 +20,225 @@ interface Message {
   timestamp: Date;
 }
 
-interface AgentSpecialty {
-  id: string;
-  name: string;
-  icon: any;
-  description: string;
-  color: string;
-}
+const agents = [
+  { id: 'rh', name: 'RH', icon: Users, description: 'Gestão de equipe e instrutores', color: 'text-blue-500' },
+  { id: 'admin', name: 'Admin', icon: Building, description: 'Processos e organização', color: 'text-purple-500' },
+  { id: 'comercial', name: 'Comercial', icon: Briefcase, description: 'Vendas e retenção', color: 'text-green-500' },
+  { id: 'marketing', name: 'Marketing', icon: TrendingUp, description: 'Campanhas e captação', color: 'text-orange-500' },
+  { id: 'financeiro', name: 'Financeiro', icon: DollarSign, description: 'MRR, churn, inadimplência', color: 'text-emerald-500' },
+  { id: 'operacoes', name: 'Operações', icon: Settings2, description: 'Aulas, frequência, automações', color: 'text-cyan-500' },
+];
+
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/agent-chat`;
 
 export function AIAgent() {
   const { toast } = useToast();
+  const {
+    students, payments, plans, classes: aulas, checkIns, leads, experimentais,
+    campaigns, assinaturas
+  } = useDataIntegration();
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedAgent, setSelectedAgent] = useState<string>("rh");
+  const [selectedAgent, setSelectedAgent] = useState("comercial");
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const agents: AgentSpecialty[] = [
-    {
-      id: 'rh',
-      name: 'RH & Gestão de Pessoas',
-      icon: Users,
-      description: 'Especialista em gestão de equipe, recrutamento e desenvolvimento',
-      color: 'text-blue-600'
-    },
-    {
-      id: 'admin',
-      name: 'Administração',
-      icon: Building,
-      description: 'Processos, finanças e organização administrativa',
-      color: 'text-purple-600'
-    },
-    {
-      id: 'comercial',
-      name: 'Gestão Comercial',
-      icon: Briefcase,
-      description: 'Vendas, captação e retenção de clientes',
-      color: 'text-green-600'
-    },
-    {
-      id: 'marketing',
-      name: 'Marketing',
-      icon: TrendingUp,
-      description: 'Estratégias de marketing e campanhas',
-      color: 'text-orange-600'
-    }
-  ];
+  const buildContext = useCallback(() => {
+    const hoje = new Date().toISOString().split('T')[0];
+    const ativos = (students || []).filter((s: any) => s.status === 'ativo');
+    const mrr = ativos.reduce((s: number, a: any) => s + (a.valor_mensalidade || 0), 0);
+    const vencidos = (payments || []).filter((p: any) => p.status !== 'pago' && p.data_vencimento < hoje);
+    const totalInad = vencidos.reduce((s: number, p: any) => s + (p.valor || 0), 0);
+    const checkinsHoje = (checkIns || []).filter((c: any) => c.data_checkin === hoje).length;
+    const leadsNovos = (leads || []).filter((l: any) => l.status === 'novo').length;
+    const aulasHoje = (aulas || []).filter((a: any) => a.data_aula === hoje).length;
+    const expPendentes = (experimentais || []).filter((e: any) => e.status === 'agendada').length;
 
-  const getAgentPrompt = (agentId: string) => {
-    const prompts = {
-      rh: "Você é um especialista em RH e gestão de pessoas. Analise os dados de funcionários, sugira melhorias em processos de RH e responda sobre gestão de equipe.",
-      admin: "Você é um especialista em administração e processos. Analise dados financeiros, organize processos e otimize operações administrativas.",
-      comercial: "Você é um especialista em vendas e gestão comercial. Analise dados de vendas, sugira estratégias de captação e retenção de clientes.",
-      marketing: "Você é um especialista em marketing. Analise campanhas, sugira estratégias e otimize resultados de marketing."
-    };
-    return prompts[agentId as keyof typeof prompts] || prompts.marketing;
-  };
+    return `
+- Total alunos: ${(students || []).length} (${ativos.length} ativos)
+- MRR: R$ ${mrr.toLocaleString('pt-BR')}
+- Inadimplência: R$ ${totalInad.toLocaleString('pt-BR')} (${vencidos.length} pagamentos vencidos)
+- Check-ins hoje: ${checkinsHoje}
+- Aulas hoje: ${aulasHoje}
+- Planos cadastrados: ${(plans || []).length}
+- Leads novos: ${leadsNovos}
+- Experimentais pendentes: ${expPendentes}
+- Campanhas ativas: ${(campaigns || []).filter((c: any) => c.status === 'ativa').length}
+- Assinaturas ativas: ${(assinaturas || []).filter((a: any) => a.status === 'ativa').length}
+- Data: ${hoje}`.trim();
+  }, [students, payments, plans, aulas, checkIns, leads, experimentais, campaigns, assinaturas]);
 
   const handleSend = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || isLoading) return;
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: input,
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
+    const userMsg: Message = { id: Date.now().toString(), role: 'user', content: input, timestamp: new Date() };
+    const allMessages = [...messages, userMsg];
+    setMessages(allMessages);
     setInput("");
     setIsLoading(true);
 
-    // Simular resposta da IA
-    setTimeout(() => {
-      const responses = {
-        rh: [
-          "Analisando seus dados de equipe... Recomendo implementar avaliações de desempenho trimestrais e um programa de desenvolvimento profissional.",
-          "Com base nos check-ins, sugiro criar um sistema de reconhecimento para funcionários mais engajados.",
-          "Para melhorar a retenção, considere implementar planos de carreira claros e benefícios flexíveis."
-        ],
-        admin: [
-          "Seus processos administrativos podem ser otimizados. Recomendo automatizar o controle de pagamentos e relatórios financeiros.",
-          "Analisando o fluxo de caixa, sugiro redistribuir vencimentos para equilibrar receitas mensais.",
-          "Para melhor organização, implemente um sistema de categorização de despesas e receitas."
-        ],
-        comercial: [
-          "Sua taxa de conversão está em 3.2%. Recomendo segmentar leads por interesse e implementar follow-ups automáticos.",
-          "Para aumentar vendas, foque em upselling de alunos do plano básico com alta frequência.",
-          "Implemente um programa de indicação com benefícios para alunos que trouxerem novos clientes."
-        ],
-        marketing: [
-          "Suas campanhas têm ROI médio de 150%. Recomendo aumentar investimento nas de melhor performance.",
-          "Para melhorar alcance, diversifique canais: Instagram, Google Ads e parcerias locais.",
-          "Crie conteúdo educativo sobre fitness para gerar autoridade e atrair leads qualificados."
-        ]
+    let assistantContent = "";
+
+    try {
+      const resp = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          messages: allMessages.map(m => ({ role: m.role, content: m.content })),
+          agentId: selectedAgent,
+          context: buildContext(),
+        }),
+      });
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ error: 'Erro desconhecido' }));
+        throw new Error(err.error || `Erro ${resp.status}`);
+      }
+
+      if (!resp.body) throw new Error("Sem stream");
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      const upsert = (chunk: string) => {
+        assistantContent += chunk;
+        setMessages(prev => {
+          const last = prev[prev.length - 1];
+          if (last?.role === 'assistant') {
+            return prev.map((m, i) => i === prev.length - 1 ? { ...m, content: assistantContent } : m);
+          }
+          return [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: assistantContent, timestamp: new Date() }];
+        });
       };
 
-      const agentResponses = responses[selectedAgent as keyof typeof responses] || responses.marketing;
-      const randomResponse = agentResponses[Math.floor(Math.random() * agentResponses.length)];
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
 
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: randomResponse,
-        timestamp: new Date()
-      };
-
-      setMessages(prev => [...prev, assistantMessage]);
+        let idx: number;
+        while ((idx = buffer.indexOf("\n")) !== -1) {
+          let line = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 1);
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (!line.startsWith("data: ")) continue;
+          const json = line.slice(6).trim();
+          if (json === "[DONE]") break;
+          try {
+            const parsed = JSON.parse(json);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) upsert(content);
+          } catch { /* partial */ }
+        }
+      }
+    } catch (e: any) {
+      toast({ title: "Erro no agente IA", description: e.message, variant: "destructive" });
+      if (!assistantContent) {
+        setMessages(prev => [...prev, {
+          id: (Date.now() + 1).toString(), role: 'assistant',
+          content: `⚠️ Erro: ${e.message}`, timestamp: new Date()
+        }]);
+      }
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages]);
 
-  const currentAgent = agents.find(a => a.id === selectedAgent);
-  const AgentIcon = currentAgent?.icon || Bot;
+  const currentAgent = agents.find(a => a.id === selectedAgent)!;
+  const AgentIcon = currentAgent.icon;
 
   return (
     <Card className="h-[700px] flex flex-col">
-      <CardHeader>
+      <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
               <Bot className="h-6 w-6 text-primary" />
-              Assistente IA Especializado
+              Agente IA — {currentAgent.name}
             </CardTitle>
-            <CardDescription>
-              Converse com especialistas de IA sobre seus dados
-            </CardDescription>
+            <CardDescription>{currentAgent.description} · Dados reais do sistema</CardDescription>
           </div>
           <Badge variant="secondary" className="flex items-center gap-1">
             <Sparkles className="h-3 w-3" />
-            IA Ativa
+            IA Real
           </Badge>
         </div>
       </CardHeader>
-      
-      <CardContent className="flex-1 flex flex-col space-y-4">
-        {/* Seleção de Agente */}
-        <Tabs value={selectedAgent} onValueChange={setSelectedAgent} className="w-full">
-          <TabsList className="grid grid-cols-4 w-full">
-            {agents.map((agent) => {
-              const Icon = agent.icon;
+
+      <CardContent className="flex-1 flex flex-col space-y-3 overflow-hidden">
+        <Tabs value={selectedAgent} onValueChange={(v) => { setSelectedAgent(v); setMessages([]); }}>
+          <TabsList className="grid grid-cols-6 w-full">
+            {agents.map(a => {
+              const I = a.icon;
               return (
-                <TabsTrigger key={agent.id} value={agent.id} className="flex items-center gap-1">
-                  <Icon className="h-4 w-4" />
-                  <span className="hidden sm:inline">{agent.name.split(' ')[0]}</span>
+                <TabsTrigger key={a.id} value={a.id} className="flex items-center gap-1 text-xs">
+                  <I className="h-3.5 w-3.5" />
+                  <span className="hidden lg:inline">{a.name}</span>
                 </TabsTrigger>
               );
             })}
           </TabsList>
-
-          {agents.map((agent) => {
-            const Icon = agent.icon;
-            return (
-              <TabsContent key={agent.id} value={agent.id} className="mt-2">
-                <div className="p-3 bg-muted rounded-lg flex items-start gap-3">
-                  <Icon className={`h-5 w-5 ${agent.color} flex-shrink-0 mt-0.5`} />
-                  <div>
-                    <p className="font-medium text-sm">{agent.name}</p>
-                    <p className="text-xs text-muted-foreground">{agent.description}</p>
-                  </div>
-                </div>
-              </TabsContent>
-            );
-          })}
         </Tabs>
 
-        {/* Chat Messages */}
         <ScrollArea className="flex-1 pr-4" ref={scrollRef}>
           <div className="space-y-4">
             {messages.length === 0 && (
               <div className="text-center py-12">
-                <AgentIcon className={`h-12 w-12 mx-auto mb-3 ${currentAgent?.color}`} />
-                <p className="text-sm text-muted-foreground mb-2">
-                  Olá! Sou seu assistente de {currentAgent?.name}.
+                <AgentIcon className={`h-12 w-12 mx-auto mb-3 ${currentAgent.color}`} />
+                <p className="text-sm text-muted-foreground mb-1">
+                  Agente de <strong>{currentAgent.name}</strong> pronto
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Faça perguntas sobre {currentAgent?.description.toLowerCase()}.
+                  Pergunte sobre métricas, sugestões ou análises. Os dados reais do sistema são injetados automaticamente.
                 </p>
               </div>
             )}
-            
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-[80%] rounded-lg p-3 ${
-                    message.role === 'user'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted'
-                  }`}
-                >
-                  <p className="text-sm">{message.content}</p>
-                  <p className="text-xs opacity-70 mt-1">
-                    {message.timestamp.toLocaleTimeString('pt-BR', { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
-                    })}
+
+            {messages.map(msg => (
+              <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[85%] rounded-lg p-3 ${
+                  msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                }`}>
+                  {msg.role === 'assistant' ? (
+                    <div className="prose prose-sm dark:prose-invert max-w-none text-sm">
+                      <ReactMarkdown>{msg.content}</ReactMarkdown>
+                    </div>
+                  ) : (
+                    <p className="text-sm">{msg.content}</p>
+                  )}
+                  <p className="text-xs opacity-60 mt-1">
+                    {msg.timestamp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
               </div>
             ))}
-            
-            {isLoading && (
+
+            {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
               <div className="flex justify-start">
                 <div className="bg-muted rounded-lg p-3 flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  <p className="text-sm text-muted-foreground">Analisando...</p>
+                  <span className="text-sm text-muted-foreground">Analisando dados...</span>
                 </div>
               </div>
             )}
           </div>
         </ScrollArea>
 
-        {/* Input */}
         <div className="flex gap-2">
           <Input
             value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-            placeholder={`Pergunte ao especialista em ${currentAgent?.name}...`}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleSend()}
+            placeholder={`Pergunte ao agente de ${currentAgent.name}...`}
             disabled={isLoading}
           />
           <Button onClick={handleSend} disabled={isLoading || !input.trim()}>
