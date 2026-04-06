@@ -7,9 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus } from "lucide-react";
+import { Plus, Copy, Link } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SupabaseStudent } from "@/hooks/useSupabaseStudents";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AddStudentDialogProps {
   onAddStudent: (student: Omit<SupabaseStudent, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
