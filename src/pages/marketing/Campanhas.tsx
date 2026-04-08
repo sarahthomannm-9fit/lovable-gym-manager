@@ -2,16 +2,20 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Target, Users, TrendingUp, Eye, X, BarChart } from "lucide-react";
+import { Target, Users, TrendingUp, Eye, X, BarChart, Sparkles } from "lucide-react";
 import { useSupabaseCampaigns, Campaign } from "@/hooks/marketing/useSupabaseCampaigns";
 import { AddCampaignDialog } from "@/components/marketing/AddCampaignDialog";
 import { MarketingSuggestions } from "@/components/marketing/MarketingSuggestions";
 import { CampaignReportDialog } from "@/components/marketing/CampaignReportDialog";
+import { useMarketingIntelligence } from "@/hooks/useMarketingIntelligence";
+import { useDataIntegration } from "@/components/DataIntegrationProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 export function Campanhas() {
   const { campaigns, campaignsLoading, refetchCampaigns } = useSupabaseCampaigns();
+  const { alunos, leads, experimentais, campanhas } = useDataIntegration();
+  const { insights: mktInsights } = useMarketingIntelligence({ campanhas: campaigns, leads, experimentais, alunos });
   const { toast } = useToast();
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
@@ -51,6 +55,26 @@ export function Campanhas() {
 
   return (
     <div className="space-y-6 p-6">
+      {/* Intelligence Banner */}
+      {mktInsights.length > 0 && (
+        <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <span className="text-xs font-mono font-bold tracking-wider">INTELIGÊNCIA DE MARKETING</span>
+            <Badge variant="outline" className="text-[9px]">{mktInsights.length} insights</Badge>
+          </div>
+          <div className="space-y-1.5">
+            {mktInsights.slice(0, 3).map(i => (
+              <div key={i.id} className="flex items-center gap-2 text-xs">
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${i.prioridade === 'alta' ? 'bg-destructive' : i.prioridade === 'media' ? 'bg-amber-500' : 'bg-muted-foreground'}`} />
+                <span className="font-medium">{i.titulo}</span>
+                <span className="text-muted-foreground">— {i.acao}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold">Campanhas de Marketing</h2>
