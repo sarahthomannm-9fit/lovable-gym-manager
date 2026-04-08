@@ -49,6 +49,10 @@ import { Funcionarios } from "./pages/Funcionarios";
 import { AvaliacoesFisicas } from "./pages/AvaliacoesFisicas";
 import { AulasExperimentais } from "./pages/AulasExperimentais";
 import { Anamnese } from "./pages/Anamnese";
+import { Inadimplencia } from "./pages/painel/Inadimplencia";
+import { Retencao } from "./pages/painel/Retencao";
+import { AgendaSemanal } from "./pages/painel/AgendaSemanal";
+import { Pipeline } from "./pages/painel/Pipeline";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -83,6 +87,10 @@ const App = () => (
                 <Routes>
                   <Route path="/" element={<Navigate to="/painel" replace />} />
                   <Route path="/painel" element={<MainLayout><Painel /></MainLayout>} />
+                  <Route path="/painel/inadimplencia" element={<MainLayout><Inadimplencia /></MainLayout>} />
+                  <Route path="/painel/retencao" element={<MainLayout><Retencao /></MainLayout>} />
+                  <Route path="/painel/agenda" element={<MainLayout><AgendaSemanal /></MainLayout>} />
+                  <Route path="/painel/pipeline" element={<MainLayout><Pipeline /></MainLayout>} />
                   <Route path="/alunos" element={<MainLayout><SupabaseStudents /></MainLayout>} />
                   <Route path="/planos" element={<MainLayout><SupabasePlans /></MainLayout>} />
                   <Route path="/aulas" element={<MainLayout><SupabaseClasses /></MainLayout>} />

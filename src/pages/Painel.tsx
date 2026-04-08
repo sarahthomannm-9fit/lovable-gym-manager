@@ -10,19 +10,27 @@ import { Dashboard } from '@/components/Dashboard';
 import { IntegratedInsights } from '@/components/IntegratedInsights';
 import { IntelligentFinancialDashboard } from '@/components/reports/IntelligentFinancialDashboard';
 import { PainelAluno } from '@/components/PainelAluno';
+import { OnboardingWizard } from '@/components/OnboardingWizard';
 import { useDataIntegration } from '@/components/DataIntegrationProvider';
 import { useCurrentUserRole } from '@/hooks/useCurrentUserRole';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Flame, BarChart3, Cog } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Flame, BarChart3, Cog, AlertTriangle, UserX, Calendar, Target } from 'lucide-react';
 
 export function Painel() {
   const { role } = useCurrentUserRole();
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   const { alerts, metrics, loading, refetchAll, insights } = useDataIntegration();
   const [mobileTab, setMobileTab] = useState('critico');
+  const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('fitmanager_onboarding'));
 
   if (role === 'user') {
     return <PainelAluno />;
+  }
+
+  if (showOnboarding) {
+    return <OnboardingWizard onComplete={() => setShowOnboarding(false)} />;
   }
 
   const fmtR = (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}`;
@@ -58,6 +66,13 @@ export function Painel() {
     );
   }
 
+  const deepDives = [
+    { icon: AlertTriangle, label: 'Inadimplência', path: '/painel/inadimplencia', count: metrics?.inadimplencia || 0, color: 'text-destructive' },
+    { icon: UserX, label: 'Retenção', path: '/painel/retencao', color: 'text-[hsl(var(--urgency-attention))]' },
+    { icon: Calendar, label: 'Agenda', path: '/painel/agenda' },
+    { icon: Target, label: 'Pipeline', path: '/painel/pipeline', count: metrics?.leadsTotal || 0 },
+  ];
+
   return (
     <PageShell
       title="CONTROL PLANE"
@@ -73,6 +88,25 @@ export function Painel() {
         </button>
       }
     >
+      {/* Deep Dive Quick Links */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        {deepDives.map(dd => (
+          <button
+            key={dd.path}
+            onClick={() => navigate(dd.path)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-card hover:bg-muted transition-colors text-[10px] font-mono"
+          >
+            <dd.icon className={`h-3 w-3 ${dd.color || 'text-muted-foreground'}`} />
+            <span>{dd.label}</span>
+            {dd.count != null && dd.count > 0 && (
+              <span className="min-w-[16px] h-4 rounded bg-muted-foreground/20 text-foreground text-[9px] font-bold flex items-center justify-center px-1">
+                {dd.count}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
       {/* Banner */}
       <WarRoomBanner alerts={alerts} />
 
