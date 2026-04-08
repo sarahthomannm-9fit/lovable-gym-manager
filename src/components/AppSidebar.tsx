@@ -47,6 +47,8 @@ import {
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useCurrentUserRole, AppRole } from "@/hooks/useCurrentUserRole";
+import { useDataIntegration } from "@/components/DataIntegrationProvider";
+import { useMemo } from "react";
 
 type MenuItem = {
   title: string;
@@ -54,6 +56,7 @@ type MenuItem = {
   path: string;
   roles?: AppRole[];
   badge?: number;
+  badgeColor?: string;
 };
 
 type MenuCategory = {
@@ -66,18 +69,60 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { role } = useCurrentUserRole();
+  const { pagamentos, alunos, checkins, leads, aulas } = useDataIntegration();
+
+  // Dynamic badge counts
+  const badges = useMemo(() => {
+    const hoje = new Date().toISOString().split('T')[0];
+    const hojeMs = Date.now();
+    const MS_DIA = 86400000;
+
+    // Inadimplentes
+    const inadimplentes = (pagamentos || []).filter((p: any) =>
+      p.status !== 'pago' && p.data_vencimento && p.data_vencimento < hoje
+    ).length;
+
+    // Alunos sem frequência (14+ dias)
+    const checkinPorAluno = new Map<string, string>();
+    (checkins || []).forEach((c: any) => {
+      const dt = c.data_checkin || c.horario_entrada?.split('T')[0];
+      if (!dt) return;
+      const prev = checkinPorAluno.get(c.aluno_id);
+      if (!prev || dt > prev) checkinPorAluno.set(c.aluno_id, dt);
+    });
+    const alunosSemFreq = (alunos || []).filter((a: any) => {
+      if (a.status !== 'ativo') return false;
+      const last = checkinPorAluno.get(a.id);
+      if (!last) return true;
+      return Math.ceil((hojeMs - new Date(last).getTime()) / MS_DIA) > 14;
+    }).length;
+
+    // Leads quentes (novos, < 7 dias)
+    const leadsQuentes = (leads || []).filter((l: any) => {
+      if (l.status !== 'novo') return false;
+      const dias = Math.ceil((hojeMs - new Date(l.created_at).getTime()) / MS_DIA);
+      return dias <= 7;
+    }).length;
+
+    // Aulas sem instrutor
+    const aulasSemInst = (aulas || []).filter((a: any) =>
+      a.data_aula >= hoje && !a.professor_id && a.status !== 'cancelada'
+    ).length;
+
+    return { inadimplentes, alunosSemFreq, leadsQuentes, aulasSemInst };
+  }, [pagamentos, alunos, checkins, leads, aulas]);
 
   const menuItems: MenuCategory[] = [
     {
       category: "PRINCIPAL",
       items: [
         { title: "Control Plane", icon: Home, path: "/painel" },
-        { title: "Alunos", icon: Users, path: "/alunos", roles: ['admin', 'manager'] },
+        { title: "Alunos", icon: Users, path: "/alunos", roles: ['admin', 'manager'], badge: badges.alunosSemFreq || undefined, badgeColor: 'bg-amber-500' },
         { title: "Check-in", icon: UserCheck, path: "/checkin", roles: ['admin', 'manager'] },
         { title: "Planos", icon: CreditCard, path: "/planos", roles: ['admin'] },
         { title: "Catálogo (SKUs)", icon: Package, path: "/catalogo", roles: ['admin'] },
-        { title: "Pagamentos", icon: Receipt, path: "/pagamentos", roles: ['admin'] },
-        { title: "Aulas", icon: Calendar, path: "/aulas", roles: ['admin', 'manager'] },
+        { title: "Pagamentos", icon: Receipt, path: "/pagamentos", roles: ['admin'], badge: badges.inadimplentes || undefined, badgeColor: 'bg-destructive' },
+        { title: "Aulas", icon: Calendar, path: "/aulas", roles: ['admin', 'manager'], badge: badges.aulasSemInst || undefined, badgeColor: 'bg-destructive' },
         { title: "Equipamentos", icon: Dumbbell, path: "/equipamentos", roles: ['admin'] },
         { title: "Produtos", icon: Package, path: "/produtos", roles: ['admin'] },
       ],
@@ -114,7 +159,7 @@ export function AppSidebar() {
       roles: ['admin'],
       items: [
         { title: "Campanhas", icon: Target, path: "/marketing/campanhas" },
-        { title: "Captação", icon: UserPlus, path: "/marketing/captacao" },
+        { title: "Captação", icon: UserPlus, path: "/marketing/captacao", badge: badges.leadsQuentes || undefined, badgeColor: 'bg-orange-500' },
         { title: "Comunicação", icon: MessageSquare, path: "/marketing/comunicacao" },
         { title: "Conversão", icon: TrendingUp, path: "/marketing/conversao" },
         { title: "Funis", icon: Target, path: "/marketing/funis" },
@@ -188,7 +233,12 @@ export function AppSidebar() {
                           className="w-full justify-start text-xs"
                         >
                           <item.icon className="mr-2 h-3.5 w-3.5" />
-                          <span>{item.title}</span>
+                          <span className="flex-1">{item.title}</span>
+                          {item.badge && item.badge > 0 && (
+                            <span className={`ml-auto min-w-[18px] h-[18px] rounded-full ${item.badgeColor || 'bg-destructive'} text-white text-[9px] font-mono font-bold flex items-center justify-center px-1`}>
+                              {item.badge > 99 ? '99+' : item.badge}
+                            </span>
+                          )}
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     ))}
