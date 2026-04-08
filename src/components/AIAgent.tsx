@@ -7,10 +7,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useDataIntegration } from "@/components/DataIntegrationProvider";
+import { useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import {
   Bot, Send, Users, Briefcase, TrendingUp, Building,
-  Sparkles, Loader2, DollarSign, Settings2
+  Sparkles, Loader2, DollarSign, Settings2, AlertTriangle, UserX, Target
 } from "lucide-react";
 
 interface Message {
@@ -33,17 +34,25 @@ const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/agent-chat`;
 
 export function AIAgent() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const {
     alunos: students, pagamentos: payments, planos: plans, aulas,
-    checkins: checkIns, leads, experimentais, campanhas: campaigns,
+    checkins: checkIns, leads, experimentais, campanhas: campaigns, metrics,
   } = useDataIntegration();
-  const assinaturas: any[] = []; // loaded separately if needed
+  const assinaturas: any[] = [];
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState("comercial");
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const quickActions = [
+    { label: 'Ver Inadimplência', icon: AlertTriangle, path: '/painel/inadimplencia' },
+    { label: 'Ver Retenção', icon: UserX, path: '/painel/retencao' },
+    { label: 'Pipeline CRM', icon: Target, path: '/painel/pipeline' },
+    { label: 'Campanhas', icon: TrendingUp, path: '/marketing/campanhas' },
+  ];
 
   const buildContext = useCallback(() => {
     const hoje = new Date().toISOString().split('T')[0];
@@ -233,6 +242,16 @@ export function AIAgent() {
             )}
           </div>
         </ScrollArea>
+
+        {/* Quick Actions */}
+        <div className="flex flex-wrap gap-1.5">
+          {quickActions.map(qa => (
+            <Button key={qa.path} size="sm" variant="outline" className="h-7 text-[10px] gap-1" onClick={() => navigate(qa.path)}>
+              <qa.icon className="h-3 w-3" />
+              {qa.label}
+            </Button>
+          ))}
+        </div>
 
         <div className="flex gap-2">
           <Input
