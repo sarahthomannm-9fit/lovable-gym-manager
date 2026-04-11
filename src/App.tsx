@@ -8,8 +8,11 @@ import { DataIntegrationProvider } from "@/components/DataIntegrationProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 import NotFound from "./pages/NotFound";
+import { Login } from "./pages/Login";
 import { Painel } from "./pages/Painel";
 import { Treinos } from "./pages/Treinos";
 import { Relatorios } from "./pages/Relatorios";
@@ -74,67 +77,76 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => (
   </SidebarProvider>
 );
 
+const Protected = ({ children }: { children: React.ReactNode }) => (
+  <ProtectedRoute>
+    <MainLayout>{children}</MainLayout>
+  </ProtectedRoute>
+);
+
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
-      <SupabaseGymDataProvider>
-        <DataIntegrationProvider>
-          <DemoModeProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <Routes>
-                  <Route path="/" element={<Navigate to="/painel" replace />} />
-                  <Route path="/painel" element={<MainLayout><Painel /></MainLayout>} />
-                  <Route path="/painel/inadimplencia" element={<MainLayout><Inadimplencia /></MainLayout>} />
-                  <Route path="/painel/retencao" element={<MainLayout><Retencao /></MainLayout>} />
-                  <Route path="/painel/agenda" element={<MainLayout><AgendaSemanal /></MainLayout>} />
-                  <Route path="/painel/pipeline" element={<MainLayout><Pipeline /></MainLayout>} />
-                  <Route path="/alunos" element={<MainLayout><SupabaseStudents /></MainLayout>} />
-                  <Route path="/planos" element={<MainLayout><SupabasePlans /></MainLayout>} />
-                  <Route path="/aulas" element={<MainLayout><SupabaseClasses /></MainLayout>} />
-                  <Route path="/pagamentos" element={<MainLayout><SupabasePayments /></MainLayout>} />
-                  <Route path="/checkin" element={<MainLayout><SupabaseCheckIn /></MainLayout>} />
-                  <Route path="/equipamentos" element={<MainLayout><Equipment /></MainLayout>} />
-                  <Route path="/treinos" element={<MainLayout><Treinos /></MainLayout>} />
-                  <Route path="/relatorios" element={<MainLayout><Relatorios /></MainLayout>} />
-                  <Route path="/relatorios/pagamentos" element={<MainLayout><FluxoPagamentos /></MainLayout>} />
-                  <Route path="/relatorios/recebimentos" element={<MainLayout><FluxoRecebimentos /></MainLayout>} />
-                  <Route path="/relatorios/cobrancas" element={<MainLayout><Cobrancas /></MainLayout>} />
-                  <Route path="/relatorios/estrategias" element={<MainLayout><EstrategiasIA /></MainLayout>} />
-                  <Route path="/relatorios/promocoes-cupons" element={<MainLayout><PromocoesCupons /></MainLayout>} />
-                  <Route path="/marketing/campanhas" element={<MainLayout><Campanhas /></MainLayout>} />
-                  <Route path="/marketing/captacao" element={<MainLayout><Captacao /></MainLayout>} />
-                  <Route path="/marketing/comunicacao" element={<MainLayout><Comunicacao /></MainLayout>} />
-                  <Route path="/marketing/conversao" element={<MainLayout><Conversao /></MainLayout>} />
-                  <Route path="/marketing/funis" element={<MainLayout><Funis /></MainLayout>} />
-                  <Route path="/marketing/email" element={<MainLayout><EmailMarketing /></MainLayout>} />
-                  <Route path="/marketing/promocoes" element={<MainLayout><Promocoes /></MainLayout>} />
-                  <Route path="/marketing/insights-ia" element={<MainLayout><InsightsIA /></MainLayout>} />
-                  <Route path="/marketing/automacao" element={<MainLayout><Automacao /></MainLayout>} />
-                  <Route path="/agente-ia" element={<MainLayout><AgenteIA /></MainLayout>} />
-                  <Route path="/catalogo" element={<MainLayout><Catalogo /></MainLayout>} />
-                  <Route path="/produtos" element={<MainLayout><Produtos /></MainLayout>} />
-                  <Route path="/9fit" element={<MainLayout><Dashboard9FIT /></MainLayout>} />
-                  <Route path="/9fit/ceo" element={<MainLayout><CEODashboard /></MainLayout>} />
-                  <Route path="/9fit/consultoria" element={<MainLayout><ConsultoriaDashboard /></MainLayout>} />
-                  <Route path="/9fit/concierge" element={<MainLayout><ConciergeDashboard /></MainLayout>} />
-                  <Route path="/9fit/trust" element={<MainLayout><TrustDashboard /></MainLayout>} />
-                  <Route path="/9fit/network" element={<MainLayout><NetworkDashboard /></MainLayout>} />
-                  <Route path="/9fit/automation" element={<MainLayout><AutomationDashboard /></MainLayout>} />
-                  <Route path="/9fit/store" element={<MainLayout><StoreDashboard /></MainLayout>} />
-                  <Route path="/funcionarios" element={<MainLayout><Funcionarios /></MainLayout>} />
-                  <Route path="/avaliacoes" element={<MainLayout><AvaliacoesFisicas /></MainLayout>} />
-                  <Route path="/experimentais" element={<MainLayout><AulasExperimentais /></MainLayout>} />
-                  <Route path="/anamnese/:token" element={<Anamnese />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </BrowserRouter>
-            </TooltipProvider>
-          </DemoModeProvider>
-        </DataIntegrationProvider>
-      </SupabaseGymDataProvider>
+      <AuthProvider>
+        <SupabaseGymDataProvider>
+          <DataIntegrationProvider>
+            <DemoModeProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <BrowserRouter>
+                  <Routes>
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/anamnese/:token" element={<Anamnese />} />
+                    <Route path="/" element={<Navigate to="/painel" replace />} />
+                    <Route path="/painel" element={<Protected><Painel /></Protected>} />
+                    <Route path="/painel/inadimplencia" element={<Protected><Inadimplencia /></Protected>} />
+                    <Route path="/painel/retencao" element={<Protected><Retencao /></Protected>} />
+                    <Route path="/painel/agenda" element={<Protected><AgendaSemanal /></Protected>} />
+                    <Route path="/painel/pipeline" element={<Protected><Pipeline /></Protected>} />
+                    <Route path="/alunos" element={<Protected><SupabaseStudents /></Protected>} />
+                    <Route path="/planos" element={<Protected><SupabasePlans /></Protected>} />
+                    <Route path="/aulas" element={<Protected><SupabaseClasses /></Protected>} />
+                    <Route path="/pagamentos" element={<Protected><SupabasePayments /></Protected>} />
+                    <Route path="/checkin" element={<Protected><SupabaseCheckIn /></Protected>} />
+                    <Route path="/equipamentos" element={<Protected><Equipment /></Protected>} />
+                    <Route path="/treinos" element={<Protected><Treinos /></Protected>} />
+                    <Route path="/relatorios" element={<Protected><Relatorios /></Protected>} />
+                    <Route path="/relatorios/pagamentos" element={<Protected><FluxoPagamentos /></Protected>} />
+                    <Route path="/relatorios/recebimentos" element={<Protected><FluxoRecebimentos /></Protected>} />
+                    <Route path="/relatorios/cobrancas" element={<Protected><Cobrancas /></Protected>} />
+                    <Route path="/relatorios/estrategias" element={<Protected><EstrategiasIA /></Protected>} />
+                    <Route path="/relatorios/promocoes-cupons" element={<Protected><PromocoesCupons /></Protected>} />
+                    <Route path="/marketing/campanhas" element={<Protected><Campanhas /></Protected>} />
+                    <Route path="/marketing/captacao" element={<Protected><Captacao /></Protected>} />
+                    <Route path="/marketing/comunicacao" element={<Protected><Comunicacao /></Protected>} />
+                    <Route path="/marketing/conversao" element={<Protected><Conversao /></Protected>} />
+                    <Route path="/marketing/funis" element={<Protected><Funis /></Protected>} />
+                    <Route path="/marketing/email" element={<Protected><EmailMarketing /></Protected>} />
+                    <Route path="/marketing/promocoes" element={<Protected><Promocoes /></Protected>} />
+                    <Route path="/marketing/insights-ia" element={<Protected><InsightsIA /></Protected>} />
+                    <Route path="/marketing/automacao" element={<Protected><Automacao /></Protected>} />
+                    <Route path="/agente-ia" element={<Protected><AgenteIA /></Protected>} />
+                    <Route path="/catalogo" element={<Protected><Catalogo /></Protected>} />
+                    <Route path="/produtos" element={<Protected><Produtos /></Protected>} />
+                    <Route path="/9fit" element={<Protected><Dashboard9FIT /></Protected>} />
+                    <Route path="/9fit/ceo" element={<Protected><CEODashboard /></Protected>} />
+                    <Route path="/9fit/consultoria" element={<Protected><ConsultoriaDashboard /></Protected>} />
+                    <Route path="/9fit/concierge" element={<Protected><ConciergeDashboard /></Protected>} />
+                    <Route path="/9fit/trust" element={<Protected><TrustDashboard /></Protected>} />
+                    <Route path="/9fit/network" element={<Protected><NetworkDashboard /></Protected>} />
+                    <Route path="/9fit/automation" element={<Protected><AutomationDashboard /></Protected>} />
+                    <Route path="/9fit/store" element={<Protected><StoreDashboard /></Protected>} />
+                    <Route path="/funcionarios" element={<Protected><Funcionarios /></Protected>} />
+                    <Route path="/avaliacoes" element={<Protected><AvaliacoesFisicas /></Protected>} />
+                    <Route path="/experimentais" element={<Protected><AulasExperimentais /></Protected>} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </BrowserRouter>
+              </TooltipProvider>
+            </DemoModeProvider>
+          </DataIntegrationProvider>
+        </SupabaseGymDataProvider>
+      </AuthProvider>
     </QueryClientProvider>
   </ErrorBoundary>
 );
