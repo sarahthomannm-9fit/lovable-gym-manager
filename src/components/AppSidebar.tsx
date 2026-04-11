@@ -10,6 +10,7 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
+import { useAuth } from "@/contexts/AuthContext";
 
 import {
   LayoutDashboard,
@@ -44,6 +45,7 @@ import {
   Network,
   Settings,
   Store,
+  LogOut,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useCurrentUserRole, AppRole } from "@/hooks/useCurrentUserRole";
@@ -69,6 +71,7 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { role } = useCurrentUserRole();
+  const { signOut } = useAuth();
   const { pagamentos, alunos, checkins, leads, aulas } = useDataIntegration();
 
   // Dynamic badge counts
@@ -249,14 +252,19 @@ export function AppSidebar() {
           })}
       </SidebarContent>
       <SidebarFooter>
-        <div className="px-3.5 py-2.5 flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-sidebar-foreground/15 flex items-center justify-center text-[10px] font-bold text-sidebar-foreground font-mono shrink-0">
-            R
+        <div className="px-3.5 py-2.5 flex items-center gap-2 justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full bg-sidebar-foreground/15 flex items-center justify-center text-[10px] font-bold text-sidebar-foreground font-mono shrink-0">
+              R
+            </div>
+            <div>
+              <div className="text-[11px] font-semibold text-sidebar-foreground">Roni</div>
+              <div className="text-[8px] text-sidebar-foreground/35 font-mono tracking-wider">CEO · 9FIT</div>
+            </div>
           </div>
-          <div>
-            <div className="text-[11px] font-semibold text-sidebar-foreground">Rony</div>
-            <div className="text-[8px] text-sidebar-foreground/35 font-mono tracking-wider">CEO · 9FIT</div>
-          </div>
+          <button onClick={() => signOut()} className="p-1.5 rounded hover:bg-sidebar-foreground/10 text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors" title="Sair">
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </SidebarFooter>
     </Sidebar>
