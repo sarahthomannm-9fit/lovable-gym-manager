@@ -261,7 +261,9 @@ export function AppSidebar() {
               <div className="text-[8px] text-sidebar-foreground/35 font-mono tracking-wider">CEO · 9FIT</div>
             </div>
           </div>
-          <LogOutButton />
+          <button onClick={() => signOut()} className="p-1.5 rounded hover:bg-sidebar-foreground/10 text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors" title="Sair">
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </SidebarFooter>
     </Sidebar>
