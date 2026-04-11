@@ -71,6 +71,7 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { role } = useCurrentUserRole();
+  const { signOut } = useAuth();
   const { pagamentos, alunos, checkins, leads, aulas } = useDataIntegration();
 
   // Dynamic badge counts
