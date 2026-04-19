@@ -5,3 +5,12 @@ verify_jwt = false
 
 [functions.setup-users]
 verify_jwt = false
+
+[functions.manage-users]
+verify_jwt = false
+
+[functions.agent-hub-chat]
+verify_jwt = false
+
+[functions.agent-daily-reports]
+verify_jwt = false
