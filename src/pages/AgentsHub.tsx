@@ -19,7 +19,6 @@ import {
   Flag,
   CheckCircle2,
   Info,
-  Bot,
   TrendingUp,
   Users,
   DollarSign,

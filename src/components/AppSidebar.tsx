@@ -175,7 +175,15 @@ export function AppSidebar() {
     {
       category: "INTELIGÊNCIA ARTIFICIAL",
       items: [
-        { title: "Agente IA", icon: Bot, path: "/agente-ia" },
+        { title: "Hub de Agentes IA", icon: Bot, path: "/agents" },
+        { title: "Agente IA", icon: Sparkles, path: "/agente-ia" },
+      ],
+    },
+    {
+      category: "ADMINISTRAÇÃO",
+      roles: ['admin'],
+      items: [
+        { title: "Usuários", icon: Shield, path: "/admin/usuarios", roles: ['admin'] },
       ],
     },
     {
