@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -77,6 +77,12 @@ export function Login() {
             >
               {loading ? 'Entrando...' : 'Entrar'}
             </Button>
+            <Link
+              to="/forgot-password"
+              className="block text-center text-xs text-muted-foreground hover:text-foreground"
+            >
+              Esqueci minha senha
+            </Link>
           </form>
         </CardContent>
       </Card>
