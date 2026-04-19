@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_conversations: {
+        Row: {
+          agent_id: string
+          content: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          role: string
+          user_id: string
+        }
+        Insert: {
+          agent_id: string
+          content: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          role: string
+          user_id: string
+        }
+        Update: {
+          agent_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      agent_reports: {
+        Row: {
+          agent_id: string
+          created_at: string
+          highlights: Json | null
+          id: string
+          metrics: Json | null
+          report_date: string
+          summary: string
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string
+          highlights?: Json | null
+          id?: string
+          metrics?: Json | null
+          report_date?: string
+          summary: string
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string
+          highlights?: Json | null
+          id?: string
+          metrics?: Json | null
+          report_date?: string
+          summary?: string
+        }
+        Relationships: []
+      }
       alunos: {
         Row: {
           aulas_disponiveis: number | null
@@ -799,6 +859,42 @@ export type Database = {
         }
         Relationships: []
       }
+      content_drafts: {
+        Row: {
+          approved_at: string | null
+          body: string | null
+          created_at: string
+          id: string
+          scheduled_at: string | null
+          status: string
+          topic: string | null
+          type: string | null
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          body?: string | null
+          created_at?: string
+          id?: string
+          scheduled_at?: string | null
+          status?: string
+          topic?: string | null
+          type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          body?: string | null
+          created_at?: string
+          id?: string
+          scheduled_at?: string | null
+          status?: string
+          topic?: string | null
+          type?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       entitlements: {
         Row: {
           aluno_id: string
@@ -1522,6 +1618,53 @@ export type Database = {
             columns: ["plano_id"]
             isOneToOne: false
             referencedRelation: "planos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_tickets: {
+        Row: {
+          agent_response: string | null
+          aluno_id: string | null
+          category: string | null
+          created_at: string
+          escalated_to_ceo: boolean | null
+          id: string
+          message: string
+          resolved_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          agent_response?: string | null
+          aluno_id?: string | null
+          category?: string | null
+          created_at?: string
+          escalated_to_ceo?: boolean | null
+          id?: string
+          message: string
+          resolved_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          agent_response?: string | null
+          aluno_id?: string | null
+          category?: string | null
+          created_at?: string
+          escalated_to_ceo?: boolean | null
+          id?: string
+          message?: string
+          resolved_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "alunos"
             referencedColumns: ["id"]
           },
         ]
