@@ -440,7 +440,7 @@ export default function AgentsHub() {
           </div>
           <div className="flex items-center gap-3">
             <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 font-mono text-[10px]">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse" /> 5 AGENTES ATIVOS
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse" /> {AGENTS.filter((a) => a.status === 'on').length} AGENTES ATIVOS
             </Badge>
             <span className="text-xs text-muted-foreground capitalize">{hoje}</span>
           </div>
@@ -471,34 +471,45 @@ export default function AgentsHub() {
               })}
         </section>
 
-        {/* Cards dos 5 agentes */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          {AGENTS.map((a) => {
-            const active = a.id === activeAgentId;
-            return (
-              <button
-                key={a.id}
-                onClick={() => setActiveAgentId(a.id)}
-                className={`text-left p-4 rounded-lg border bg-card transition-all ${
-                  active ? 'border-2 shadow-md' : 'border-border/40 hover:border-border'
-                }`}
-                style={active ? { borderColor: a.color } : undefined}
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <Badge style={{ backgroundColor: a.bg, color: a.color }} className="text-[10px] border-0 font-semibold">
-                    {a.role}
-                  </Badge>
-                  <span
-                    className={`w-2 h-2 rounded-full ${a.status === 'on' ? 'bg-emerald-500' : 'bg-amber-500'}`}
-                    title={a.status === 'on' ? 'Ativo' : 'Idle'}
-                  />
-                </div>
-                <h3 className="text-sm font-bold text-foreground mb-1">{a.name}</h3>
-                <p className="text-[11px] text-muted-foreground leading-snug">{a.description}</p>
-              </button>
-            );
-          })}
-        </section>
+        {/* Agentes agrupados */}
+        {(['core', 'receita', 'operacao', 'marketing'] as AgentGroup[]).map((g) => {
+          const list = AGENTS.filter((a) => a.group === g);
+          if (list.length === 0) return null;
+          return (
+            <section key={g}>
+              <h2 className="text-[10px] font-mono text-muted-foreground tracking-widest uppercase mb-2">
+                {GROUP_LABELS[g]}
+              </h2>
+              <div className={`grid gap-3 ${g === 'core' ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-5'}`}>
+                {list.map((a) => {
+                  const active = a.id === activeAgentId;
+                  return (
+                    <button
+                      key={a.id}
+                      onClick={() => setActiveAgentId(a.id)}
+                      className={`text-left p-4 rounded-lg border bg-card transition-all ${
+                        active ? 'border-2 shadow-md' : 'border-border/40 hover:border-border'
+                      } ${g === 'core' ? 'lg:col-span-1' : ''}`}
+                      style={active ? { borderColor: a.color } : undefined}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <Badge style={{ backgroundColor: a.bg, color: a.color }} className="text-[10px] border-0 font-semibold">
+                          {a.role}
+                        </Badge>
+                        <span
+                          className={`w-2 h-2 rounded-full ${a.status === 'on' ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                          title={a.status === 'on' ? 'Ativo' : 'Idle'}
+                        />
+                      </div>
+                      <h3 className="text-sm font-bold text-foreground mb-1">{a.name}</h3>
+                      <p className="text-[11px] text-muted-foreground leading-snug">{a.description}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })}
 
         {/* Chat */}
         <Card>
