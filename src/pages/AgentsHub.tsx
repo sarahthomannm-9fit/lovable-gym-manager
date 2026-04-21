@@ -28,13 +28,15 @@ import {
 // ============================================
 // AGENT CONFIG
 // ============================================
-type AgentId = 'sdr' | 'onboard' | 'billing' | 'content' | 'suporte';
+type AgentId = 'ron' | 'sdr' | 'prep' | 'reativacao' | 'upsell' | 'b2b' | 'onboard' | 'billing' | 'content' | 'suporte';
 type AgentStatus = 'on' | 'idle';
+type AgentGroup = 'core' | 'receita' | 'operacao' | 'marketing';
 
 interface AgentDef {
   id: AgentId;
   name: string;
   role: string;
+  group: AgentGroup;
   description: string;
   color: string;
   bg: string;
@@ -48,9 +50,31 @@ interface AgentDef {
 
 const AGENTS: AgentDef[] = [
   {
+    id: 'ron',
+    name: 'RON Core',
+    role: 'COO',
+    group: 'core',
+    description: 'Orquestrador master. Recebe seus comandos e distribui para os agentes certos.',
+    color: '#1F2937',
+    bg: '#E5E7EB',
+    status: 'on',
+    triggers: ['comando direto do CEO', 'falha em qualquer agente (retry)', 'briefing diário 07h'],
+    actions: [
+      'Recebe input do CEO em linguagem natural',
+      'Decide qual agente acionar e com quais parâmetros',
+      'Monitora execução e aplica retry/fallback',
+      'Loga toda execução em agent_logs',
+      'Devolve plano de ação em até 5 bullets',
+    ],
+    escalation: 'Quando dois ou mais agentes falham na mesma cadeia.',
+    table: 'agent_logs',
+    fields: 'id, agent_id, triggered_by, input, output, status, latency_ms, created_at',
+  },
+  {
     id: 'sdr',
     name: 'SDR Agent',
     role: 'Vendas',
+    group: 'receita',
     description: 'Prospecta leads no Instagram, qualifica e organiza follow-ups.',
     color: '#0F6E56',
     bg: '#E1F5EE',
@@ -69,9 +93,94 @@ const AGENTS: AgentDef[] = [
     fields: 'id, nome, email, telefone, status, score, fonte, observacoes, created_at',
   },
   {
+    id: 'prep',
+    name: 'Prep de Call',
+    role: 'Vendas',
+    group: 'receita',
+    description: 'Briefing de 5 linhas antes de cada call do CEO.',
+    color: '#5B21B6',
+    bg: '#EDE9FE',
+    status: 'on',
+    triggers: ['call agendada nas próximas 2h', 'comando do CEO informando o lead'],
+    actions: [
+      'Puxa histórico do lead no Supabase',
+      'Identifica origem, dor e tentativas anteriores',
+      'Antecipa objeção mais provável',
+      'Sugere produto/plano ideal',
+      'Devolve estratégia de fechamento em 1 linha',
+    ],
+    escalation: 'Lead sem histórico nenhum no banco.',
+    table: 'leads',
+    fields: 'id, nome, fonte, status, observacoes, score',
+  },
+  {
+    id: 'reativacao',
+    name: 'Reativação Agent',
+    role: 'Vendas',
+    group: 'receita',
+    description: 'Recupera ex-alunos inativos (30, 60, 90+ dias).',
+    color: '#B45309',
+    bg: '#FEF3C7',
+    status: 'on',
+    triggers: ['varredura semanal de inativos', 'comando do CEO ("reativar base 90d")'],
+    actions: [
+      'Segmenta ex-alunos por tempo inativo',
+      'Identifica último plano e perfil',
+      'Gera mensagem curta personalizada',
+      'CTA claro (volta com desconto, prova social, urgência)',
+      'Marca tentativa e mede resposta',
+    ],
+    escalation: 'Aluno responde com reclamação formal ou pedido de cancelamento definitivo.',
+    table: 'alunos',
+    fields: 'id, nome, status, lifecycle_status, plano_id, data_matricula',
+  },
+  {
+    id: 'upsell',
+    name: 'Upsell Agent',
+    role: 'Vendas',
+    group: 'receita',
+    description: 'Detecta gaps no plano atual e sugere upgrade.',
+    color: '#0E7490',
+    bg: '#CFFAFE',
+    status: 'on',
+    triggers: ['aluno com 60+ dias ativo', 'comando do CEO', 'aluno completa primeira avaliação'],
+    actions: [
+      'Analisa plano atual + serviços usados',
+      'Detecta gap (ex: usa treino, não usa avaliação)',
+      'Calcula valor adicional do upgrade',
+      'Gera oferta personalizada',
+      'Reporta conversão para CEO',
+    ],
+    escalation: 'Aluno com pagamento pendente ou em cancelamento.',
+    table: 'alunos',
+    fields: 'id, nome, plano_id, valor_mensalidade, lifecycle_status',
+  },
+  {
+    id: 'b2b',
+    name: 'Proposta B2B',
+    role: 'Vendas',
+    group: 'receita',
+    description: 'Gera proposta HTML para empresas em 6 blocos estruturados.',
+    color: '#9F1239',
+    bg: '#FFE4E6',
+    status: 'on',
+    triggers: ['comando do CEO com dados da empresa'],
+    actions: [
+      'Recebe nome da empresa, serviços e valor',
+      'Gera Headline + Problema + Solução',
+      'Lista entregáveis e CTA',
+      'Salva HTML em propostas_b2b status draft',
+      'CEO aprova e envia',
+    ],
+    escalation: 'Empresa com mais de 500 colaboradores ou contrato acima de R$50k.',
+    table: 'propostas_b2b',
+    fields: 'id, empresa, contato, valor, html, status',
+  },
+  {
     id: 'onboard',
     name: 'Onboarding Agent',
     role: 'Alunos',
+    group: 'operacao',
     description: 'Acompanha novos alunos nos primeiros 30 dias.',
     color: '#185FA5',
     bg: '#E6F1FB',
@@ -93,6 +202,7 @@ const AGENTS: AgentDef[] = [
     id: 'billing',
     name: 'Billing Agent',
     role: 'Financeiro',
+    group: 'operacao',
     description: 'Monitora cobranças e aplica régua de inadimplência.',
     color: '#854F0B',
     bg: '#FAEEDA',
@@ -111,30 +221,10 @@ const AGENTS: AgentDef[] = [
     fields: 'id, aluno_id, valor, status, data_vencimento, data_pagamento, metodo_pagamento',
   },
   {
-    id: 'content',
-    name: 'Content Agent',
-    role: 'Marketing',
-    description: 'Produz scripts de Reels, copy de anúncios e posts.',
-    color: '#993556',
-    bg: '#FBEAF0',
-    status: 'idle',
-    triggers: ['comando do CEO', 'pauta semanal segunda 08h'],
-    actions: [
-      'Recebe tema do CEO',
-      'Gera script de Reels em 3 partes (gancho + dev + CTA)',
-      'Gera copy de anúncio (headline + body + CTA)',
-      'Gera legenda com hashtags',
-      'Salva em content_drafts status pending_review',
-      'Após aprovação: status approved + sugere horário',
-    ],
-    escalation: 'Conteúdo com promessas médicas ou resultados garantidos.',
-    table: 'content_drafts',
-    fields: 'id, type, topic, body, status, approved_at, scheduled_at',
-  },
-  {
     id: 'suporte',
     name: 'Suporte Agent',
     role: 'Atendimento',
+    group: 'operacao',
     description: 'Responde dúvidas de alunos sobre treinos, planos, pagamentos e app.',
     color: '#3B6D11',
     bg: '#EAF3DE',
@@ -152,7 +242,36 @@ const AGENTS: AgentDef[] = [
     table: 'support_tickets',
     fields: 'id, aluno_id, message, category, status, agent_response, escalated_to_ceo',
   },
+  {
+    id: 'content',
+    name: 'Content Agent',
+    role: 'Marketing',
+    group: 'marketing',
+    description: 'Produz scripts de Reels, copy de anúncios e posts.',
+    color: '#993556',
+    bg: '#FBEAF0',
+    status: 'idle',
+    triggers: ['comando do CEO', 'pauta semanal segunda 08h'],
+    actions: [
+      'Recebe tema do CEO',
+      'Gera script de Reels em 3 partes (gancho + dev + CTA)',
+      'Gera copy de anúncio (headline + body + CTA)',
+      'Gera legenda com hashtags',
+      'Salva em content_drafts status pending_review',
+      'Após aprovação: status approved + sugere horário',
+    ],
+    escalation: 'Conteúdo com promessas médicas ou resultados garantidos.',
+    table: 'content_drafts',
+    fields: 'id, type, topic, body, status, approved_at, scheduled_at',
+  },
 ];
+
+const GROUP_LABELS: Record<AgentGroup, string> = {
+  core: 'cérebro · ron core',
+  receita: 'agentes de receita',
+  operacao: 'operação',
+  marketing: 'marketing',
+};
 
 // ============================================
 // TYPES
@@ -175,9 +294,10 @@ interface MetricCard {
 // COMPONENT
 // ============================================
 export default function AgentsHub() {
-  const [activeAgentId, setActiveAgentId] = useState<AgentId>('sdr');
+  const [activeAgentId, setActiveAgentId] = useState<AgentId>('ron');
   const [chats, setChats] = useState<Record<AgentId, ChatMessage[]>>({
-    sdr: [], onboard: [], billing: [], content: [], suporte: [],
+    ron: [], sdr: [], prep: [], reativacao: [], upsell: [], b2b: [],
+    onboard: [], billing: [], content: [], suporte: [],
   });
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
@@ -197,7 +317,12 @@ export default function AgentsHub() {
   useEffect(() => {
     if (chats[activeAgentId].length === 0) {
       const hello: Record<AgentId, string> = {
+        ron: 'Rony, RON Core online. Me dá o comando — eu decido qual agente acionar.',
         sdr: 'Olá Rony. Pronto para prospectar. Qual lead vamos trabalhar?',
+        prep: 'Rony, me passa o nome do lead que tem call agendada. Devolvo briefing em 5 linhas.',
+        reativacao: 'Rony, posso rodar segmentação de inativos 30/60/90d. Qual janela?',
+        upsell: 'Rony, qual aluno você quer analisar para upgrade?',
+        b2b: 'Rony, me passa: empresa, serviços e valor. Gero a proposta na hora.',
         onboard: 'Oi Rony! Tudo certo no onboarding. Algum aluno específico?',
         billing: 'Olá Rony. Régua financeira em dia. O que precisa?',
         content: 'Oi Rony, qual tema vamos rodar hoje?',
@@ -315,7 +440,7 @@ export default function AgentsHub() {
           </div>
           <div className="flex items-center gap-3">
             <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 font-mono text-[10px]">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse" /> 5 AGENTES ATIVOS
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse" /> {AGENTS.filter((a) => a.status === 'on').length} AGENTES ATIVOS
             </Badge>
             <span className="text-xs text-muted-foreground capitalize">{hoje}</span>
           </div>
@@ -346,34 +471,45 @@ export default function AgentsHub() {
               })}
         </section>
 
-        {/* Cards dos 5 agentes */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          {AGENTS.map((a) => {
-            const active = a.id === activeAgentId;
-            return (
-              <button
-                key={a.id}
-                onClick={() => setActiveAgentId(a.id)}
-                className={`text-left p-4 rounded-lg border bg-card transition-all ${
-                  active ? 'border-2 shadow-md' : 'border-border/40 hover:border-border'
-                }`}
-                style={active ? { borderColor: a.color } : undefined}
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <Badge style={{ backgroundColor: a.bg, color: a.color }} className="text-[10px] border-0 font-semibold">
-                    {a.role}
-                  </Badge>
-                  <span
-                    className={`w-2 h-2 rounded-full ${a.status === 'on' ? 'bg-emerald-500' : 'bg-amber-500'}`}
-                    title={a.status === 'on' ? 'Ativo' : 'Idle'}
-                  />
-                </div>
-                <h3 className="text-sm font-bold text-foreground mb-1">{a.name}</h3>
-                <p className="text-[11px] text-muted-foreground leading-snug">{a.description}</p>
-              </button>
-            );
-          })}
-        </section>
+        {/* Agentes agrupados */}
+        {(['core', 'receita', 'operacao', 'marketing'] as AgentGroup[]).map((g) => {
+          const list = AGENTS.filter((a) => a.group === g);
+          if (list.length === 0) return null;
+          return (
+            <section key={g}>
+              <h2 className="text-[10px] font-mono text-muted-foreground tracking-widest uppercase mb-2">
+                {GROUP_LABELS[g]}
+              </h2>
+              <div className={`grid gap-3 ${g === 'core' ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-5'}`}>
+                {list.map((a) => {
+                  const active = a.id === activeAgentId;
+                  return (
+                    <button
+                      key={a.id}
+                      onClick={() => setActiveAgentId(a.id)}
+                      className={`text-left p-4 rounded-lg border bg-card transition-all ${
+                        active ? 'border-2 shadow-md' : 'border-border/40 hover:border-border'
+                      } ${g === 'core' ? 'lg:col-span-1' : ''}`}
+                      style={active ? { borderColor: a.color } : undefined}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <Badge style={{ backgroundColor: a.bg, color: a.color }} className="text-[10px] border-0 font-semibold">
+                          {a.role}
+                        </Badge>
+                        <span
+                          className={`w-2 h-2 rounded-full ${a.status === 'on' ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                          title={a.status === 'on' ? 'Ativo' : 'Idle'}
+                        />
+                      </div>
+                      <h3 className="text-sm font-bold text-foreground mb-1">{a.name}</h3>
+                      <p className="text-[11px] text-muted-foreground leading-snug">{a.description}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })}
 
         {/* Chat */}
         <Card>

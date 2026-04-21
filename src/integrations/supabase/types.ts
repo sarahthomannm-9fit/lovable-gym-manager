@@ -44,6 +44,42 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_logs: {
+        Row: {
+          agent_id: string
+          created_at: string
+          id: string
+          input: Json | null
+          latency_ms: number | null
+          output: Json | null
+          status: string
+          triggered_by: string
+          user_id: string | null
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string
+          id?: string
+          input?: Json | null
+          latency_ms?: number | null
+          output?: Json | null
+          status?: string
+          triggered_by?: string
+          user_id?: string | null
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string
+          id?: string
+          input?: Json | null
+          latency_ms?: number | null
+          output?: Json | null
+          status?: string
+          triggered_by?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       agent_reports: {
         Row: {
           agent_id: string
@@ -1528,6 +1564,48 @@ export type Database = {
           updated_at?: string
           usado?: number | null
           valido_ate?: string | null
+        }
+        Relationships: []
+      }
+      propostas_b2b: {
+        Row: {
+          contato: string | null
+          created_at: string
+          email: string | null
+          empresa: string
+          html: string | null
+          id: string
+          servicos: Json | null
+          status: string
+          telefone: string | null
+          updated_at: string
+          valor: number | null
+        }
+        Insert: {
+          contato?: string | null
+          created_at?: string
+          email?: string | null
+          empresa: string
+          html?: string | null
+          id?: string
+          servicos?: Json | null
+          status?: string
+          telefone?: string | null
+          updated_at?: string
+          valor?: number | null
+        }
+        Update: {
+          contato?: string | null
+          created_at?: string
+          email?: string | null
+          empresa?: string
+          html?: string | null
+          id?: string
+          servicos?: Json | null
+          status?: string
+          telefone?: string | null
+          updated_at?: string
+          valor?: number | null
         }
         Relationships: []
       }
