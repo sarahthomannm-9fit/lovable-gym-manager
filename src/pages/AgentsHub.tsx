@@ -294,9 +294,10 @@ interface MetricCard {
 // COMPONENT
 // ============================================
 export default function AgentsHub() {
-  const [activeAgentId, setActiveAgentId] = useState<AgentId>('sdr');
+  const [activeAgentId, setActiveAgentId] = useState<AgentId>('ron');
   const [chats, setChats] = useState<Record<AgentId, ChatMessage[]>>({
-    sdr: [], onboard: [], billing: [], content: [], suporte: [],
+    ron: [], sdr: [], prep: [], reativacao: [], upsell: [], b2b: [],
+    onboard: [], billing: [], content: [], suporte: [],
   });
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
@@ -316,7 +317,12 @@ export default function AgentsHub() {
   useEffect(() => {
     if (chats[activeAgentId].length === 0) {
       const hello: Record<AgentId, string> = {
+        ron: 'Rony, RON Core online. Me dá o comando — eu decido qual agente acionar.',
         sdr: 'Olá Rony. Pronto para prospectar. Qual lead vamos trabalhar?',
+        prep: 'Rony, me passa o nome do lead que tem call agendada. Devolvo briefing em 5 linhas.',
+        reativacao: 'Rony, posso rodar segmentação de inativos 30/60/90d. Qual janela?',
+        upsell: 'Rony, qual aluno você quer analisar para upgrade?',
+        b2b: 'Rony, me passa: empresa, serviços e valor. Gero a proposta na hora.',
         onboard: 'Oi Rony! Tudo certo no onboarding. Algum aluno específico?',
         billing: 'Olá Rony. Régua financeira em dia. O que precisa?',
         content: 'Oi Rony, qual tema vamos rodar hoje?',
