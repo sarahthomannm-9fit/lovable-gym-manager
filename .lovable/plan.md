@@ -1,153 +1,124 @@
 
 
-# Plano: Finalizar FitManager — Vida Completa do Ecossistema
+# Plano: Corrigir conexão dos agentes + expandir para Ecossistema 9FIT
 
-## Situacao Atual
+## 1. Bug crítico (causa raiz do "erro de conexão")
 
-O sistema ja tem:
-- Business Engine + Automation Queue + Action Executor (motores 1-4 implementados)
-- War Room 3 colunas (Critical, Business, System) funcionando
-- PageShell em 8 telas core
-- AI Agent com streaming real via Edge Function
-- Marketing + Financial Intelligence hooks
-- Anamnese/PAR-Q com link publico
+A edge function `agent-hub-chat` está chamando `supabase.auth.getClaims(token)` mas a versão do SDK importada (`@supabase/supabase-js@2.45.0`) **não tem esse método**. O log confirma:
 
-**O que falta para o sistema "respirar":**
-
-1. As telas de Marketing, Financeiro e 9FIT OS nao usam os engines — sao estaticas
-2. O fluxo completo de conversao Lead -> Experimental -> Aluno nao esta conectado
-3. Nenhuma tela de deep-dive do Control Plane existe (/painel/atrasos, /painel/agenda, etc.)
-4. A sidebar nao reflete badges dinamicos de urgencia por secao
-5. O Agente IA nao tem capacidade de executar acoes (so responde texto)
-6. O onboarding inteligente (3 perguntas de calibracao) nao existe
-
----
-
-## Bloco 1: Deep-Dive Routes do Control Plane (4 rotas novas)
-
-Criar sub-paginas do painel que mostram o "zoom" de cada B.O.:
-
-| Rota | O que mostra |
-|------|-------------|
-| `/painel/inadimplencia` | Lista completa de alunos inadimplentes por etapa da regua (D+1 a D+30+), com acoes inline (cobrar, negociar, cancelar). Usa `useBusinessEngine` para classificar. |
-| `/painel/retencao` | Alunos sem frequencia agrupados por tier (7d, 14d, 21d, 30d). Acoes: mensagem, ligar, marcar resolvido. |
-| `/painel/agenda` | Visao semanal de aulas com badges de estado (ok/sem instrutor/lotada/vazia). Drag to reschedule (futuro). |
-| `/painel/pipeline` | Funil visual Lead -> Agendado -> Experimental -> Proposta -> Convertido. Cards movem entre colunas. |
-
-Cada deep-dive usa PageShell com metrics relevantes e permite acao direta sem sair da pagina.
-
-**Arquivos:**
-- Criar `src/pages/painel/Inadimplencia.tsx`
-- Criar `src/pages/painel/Retencao.tsx`
-- Criar `src/pages/painel/AgendaSemanal.tsx`
-- Criar `src/pages/painel/Pipeline.tsx`
-- Editar `src/App.tsx` (4 rotas novas)
-- Editar `src/pages/Painel.tsx` (links para deep-dives nos cards)
-
----
-
-## Bloco 2: Marketing + Financeiro com Engines Vivos
-
-As telas de marketing e financeiro precisam consumir os intelligence hooks e mostrar acoes, nao so dados.
-
-### Marketing
-- Editar `src/pages/marketing/Campanhas.tsx` — integrar `useMarketingIntelligence`, mostrar banner de insights no topo, badges de ROI por campanha
-- Editar `src/pages/marketing/Captacao.tsx` — integrar `useBusinessEngine` leads classificados, temperatura visual (borda quente/morno/frio), acao inline de contato
-- Editar `src/pages/marketing/InsightsIA.tsx` — alimentar com dados reais do hook ao inves de estaticos
-- Editar `src/pages/marketing/Automacao.tsx` — mostrar `useAutomationQueue` items do tipo remarketing com botao executar
-
-### Financeiro
-- Editar `src/pages/Relatorios.tsx` — integrar `useFinancialIntelligence`, health score visivel, alertas no topo
-- Editar `src/pages/relatorios/Cobrancas.tsx` — usar `useBusinessEngine` pagamentos classificados por etapa, mostrar regua visual
-- Editar `src/pages/relatorios/EstrategiasIA.tsx` — consumir financial intelligence alerts como cards de acao
-
----
-
-## Bloco 3: Fluxo Lead -> Aluno Conectado
-
-Hoje, converter um lead em aluno sao processos separados. Conectar:
-
-- Editar `src/pages/AulasExperimentais.tsx` — adicionar botao "Converter em Aluno" que pre-preenche `AddStudentDialog` com dados do lead/experimental (nome, email, telefone)
-- Editar `src/components/students/AddStudentDialog.tsx` — aceitar `defaultValues` prop para pre-preenchimento vindo de conversao
-- Ao converter: atualizar status do lead para "convertido", atualizar experimental para "convertido", gerar token de anamnese automaticamente
-- Registrar `system_event` tipo `lead.converted` com metadata
-
-**Arquivos:**
-- Editar `src/pages/AulasExperimentais.tsx`
-- Editar `src/components/students/AddStudentDialog.tsx`
-
----
-
-## Bloco 4: Sidebar com Badges Dinamicos
-
-A sidebar precisa mostrar urgencia por secao sem o usuario abrir cada pagina:
-
-- Editar `src/components/AppSidebar.tsx`:
-  - Consumir `useDataIntegration()` para contar alertas por area
-  - Badge vermelho em "Pagamentos" se ha inadimplentes
-  - Badge amarelo em "Alunos" se ha alunos sem frequencia
-  - Badge em "Captacao" se ha leads quentes sem follow-up
-  - Badge em "Aulas" se ha aula sem instrutor
-
----
-
-## Bloco 5: Agente IA com Capacidade de Acao
-
-O agente responde texto mas nao executa. Adicionar:
-
-- Editar `src/components/AIAgent.tsx`:
-  - Adicionar "Quick Actions" pre-definidas que o agente pode sugerir como botoes clicaveis:
-    - "Executar cobranca em lote" -> chama `useActionExecutor`
-    - "Ver alunos em risco" -> navega para `/painel/retencao`
-    - "Criar campanha de remarketing" -> navega para `/marketing/campanhas`
-  - Quando o agente menciona uma acao, renderizar como botao inline na resposta
-  - Adicionar contexto do `useBusinessEngine` (criticos, atencao, oportunidades) ao prompt
-
----
-
-## Bloco 6: Onboarding Inteligente (Calibracao)
-
-Primeira vez que abre o sistema, 3 perguntas que calibram o contexto:
-
-- Criar `src/components/OnboardingWizard.tsx`:
-  - Pergunta 1: "Quantos alunos voce tem?" (0-10, 10-50, 50-100, 100+)
-  - Pergunta 2: "Como voce cobra?" (Manual/Pix, Recorrencia, Boleto, Misto)
-  - Pergunta 3: "Voce trabalha solo ou tem equipe?" (Solo, 1-3, 4+)
-  - Salva em `localStorage` key `fitmanager_onboarding`
-  - Resultado ajusta prioridade de alertas no painel (ex: solo = esconde alertas de equipe)
-- Editar `src/pages/Painel.tsx` — verificar se onboarding foi feito, se nao mostrar wizard
-
----
-
-## Bloco 7: Estados Visuais Completos nas Telas Restantes
-
-Telas que ainda nao tem estados visuais completos (critical/empty/loading):
-
-- `src/pages/Funcionarios.tsx` — PageShell + empty state "Cadastrar primeiro funcionario"
-- `src/pages/AvaliacoesFisicas.tsx` — PageShell + badge "pendentes" 
-- `src/components/Equipment.tsx` — PageShell + estado critico se equipamento em manutencao
-- `src/pages/Produtos.tsx` — PageShell + metrics
-
----
-
-## Sequencia de Implementacao
-
-```text
-1. Sidebar badges dinamicos               (base visual)
-2. Deep-dive routes do Control Plane       (4 paginas)
-3. Marketing + Financeiro com engines      (6 edits)
-4. Fluxo Lead -> Aluno conectado           (conversao)
-5. Agente IA com acoes                     (interacao)
-6. Onboarding inteligente                  (calibracao)
-7. Estados visuais telas restantes         (consistencia)
+```
+TypeError: supabase.auth.getClaims is not a function
 ```
 
-## Total de Arquivos
+**Correção:** trocar para `supabase.auth.getUser(token)`, que existe nessa versão e retorna o usuário autenticado a partir do JWT. Mesma correção aplicada em qualquer outra função afetada.
 
-| Acao | Qtd |
-|------|-----|
-| Criar | 5 (4 deep-dives + onboarding) |
-| Editar | ~15 (sidebar, marketing, financeiro, agent, painel, experimentais, etc.) |
+## 2. Arquitetura RON Core (expansão do Hub)
 
-Sem migrations — toda logica e frontend consumindo dados existentes do Supabase via hooks ja implementados.
+Reorganizar o `/agents` em torno de uma hierarquia clara, sem quebrar o que já existe. Mantém os 5 agentes atuais e adiciona os essenciais para o ciclo de receita.
+
+```text
+                   ┌──────────────────────┐
+                   │  CEO (Rony) — humano │
+                   └──────────┬───────────┘
+                              │ comandos
+                   ┌──────────▼───────────┐
+                   │  RON Core (COO)      │  ← novo agente master
+                   │  roteia + monitora   │
+                   └──────────┬───────────┘
+        ┌────────┬────────────┼────────────┬─────────┐
+        ▼        ▼            ▼            ▼         ▼
+     Vendas   Marketing   Financeiro   Suporte   Produto
+       │         │            │           │         │
+   ┌───┴───┐  Content      Billing     Suporte   (futuro)
+   SDR  Prep                                       
+   Reativ                                          
+   Upsell                                          
+   B2B                                             
+```
+
+### Agentes na v1 (entregáveis agora)
+
+| Camada | Agente | Status | Função |
+|---|---|---|---|
+| 1 | **RON Core** | novo | Orquestrador. Recebe comando do CEO, decide qual agente executar, loga tudo. |
+| 2 | SDR Agent | existe | Qualifica leads novos. |
+| 2 | **Prep de Call** | novo | Briefing de 5 linhas antes de cada call (puxa histórico do lead). |
+| 2 | **Reativação** | novo | Mensagens para ex-alunos 30/60/90 dias. |
+| 2 | **Upsell** | novo | Detecta gap no plano atual e sugere upgrade. |
+| 2 | **Proposta B2B** | novo | Gera HTML de proposta para empresas. |
+| 2 | Onboarding | existe | Acompanha novos alunos 30 dias. |
+| 2 | Billing | existe | Régua de inadimplência. |
+| 2 | Content | existe | Scripts de Reels e copy. |
+| 2 | Suporte | existe | Tickets de alunos. |
+
+Camadas 4–6 (Produto, Infra, Estratégia) ficam fora desta entrega — entram em iteração futura para evitar escopo gigante que quebra rápido.
+
+## 3. Mudanças no banco
+
+Nova tabela única `agent_logs` (memória central exigida pelo "RON Core") — registra toda execução de agente: input, output, status, agente, latência. Substitui logs espalhados.
+
+```sql
+create table public.agent_logs (
+  id uuid primary key default gen_random_uuid(),
+  agent_id text not null,
+  triggered_by text not null,         -- 'ceo' | 'cron' | 'event'
+  input jsonb,
+  output jsonb,
+  status text default 'success',      -- success | error | partial
+  latency_ms integer,
+  created_at timestamptz default now()
+);
+-- RLS: authenticated full access
+```
+
+Tabela `propostas_b2b` para o agente de Proposta:
+
+```sql
+create table public.propostas_b2b (
+  id uuid primary key default gen_random_uuid(),
+  empresa text not null, contato text, email text,
+  servicos jsonb, valor numeric,
+  html text, status text default 'draft',
+  created_at timestamptz default now()
+);
+```
+
+Nada é renomeado. Tabelas existentes (`leads`, `alunos`, `pagamentos`, `support_tickets`, `content_drafts`) continuam intactas.
+
+## 4. Mudanças na UI (`/agents`)
+
+- Reorganização visual em **3 grupos** dentro do Hub: **Receita** (SDR, Prep, Reativação, Upsell, B2B) · **Operação** (Onboarding, Billing, Suporte) · **Marketing** (Content).
+- Card extra no topo: **RON Core** (cinza-escuro, sempre ativo) — clicar nele abre o chat de comandos diretos ("reativar base 90d, fechar 2 contratos").
+- Mantém métricas e briefing como estão.
+- Card de cada novo agente com a mesma anatomia (status dot, role badge, descrição, ações).
+
+## 5. Edge functions
+
+- **Corrigir** `agent-hub-chat` (`getUser` em vez de `getClaims`). Mesma checagem em `agent-daily-reports` e `manage-users` se aplicável.
+- **Estender** `agent-hub-chat` com prompts dos 5 novos agentes (`ron`, `prep`, `reativacao`, `upsell`, `b2b`).
+- **Nova função** `proposta-b2b-generate`: recebe `{empresa, servicos, valor}` → gera HTML via Lovable AI Gateway → salva em `propostas_b2b`.
+- Toda chamada loga em `agent_logs` (input, output, latência).
+
+## 6. Detalhes técnicos
+
+- Lovable AI Gateway permanece como provedor (já configurado, sem custo extra de chave).
+- Modelo: `google/gemini-2.5-flash` para chat (rápido, barato), `google/gemini-2.5-pro` para Proposta B2B (qualidade alta no HTML).
+- Auth via `getUser(token)` retorna `{data: {user}, error}` — `user.id` substitui `claims.sub`.
+- Cron de relatórios diários (já configurado via SQL pelo usuário) continua válido — apenas estende para incluir os novos agentes.
+- Sem quebra de rotas, sem mudança em sidebar (apenas o conteúdo de `/agents` evolui).
+
+## 7. Ordem de execução
+
+1. Migration: criar `agent_logs` e `propostas_b2b` com RLS.
+2. Corrigir `agent-hub-chat` (`getClaims` → `getUser`) e adicionar prompts dos 5 novos agentes.
+3. Criar edge function `proposta-b2b-generate`.
+4. Atualizar `AgentsHub.tsx`: card RON Core + 4 novos agentes agrupados em 3 seções.
+5. Adicionar logging de cada chamada em `agent_logs`.
+6. Testar fluxo: comando para RON Core → roteamento → resposta do agente certo.
+
+## Fora do escopo desta entrega
+
+- Camadas 4–6 (agentes de Produto, Infra, Estratégia).
+- Integração real com Instagram/WhatsApp (fica como próximo passo — exige API Business e webhook).
+- Geração de PDF da proposta (HTML primeiro; PDF na próxima iteração).
 
