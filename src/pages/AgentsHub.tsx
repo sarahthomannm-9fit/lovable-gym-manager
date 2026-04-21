@@ -28,13 +28,15 @@ import {
 // ============================================
 // AGENT CONFIG
 // ============================================
-type AgentId = 'sdr' | 'onboard' | 'billing' | 'content' | 'suporte';
+type AgentId = 'ron' | 'sdr' | 'prep' | 'reativacao' | 'upsell' | 'b2b' | 'onboard' | 'billing' | 'content' | 'suporte';
 type AgentStatus = 'on' | 'idle';
+type AgentGroup = 'core' | 'receita' | 'operacao' | 'marketing';
 
 interface AgentDef {
   id: AgentId;
   name: string;
   role: string;
+  group: AgentGroup;
   description: string;
   color: string;
   bg: string;
