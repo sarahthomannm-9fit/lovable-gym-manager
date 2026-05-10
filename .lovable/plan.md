@@ -1,124 +1,173 @@
 
+# Plano: Modos Operacionais do GymManager (Admin / Síndico / Professor / Corporate)
 
-# Plano: Corrigir conexão dos agentes + expandir para Ecossistema 9FIT
+## Princípio
 
-## 1. Bug crítico (causa raiz do "erro de conexão")
+O GymManager continua sendo **a base** — todo o código atual (alunos, pagamentos, aulas, agentes IA, marketing) permanece. Adicionamos uma **camada de contexto** que:
 
-A edge function `agent-hub-chat` está chamando `supabase.auth.getClaims(token)` mas a versão do SDK importada (`@supabase/supabase-js@2.45.0`) **não tem esse método**. O log confirma:
+1. Identifica o papel do usuário no login.
+2. Escolhe a organização (se ele pertence a mais de uma).
+3. Renderiza um **layout/dashboard dedicado** para a persona, lendo dos mesmos dados.
+4. Restringe acesso por RLS (cada persona só vê o que pode).
 
-```
-TypeError: supabase.auth.getClaims is not a function
-```
-
-**Correção:** trocar para `supabase.auth.getUser(token)`, que existe nessa versão e retorna o usuário autenticado a partir do JWT. Mesma correção aplicada em qualquer outra função afetada.
-
-## 2. Arquitetura RON Core (expansão do Hub)
-
-Reorganizar o `/agents` em torno de uma hierarquia clara, sem quebrar o que já existe. Mantém os 5 agentes atuais e adiciona os essenciais para o ciclo de receita.
+**Apenas Admin acessa o sistema completo.** Os outros entram em uma "casca" focada na função deles.
 
 ```text
-                   ┌──────────────────────┐
-                   │  CEO (Rony) — humano │
-                   └──────────┬───────────┘
-                              │ comandos
-                   ┌──────────▼───────────┐
-                   │  RON Core (COO)      │  ← novo agente master
-                   │  roteia + monitora   │
-                   └──────────┬───────────┘
-        ┌────────┬────────────┼────────────┬─────────┐
-        ▼        ▼            ▼            ▼         ▼
-     Vendas   Marketing   Financeiro   Suporte   Produto
-       │         │            │           │         │
-   ┌───┴───┐  Content      Billing     Suporte   (futuro)
-   SDR  Prep                                       
-   Reativ                                          
-   Upsell                                          
-   B2B                                             
+            LOGIN
+              │
+   ┌──────────┴──────────┐
+   │  Detecta papéis     │
+   └──────────┬──────────┘
+              │
+   ┌──────────┼──────────┬──────────┐
+   ▼          ▼          ▼          ▼
+ ADMIN     SÍNDICO   PROFESSOR  CORPORATE(RH)
+ /painel   /sindico  /coach    /corp
+ (full)    (read-    (gestão   (read-only
+           mostly)   própria)  empresa)
 ```
 
-### Agentes na v1 (entregáveis agora)
+## 1. Banco de dados (1 migration)
 
-| Camada | Agente | Status | Função |
+### 1.1 Expandir o enum de papéis
+
+```sql
+ALTER TYPE app_role ADD VALUE 'sindico';
+ALTER TYPE app_role ADD VALUE 'professor';
+ALTER TYPE app_role ADD VALUE 'corporate';
+```
+
+### 1.2 Tabela `organizations`
+
+Representa qualquer "cliente operacional": condomínio, empresa corporativa, ou negócio de um professor.
+
+```sql
+CREATE TABLE public.organizations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  nome text NOT NULL,
+  tipo text NOT NULL,            -- 'condominio' | 'corporate' | 'professor' | 'studio'
+  cnpj text,
+  contato_nome text,
+  contato_email text,
+  contato_telefone text,
+  status text DEFAULT 'ativo',
+  metadata jsonb DEFAULT '{}',
+  created_at timestamptz DEFAULT now()
+);
+```
+
+### 1.3 Tabela `organization_members`
+
+Liga usuário ↔ organização ↔ papel naquela org. Um usuário pode ser síndico de 2 condomínios; admin global tem acesso transversal.
+
+```sql
+CREATE TABLE public.organization_members (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id uuid REFERENCES organizations(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL,
+  papel app_role NOT NULL,       -- sindico | professor | corporate
+  created_at timestamptz DEFAULT now(),
+  UNIQUE(organization_id, user_id, papel)
+);
+```
+
+### 1.4 Escopo dos alunos
+
+```sql
+ALTER TABLE public.alunos ADD COLUMN organization_id uuid REFERENCES organizations(id);
+CREATE INDEX idx_alunos_org ON public.alunos(organization_id);
+```
+
+Alunos antigos ficam com `NULL` e continuam visíveis apenas para Admin.
+
+### 1.5 Função helper + RLS
+
+```sql
+CREATE FUNCTION public.user_has_org(_user uuid, _org uuid)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM organization_members
+    WHERE user_id = _user AND organization_id = _org
+  );
+$$;
+```
+
+RLS em `organizations` e `organization_members`: admin vê tudo (`is_admin(auth.uid())`); demais veem apenas as orgs onde têm membership.
+
+## 2. Frontend — camada de contexto
+
+### 2.1 Hook `useOperationalContext`
+
+Retorna `{ role, organizationId, organization, switchOrg() }`. Lê:
+- papel global em `user_roles` (admin tem prioridade);
+- memberships em `organization_members`;
+- org selecionada em `localStorage` (`9fit:active_org`).
+
+### 2.2 Tela de seleção `/select-context`
+
+Mostrada após login **se** o usuário tem múltiplos papéis ou pertence a múltiplas orgs. Cards grandes com o tipo (Condomínio X, Empresa Y, Meu negócio…). Admin vê um botão extra "Acessar como Admin (visão completa)".
+
+### 2.3 Roteamento por persona em `App.tsx`
+
+Adicionar três grupos de rotas, cada uma com seu **layout próprio** (não a `AppSidebar` atual):
+
+| Persona | Rota base | Layout | Páginas iniciais |
 |---|---|---|---|
-| 1 | **RON Core** | novo | Orquestrador. Recebe comando do CEO, decide qual agente executar, loga tudo. |
-| 2 | SDR Agent | existe | Qualifica leads novos. |
-| 2 | **Prep de Call** | novo | Briefing de 5 linhas antes de cada call (puxa histórico do lead). |
-| 2 | **Reativação** | novo | Mensagens para ex-alunos 30/60/90 dias. |
-| 2 | **Upsell** | novo | Detecta gap no plano atual e sugere upgrade. |
-| 2 | **Proposta B2B** | novo | Gera HTML de proposta para empresas. |
-| 2 | Onboarding | existe | Acompanha novos alunos 30 dias. |
-| 2 | Billing | existe | Régua de inadimplência. |
-| 2 | Content | existe | Scripts de Reels e copy. |
-| 2 | Suporte | existe | Tickets de alunos. |
+| Admin | `/painel`, `/alunos`, … | `AppSidebar` (atual, intacto) | tudo que já existe |
+| Síndico | `/sindico` | `SindicoLayout` (header simples, sem sidebar) | Visão Geral, Alunos do Condomínio, Aulas da Semana, Comunicados |
+| Professor | `/coach` | `CoachLayout` (mobile-first) | Hoje, Meus Alunos, Minhas Aulas, Receitas |
+| Corporate | `/corp` | `CorpLayout` (read-only executivo) | Visão Geral, Funcionários Ativos, Adesão, Relatório Mensal |
 
-Camadas 4–6 (Produto, Infra, Estratégia) ficam fora desta entrega — entram em iteração futura para evitar escopo gigante que quebra rápido.
+Guard `RoleRoute`: se papel ≠ esperado, redireciona para `/select-context`.
 
-## 3. Mudanças no banco
+### 2.4 Login redireciona pelo papel
 
-Nova tabela única `agent_logs` (memória central exigida pelo "RON Core") — registra toda execução de agente: input, output, status, agente, latência. Substitui logs espalhados.
+Em `Login.tsx` após `signInWithPassword`:
 
-```sql
-create table public.agent_logs (
-  id uuid primary key default gen_random_uuid(),
-  agent_id text not null,
-  triggered_by text not null,         -- 'ceo' | 'cron' | 'event'
-  input jsonb,
-  output jsonb,
-  status text default 'success',      -- success | error | partial
-  latency_ms integer,
-  created_at timestamptz default now()
-);
--- RLS: authenticated full access
+```ts
+const role = await fetchPrimaryRole();
+const memberships = await fetchMemberships();
+if (role === 'admin') navigate('/painel');
+else if (memberships.length > 1) navigate('/select-context');
+else navigate(routeForRole(role));
 ```
 
-Tabela `propostas_b2b` para o agente de Proposta:
+## 3. Conteúdo de cada modo (v1 pragmática)
 
-```sql
-create table public.propostas_b2b (
-  id uuid primary key default gen_random_uuid(),
-  empresa text not null, contato text, email text,
-  servicos jsonb, valor numeric,
-  html text, status text default 'draft',
-  created_at timestamptz default now()
-);
-```
+### Admin (sem mudança)
+Continua usando `AppSidebar` com tudo. Ganha apenas duas seções novas no menu: **Organizações** (CRUD em `organizations`) e **Membros** (atribuir usuário→org→papel).
 
-Nada é renomeado. Tabelas existentes (`leads`, `alunos`, `pagamentos`, `support_tickets`, `content_drafts`) continuam intactas.
+### Síndico — `/sindico`
+Read-mostly. 4 cards de KPI do condomínio (alunos ativos, presença na semana, aulas confirmadas, comunicados pendentes) + lista dos alunos do condomínio + agenda da semana. Botão único de ação: "Solicitar à equipe 9FIT" (cria `support_ticket` com `category='condominio'`).
 
-## 4. Mudanças na UI (`/agents`)
+### Professor — `/coach`
+Mobile-first. Tabs: **Hoje** (aulas do dia + check-in rápido), **Alunos** (apenas os vinculados a ele via `aulas`/`treinos`), **Receita** (lista de pagamentos onde ele é o profissional). Reutiliza componentes existentes filtrados.
 
-- Reorganização visual em **3 grupos** dentro do Hub: **Receita** (SDR, Prep, Reativação, Upsell, B2B) · **Operação** (Onboarding, Billing, Suporte) · **Marketing** (Content).
-- Card extra no topo: **RON Core** (cinza-escuro, sempre ativo) — clicar nele abre o chat de comandos diretos ("reativar base 90d, fechar 2 contratos").
-- Mantém métricas e briefing como estão.
-- Card de cada novo agente com a mesma anatomia (status dot, role badge, descrição, ações).
+### Corporate (RH) — `/corp`
+Read-only executivo. KPIs da empresa (funcionários elegíveis, adesão %, sessões/mês, NPS) + tabela de funcionários ativos + botão "Baixar relatório PDF" (usa edge function existente / a criar depois). Sem ações operacionais.
 
-## 5. Edge functions
+## 4. Segurança
 
-- **Corrigir** `agent-hub-chat` (`getUser` em vez de `getClaims`). Mesma checagem em `agent-daily-reports` e `manage-users` se aplicável.
-- **Estender** `agent-hub-chat` com prompts dos 5 novos agentes (`ron`, `prep`, `reativacao`, `upsell`, `b2b`).
-- **Nova função** `proposta-b2b-generate`: recebe `{empresa, servicos, valor}` → gera HTML via Lovable AI Gateway → salva em `propostas_b2b`.
-- Toda chamada loga em `agent_logs` (input, output, latência).
+- RLS de `alunos` mantém Admin com acesso total; síndico/professor/corporate veem apenas registros com `organization_id` ∈ suas memberships.
+- Edge functions já autenticadas continuam usando `getUser()`.
+- A seleção de org é validada server-side em todas as queries (não confiar no `localStorage`).
 
-## 6. Detalhes técnicos
+## 5. Ordem de execução
 
-- Lovable AI Gateway permanece como provedor (já configurado, sem custo extra de chave).
-- Modelo: `google/gemini-2.5-flash` para chat (rápido, barato), `google/gemini-2.5-pro` para Proposta B2B (qualidade alta no HTML).
-- Auth via `getUser(token)` retorna `{data: {user}, error}` — `user.id` substitui `claims.sub`.
-- Cron de relatórios diários (já configurado via SQL pelo usuário) continua válido — apenas estende para incluir os novos agentes.
-- Sem quebra de rotas, sem mudança em sidebar (apenas o conteúdo de `/agents` evolui).
-
-## 7. Ordem de execução
-
-1. Migration: criar `agent_logs` e `propostas_b2b` com RLS.
-2. Corrigir `agent-hub-chat` (`getClaims` → `getUser`) e adicionar prompts dos 5 novos agentes.
-3. Criar edge function `proposta-b2b-generate`.
-4. Atualizar `AgentsHub.tsx`: card RON Core + 4 novos agentes agrupados em 3 seções.
-5. Adicionar logging de cada chamada em `agent_logs`.
-6. Testar fluxo: comando para RON Core → roteamento → resposta do agente certo.
+1. Migration (enum + 2 tabelas + coluna em alunos + RLS).
+2. Hook `useOperationalContext` + tela `/select-context`.
+3. Layouts (`SindicoLayout`, `CoachLayout`, `CorpLayout`) — cada um é um shell de 80 linhas.
+4. Páginas v1 de cada persona (1 dashboard com dados reais via Supabase scoped).
+5. Roteamento + guards + redirect no login.
+6. CRUD de organizações e membros para o Admin.
 
 ## Fora do escopo desta entrega
 
-- Camadas 4–6 (agentes de Produto, Infra, Estratégia).
-- Integração real com Instagram/WhatsApp (fica como próximo passo — exige API Business e webhook).
-- Geração de PDF da proposta (HTML primeiro; PDF na próxima iteração).
+- Pricing/billing automatizado por organização.
+- White-label visual por org (logo/cor próprios).
+- Mobile app nativo do professor.
+- Integração com WhatsApp/Instagram dos agentes (segue na próxima rodada).
 
+## O que NÃO muda
+
+Tudo que o Admin já usa hoje (`/painel`, `/alunos`, `/agents`, marketing, relatórios). Os novos modos são **adições paralelas**, não refatoração.
