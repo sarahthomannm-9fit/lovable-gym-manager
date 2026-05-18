@@ -184,6 +184,7 @@ export function AppSidebar() {
       roles: ['admin'],
       items: [
         { title: "Usuários", icon: Shield, path: "/admin/usuarios", roles: ['admin'] },
+        { title: "Organizações", icon: Network, path: "/admin/organizacoes", roles: ['admin'] },
       ],
     },
     {
