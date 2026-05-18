@@ -1,0 +1,113 @@
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { AppRole } from './useCurrentUserRole';
+
+export type Organization = {
+  id: string;
+  nome: string;
+  tipo: 'condominio' | 'corporate' | 'professor' | 'studio';
+  status: string;
+};
+
+export type Membership = {
+  organization_id: string;
+  papel: AppRole;
+  organization: Organization;
+};
+
+type Ctx = {
+  loading: boolean;
+  isAdmin: boolean;
+  primaryRole: AppRole | null;
+  memberships: Membership[];
+  activeOrg: Organization | null;
+  activeRole: AppRole | null;
+  setActiveOrg: (org: Organization | null) => void;
+  refresh: () => Promise<void>;
+};
+
+const STORAGE_KEY = '9fit:active_org';
+
+const OperationalContext = createContext<Ctx | null>(null);
+
+export function OperationalContextProvider({ children }: { children: ReactNode }) {
+  const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [primaryRole, setPrimaryRole] = useState<AppRole | null>(null);
+  const [memberships, setMemberships] = useState<Membership[]>([]);
+  const [activeOrg, setActiveOrgState] = useState<Organization | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setIsAdmin(false); setPrimaryRole(null); setMemberships([]); setActiveOrgState(null);
+      setLoading(false);
+      return;
+    }
+
+    const { data: roleRow } = await supabase
+      .from('user_roles').select('role').eq('user_id', user.id).maybeSingle();
+    const role = (roleRow?.role as AppRole) ?? null;
+    setPrimaryRole(role);
+    setIsAdmin(role === 'admin');
+
+    const { data: memRows } = await (supabase as any)
+      .from('organization_members')
+      .select('organization_id, papel, organization:organizations(id, nome, tipo, status)')
+      .eq('user_id', user.id);
+
+    const list: Membership[] = (memRows || []).filter((m: any) => m.organization);
+    setMemberships(list);
+
+    const savedId = localStorage.getItem(STORAGE_KEY);
+    const saved = list.find((m) => m.organization.id === savedId)?.organization
+      ?? (list.length === 1 ? list[0].organization : null);
+    setActiveOrgState(saved);
+
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    load();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => load());
+    return () => subscription.unsubscribe();
+  }, [load]);
+
+  const setActiveOrg = (org: Organization | null) => {
+    setActiveOrgState(org);
+    if (org) localStorage.setItem(STORAGE_KEY, org.id);
+    else localStorage.removeItem(STORAGE_KEY);
+  };
+
+  const activeRole = activeOrg
+    ? (memberships.find((m) => m.organization.id === activeOrg.id)?.papel ?? null)
+    : (isAdmin ? 'admin' : primaryRole);
+
+  return (
+    <OperationalContext.Provider value={{
+      loading, isAdmin, primaryRole, memberships, activeOrg, activeRole,
+      setActiveOrg, refresh: load,
+    }}>
+      {children}
+    </OperationalContext.Provider>
+  );
+}
+
+export function useOperationalContext() {
+  const ctx = useContext(OperationalContext);
+  if (!ctx) throw new Error('useOperationalContext must be used inside provider');
+  return ctx;
+}
+
+export function routeForRole(role: AppRole | null): string {
+  switch (role) {
+    case 'admin':
+    case 'manager':
+    case 'user': return '/painel';
+    case 'sindico': return '/sindico';
+    case 'professor': return '/coach';
+    case 'corporate': return '/corp';
+    default: return '/select-context';
+  }
+}
