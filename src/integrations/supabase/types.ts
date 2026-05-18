@@ -129,6 +129,7 @@ export type Database = {
           lifecycle_status: Database["public"]["Enums"]["pessoa_status"]
           nome: string
           observacoes_medicas: string | null
+          organization_id: string | null
           plano_id: string | null
           status: string | null
           telefone: string | null
@@ -154,6 +155,7 @@ export type Database = {
           lifecycle_status?: Database["public"]["Enums"]["pessoa_status"]
           nome: string
           observacoes_medicas?: string | null
+          organization_id?: string | null
           plano_id?: string | null
           status?: string | null
           telefone?: string | null
@@ -179,6 +181,7 @@ export type Database = {
           lifecycle_status?: Database["public"]["Enums"]["pessoa_status"]
           nome?: string
           observacoes_medicas?: string | null
+          organization_id?: string | null
           plano_id?: string | null
           status?: string | null
           telefone?: string | null
@@ -192,6 +195,13 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alunos_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
@@ -1317,6 +1327,80 @@ export type Database = {
         }
         Relationships: []
       }
+      organization_members: {
+        Row: {
+          created_at: string
+          id: string
+          organization_id: string
+          papel: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_id: string
+          papel: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_id?: string
+          papel?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          cnpj: string | null
+          contato_email: string | null
+          contato_nome: string | null
+          contato_telefone: string | null
+          created_at: string
+          id: string
+          metadata: Json
+          nome: string
+          status: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          cnpj?: string | null
+          contato_email?: string | null
+          contato_nome?: string | null
+          contato_telefone?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          nome: string
+          status?: string
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          cnpj?: string | null
+          contato_email?: string | null
+          contato_nome?: string | null
+          contato_telefone?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          nome?: string
+          status?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pagamentos: {
         Row: {
           aluno_id: string | null
@@ -1954,9 +2038,16 @@ export type Database = {
           total_recebido: number
         }[]
       }
+      user_has_org: { Args: { _org: string; _user: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "manager" | "user"
+      app_role:
+        | "admin"
+        | "manager"
+        | "user"
+        | "sindico"
+        | "professor"
+        | "corporate"
       entitlement_status: "ativo" | "suspenso" | "expirado"
       pessoa_status:
         | "lead"
@@ -2101,7 +2192,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "manager", "user"],
+      app_role: [
+        "admin",
+        "manager",
+        "user",
+        "sindico",
+        "professor",
+        "corporate",
+      ],
       entitlement_status: ["ativo", "suspenso", "expirado"],
       pessoa_status: [
         "lead",
