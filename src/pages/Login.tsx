@@ -18,12 +18,32 @@ export function Login() {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-    if (error) {
+    if (error || !data.user) {
       toast.error('Credenciais inválidas. Verifique e-mail e senha.');
-    } else {
+      setLoading(false);
+      return;
+    }
+
+    const uid = data.user.id;
+    const [{ data: roleRow }, { data: mems }] = await Promise.all([
+      supabase.from('user_roles').select('role').eq('user_id', uid).maybeSingle(),
+      (supabase as any).from('organization_members').select('papel, organization_id').eq('user_id', uid),
+    ]);
+    const role = roleRow?.role;
+    const memberships = mems || [];
+
+    if (role === 'admin') {
       navigate('/painel');
+    } else if (memberships.length === 0) {
+      navigate('/painel');
+    } else if (memberships.length === 1) {
+      const papel = memberships[0].papel;
+      const target = papel === 'sindico' ? '/sindico' : papel === 'professor' ? '/coach' : papel === 'corporate' ? '/corp' : '/painel';
+      navigate(target);
+    } else {
+      navigate('/select-context');
     }
     setLoading(false);
   };
