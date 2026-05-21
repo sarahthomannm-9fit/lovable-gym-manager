@@ -3,7 +3,11 @@ import { useDataIntegration } from '@/components/DataIntegrationProvider';
 import { useBusinessEngine } from '@/hooks/useBusinessEngine';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Flame, Thermometer, Snowflake } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Flame, Thermometer, Snowflake, MessageSquare, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useState } from 'react';
+import { toast } from 'sonner';
 
 const ETAPAS = [
   { key: 'captado', label: 'Captado', color: 'border-t-blue-500' },
@@ -13,21 +17,31 @@ const ETAPAS = [
   { key: 'convertido', label: 'Convertido', color: 'border-t-green-500' },
 ];
 
-const TEMP_ICON: Record<string, any> = {
-  quente: Flame,
-  morno: Thermometer,
-  frio: Snowflake,
-};
-
-const TEMP_COLOR: Record<string, string> = {
-  quente: 'text-red-500',
-  morno: 'text-amber-500',
-  frio: 'text-blue-400',
-};
+const TEMP_ICON: Record<string, any> = { quente: Flame, morno: Thermometer, frio: Snowflake };
+const TEMP_COLOR: Record<string, string> = { quente: 'text-red-500', morno: 'text-amber-500', frio: 'text-blue-400' };
 
 export function Pipeline() {
   const { alunos, pagamentos, checkins, aulas, leads, experimentais } = useDataIntegration();
   const engine = useBusinessEngine({ alunos, pagamentos, checkins, aulas, leads, experimentais });
+  const [acting, setActing] = useState<string | null>(null);
+  const [done, setDone] = useState<Set<string>>(new Set());
+
+  const contatar = async (lead: any) => {
+    setActing(lead.id);
+    const { error } = await supabase.from('mensagens_marketing').insert({
+      canal: 'whatsapp',
+      titulo: `Contato comercial - ${lead.nome}`,
+      corpo: `Abordagem inicial para lead ${lead.temperatura}`,
+      destinatarios: 1,
+      status: 'agendada',
+    });
+    if (!error) {
+      await supabase.from('leads').update({ status: 'contatado' }).eq('id', lead.id);
+      setDone(s => new Set(s).add(lead.id));
+      toast.success(`Contato com ${lead.nome} registrado`);
+    } else toast.error('Falha ao registrar');
+    setActing(null);
+  };
 
   const porEtapa = ETAPAS.map(etapa => ({
     ...etapa,
@@ -58,16 +72,26 @@ export function Pipeline() {
               ) : (
                 etapa.leads.map(lead => {
                   const TempIcon = TEMP_ICON[lead.temperatura] || Snowflake;
+                  const isActing = acting === lead.id;
+                  const isDone = done.has(lead.id);
                   return (
-                    <Card key={lead.id} className="cursor-default hover:shadow-sm transition-shadow">
+                    <Card key={lead.id} className="hover:shadow-sm transition-shadow">
                       <CardContent className="p-2.5">
                         <div className="flex items-center gap-1.5 mb-1">
                           <TempIcon className={`h-3 w-3 ${TEMP_COLOR[lead.temperatura]}`} />
-                          <p className="text-xs font-medium truncate">{lead.nome}</p>
+                          <p className="text-xs font-medium truncate flex-1">{lead.nome}</p>
                         </div>
-                        <p className="text-[9px] text-muted-foreground font-mono">
+                        <p className="text-[9px] text-muted-foreground font-mono mb-1.5">
                           {lead.diasSemContato}d sem contato
                         </p>
+                        {etapa.key !== 'convertido' && (
+                          <Button size="sm" variant="outline" className="h-6 text-[10px] w-full"
+                                  disabled={isActing || isDone}
+                                  onClick={() => contatar(lead)}>
+                            {isActing ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <MessageSquare className="h-2.5 w-2.5 mr-1" />}
+                            {isDone ? 'Contatado' : 'Contatar'}
+                          </Button>
+                        )}
                       </CardContent>
                     </Card>
                   );
