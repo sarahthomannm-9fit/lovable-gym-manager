@@ -17,6 +17,7 @@ import SindicoHome from "./pages/sindico/SindicoHome";
 import CoachHome from "./pages/coach/CoachHome";
 import CorpHome from "./pages/corp/CorpHome";
 import OrganizationsAdmin from "./pages/admin/OrganizationsAdmin";
+import MoradorHome from "./pages/morador/MoradorHome";
 
 import NotFound from "./pages/NotFound";
 import { Login } from "./pages/Login";
@@ -115,6 +116,7 @@ const App = () => (
                     <Route path="/sindico" element={<ProtectedRoute><RoleRoute allow={['sindico','admin']}><SindicoHome /></RoleRoute></ProtectedRoute>} />
                     <Route path="/coach" element={<ProtectedRoute><RoleRoute allow={['professor','admin']}><CoachHome /></RoleRoute></ProtectedRoute>} />
                     <Route path="/corp" element={<ProtectedRoute><RoleRoute allow={['corporate','admin']}><CorpHome /></RoleRoute></ProtectedRoute>} />
+                    <Route path="/morador" element={<ProtectedRoute><MoradorHome /></ProtectedRoute>} />
                     <Route path="/admin/organizacoes" element={<Protected><OrganizationsAdmin /></Protected>} />
                     <Route path="/" element={<Navigate to="/painel" replace />} />
                     <Route path="/agents" element={<Protected><AgentsHub /></Protected>} />
