@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { PersonaLayout, PersonaEmptyState } from '@/layouts/PersonaLayout';
+import { PersonaLayout } from '@/layouts/PersonaLayout';
 import { useOperationalContext } from '@/hooks/useOperationalContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,13 +13,10 @@ import { toast } from 'sonner';
 const ACCENT = '#A78BFA';
 
 export default function CorpHome() {
-  const { activeOrg, ensureOrgForPersona } = useOperationalContext();
-  const [ready, setReady] = useState(false);
+  const { activeOrg } = useOperationalContext();
   const [alunos, setAlunos] = useState<any[]>([]);
   const [engajamento, setEngajamento] = useState<Record<string, number>>({});
   const [faturamento, setFaturamento] = useState<{ mes: string; total: number }[]>([]);
-
-  useEffect(() => { ensureOrgForPersona('corporate').then(() => setReady(true)); }, []);
 
   useEffect(() => {
     if (!activeOrg) return;
@@ -80,14 +77,6 @@ export default function CorpHome() {
     });
     if (error) toast.error('Falha'); else toast.success('Relatório solicitado à equipe 9FIT');
   };
-
-  if (!activeOrg && ready) {
-    return (
-      <PersonaLayout title="Painel Corporativo" accent={ACCENT}>
-        <PersonaEmptyState message="Nenhuma empresa corporativa selecionada." />
-      </PersonaLayout>
-    );
-  }
 
   return (
     <PersonaLayout title="Painel Corporativo" subtitle="Relatório executivo" accent={ACCENT}>

@@ -46,10 +46,6 @@ import {
   Settings,
   Store,
   LogOut,
-  Building2,
-  GraduationCap,
-  User,
-  ArrowLeftRight,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useCurrentUserRole, AppRole } from "@/hooks/useCurrentUserRole";
@@ -181,16 +177,6 @@ export function AppSidebar() {
       items: [
         { title: "Hub de Agentes IA", icon: Bot, path: "/agents" },
         { title: "Agente IA", icon: Sparkles, path: "/agente-ia" },
-      ],
-    },
-    {
-      category: "PERSONAS",
-      items: [
-        { title: "Síndico", icon: Building2, path: "/sindico" },
-        { title: "Coach", icon: GraduationCap, path: "/coach" },
-        { title: "Corporativo", icon: Briefcase, path: "/corp" },
-        { title: "Morador / Aluno", icon: User, path: "/morador" },
-        { title: "Trocar contexto", icon: ArrowLeftRight, path: "/select-context" },
       ],
     },
     {
