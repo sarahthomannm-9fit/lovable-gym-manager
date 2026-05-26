@@ -101,6 +101,14 @@ export default function SindicoHome() {
 
   useEffect(() => { carregar(); }, [activeOrg]);
 
+  if (!activeOrg && ready) {
+    return (
+      <PersonaLayout title="Painel do Síndico" accent={ACCENT}>
+        <PersonaEmptyState message="Nenhum condomínio selecionado. Selecione um contexto para visualizar o painel." />
+      </PersonaLayout>
+    );
+  }
+
   const solicitarCobranca = async (i: Inad) => {
     if (!activeOrg) return;
     const { error } = await supabase.from('support_tickets').insert({

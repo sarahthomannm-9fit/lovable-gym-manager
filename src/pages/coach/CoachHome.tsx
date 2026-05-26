@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { PersonaLayout } from '@/layouts/PersonaLayout';
+import { PersonaLayout, PersonaEmptyState } from '@/layouts/PersonaLayout';
 import { useOperationalContext } from '@/hooks/useOperationalContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,13 +12,17 @@ import { toast } from 'sonner';
 const ACCENT = '#C8FF00';
 
 export default function CoachHome() {
-  const { activeOrg } = useOperationalContext();
+  const { activeOrg, ensureOrgForPersona, isAdmin } = useOperationalContext();
+  const [ready, setReady] = useState(false);
   const [aulasHoje, setAulasHoje] = useState<any[]>([]);
   const [aulasSemana, setAulasSemana] = useState<any[]>([]);
   const [alunos, setAlunos] = useState<any[]>([]);
   const [treinos, setTreinos] = useState<any[]>([]);
   const [historico, setHistorico] = useState<any[]>([]);
   const [marcando, setMarcando] = useState<string | null>(null);
+
+  useEffect(() => { ensureOrgForPersona('professor').then(() => setReady(true)); }, []);
+
 
   const carregar = async () => {
     const hoje = new Date().toISOString().slice(0, 10);
@@ -51,6 +55,14 @@ export default function CoachHome() {
   };
 
   useEffect(() => { carregar(); }, [activeOrg]);
+
+  if (!activeOrg && ready && !isAdmin) {
+    return (
+      <PersonaLayout title="Meu dia" accent={ACCENT}>
+        <PersonaEmptyState message="Nenhum contexto de coach disponível." />
+      </PersonaLayout>
+    );
+  }
 
   const marcarPresenca = async (alunoId: string, nome: string) => {
     setMarcando(alunoId);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { PersonaLayout } from '@/layouts/PersonaLayout';
+import { PersonaLayout, PersonaEmptyState } from '@/layouts/PersonaLayout';
 import { useOperationalContext } from '@/hooks/useOperationalContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,10 +13,13 @@ import { toast } from 'sonner';
 const ACCENT = '#A78BFA';
 
 export default function CorpHome() {
-  const { activeOrg } = useOperationalContext();
+  const { activeOrg, ensureOrgForPersona } = useOperationalContext();
+  const [ready, setReady] = useState(false);
   const [alunos, setAlunos] = useState<any[]>([]);
   const [engajamento, setEngajamento] = useState<Record<string, number>>({});
   const [faturamento, setFaturamento] = useState<{ mes: string; total: number }[]>([]);
+
+  useEffect(() => { ensureOrgForPersona('corporate').then(() => setReady(true)); }, []);
 
   useEffect(() => {
     if (!activeOrg) return;
