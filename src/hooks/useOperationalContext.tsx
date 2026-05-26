@@ -24,6 +24,7 @@ type Ctx = {
   activeRole: AppRole | null;
   setActiveOrg: (org: Organization | null) => void;
   refresh: () => Promise<void>;
+  ensureOrgForPersona: (tipo: Organization['tipo']) => Promise<Organization | null>;
 };
 
 const STORAGE_KEY = '9fit:active_org';
@@ -39,33 +40,40 @@ export function OperationalContextProvider({ children }: { children: ReactNode }
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setIsAdmin(false); setPrimaryRole(null); setMemberships([]); setActiveOrgState(null);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setIsAdmin(false); setPrimaryRole(null); setMemberships([]); setActiveOrgState(null);
+        return;
+      }
+
+      const { data: roleRow } = await supabase
+        .from('user_roles').select('role').eq('user_id', user.id).maybeSingle();
+      const role = (roleRow?.role as AppRole) ?? null;
+      setPrimaryRole(role);
+      setIsAdmin(role === 'admin');
+
+      let list: Membership[] = [];
+      try {
+        const { data: memRows } = await (supabase as any)
+          .from('organization_members')
+          .select('organization_id, papel, organization:organizations(id, nome, tipo, status)')
+          .eq('user_id', user.id);
+        list = (memRows || []).filter((m: any) => m.organization);
+      } catch (e) {
+        console.warn('[OperationalContext] memberships load failed', e);
+      }
+      setMemberships(list);
+
+      const savedId = localStorage.getItem(STORAGE_KEY);
+      const saved = list.find((m) => m.organization.id === savedId)?.organization
+        ?? (list.length === 1 ? list[0].organization : null);
+      setActiveOrgState(saved);
+    } catch (e) {
+      console.error('[OperationalContext] load failed', e);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const { data: roleRow } = await supabase
-      .from('user_roles').select('role').eq('user_id', user.id).maybeSingle();
-    const role = (roleRow?.role as AppRole) ?? null;
-    setPrimaryRole(role);
-    setIsAdmin(role === 'admin');
-
-    const { data: memRows } = await (supabase as any)
-      .from('organization_members')
-      .select('organization_id, papel, organization:organizations(id, nome, tipo, status)')
-      .eq('user_id', user.id);
-
-    const list: Membership[] = (memRows || []).filter((m: any) => m.organization);
-    setMemberships(list);
-
-    const savedId = localStorage.getItem(STORAGE_KEY);
-    const saved = list.find((m) => m.organization.id === savedId)?.organization
-      ?? (list.length === 1 ? list[0].organization : null);
-    setActiveOrgState(saved);
-
-    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -80,14 +88,30 @@ export function OperationalContextProvider({ children }: { children: ReactNode }
     else localStorage.removeItem(STORAGE_KEY);
   };
 
+  const ensureOrgForPersona = async (tipo: Organization['tipo']): Promise<Organization | null> => {
+    if (activeOrg && activeOrg.tipo === tipo) return activeOrg;
+    // Prefer membership of this tipo
+    const m = memberships.find((x) => x.organization.tipo === tipo);
+    if (m) { setActiveOrg(m.organization); return m.organization; }
+    // Admin fallback: pick first existing org of that tipo
+    if (isAdmin) {
+      const { data } = await (supabase as any)
+        .from('organizations')
+        .select('id, nome, tipo, status')
+        .eq('tipo', tipo).limit(1).maybeSingle();
+      if (data) { setActiveOrg(data); return data as Organization; }
+    }
+    return null;
+  };
+
   const activeRole = activeOrg
-    ? (memberships.find((m) => m.organization.id === activeOrg.id)?.papel ?? null)
+    ? (memberships.find((m) => m.organization.id === activeOrg.id)?.papel ?? (isAdmin ? 'admin' : null))
     : (isAdmin ? 'admin' : primaryRole);
 
   return (
     <OperationalContext.Provider value={{
       loading, isAdmin, primaryRole, memberships, activeOrg, activeRole,
-      setActiveOrg, refresh: load,
+      setActiveOrg, refresh: load, ensureOrgForPersona,
     }}>
       {children}
     </OperationalContext.Provider>
