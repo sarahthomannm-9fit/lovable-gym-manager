@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { PersonaLayout } from '@/layouts/PersonaLayout';
+import { PersonaLayout, PersonaEmptyState } from '@/layouts/PersonaLayout';
 import { useOperationalContext } from '@/hooks/useOperationalContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
@@ -18,7 +18,8 @@ type Aula = { id: string; nome: string; horario_inicio: string; capacidade: numb
 type Ticket = { id: string; message: string; status: string; created_at: string; agent_response: string | null };
 
 export default function SindicoHome() {
-  const { activeOrg } = useOperationalContext();
+  const { activeOrg, ensureOrgForPersona } = useOperationalContext();
+  const [ready, setReady] = useState(false);
   const [metrics, setMetrics] = useState({ alunos: 0, receita: 0, inadCount: 0, ocupacao: 0 });
   const [inad, setInad] = useState<Inad[]>([]);
   const [aulasHoje, setAulasHoje] = useState<Aula[]>([]);
@@ -31,8 +32,10 @@ export default function SindicoHome() {
 
   const iniciais = (activeOrg?.nome || '??').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
+  useEffect(() => { ensureOrgForPersona('condominio').then((o) => setReady(!!o || !!activeOrg)); }, []);
+
   const carregar = async () => {
-    if (!activeOrg) return;
+    if (!activeOrg) { setReady(true); return; }
     const hoje = new Date().toISOString().slice(0, 10);
     const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
     const seteDias = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
