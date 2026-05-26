@@ -81,6 +81,14 @@ export default function CorpHome() {
     if (error) toast.error('Falha'); else toast.success('Relatório solicitado à equipe 9FIT');
   };
 
+  if (!activeOrg && ready) {
+    return (
+      <PersonaLayout title="Painel Corporativo" accent={ACCENT}>
+        <PersonaEmptyState message="Nenhuma empresa corporativa selecionada." />
+      </PersonaLayout>
+    );
+  }
+
   return (
     <PersonaLayout title="Painel Corporativo" subtitle="Relatório executivo" accent={ACCENT}>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
