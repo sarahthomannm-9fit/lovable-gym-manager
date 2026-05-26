@@ -4,22 +4,18 @@ import { useOperationalContext } from '@/hooks/useOperationalContext';
 import { AppRole } from '@/hooks/useCurrentUserRole';
 
 export function RoleRoute({ allow, children }: { allow: AppRole[]; children: ReactNode }) {
-  const { loading, isAdmin, activeRole, activeOrg, memberships } = useOperationalContext();
+  const { loading, isAdmin, activeRole, memberships } = useOperationalContext();
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-[#07070A] text-muted-foreground">Carregando…</div>;
   }
 
-  // Admin sempre pode entrar; mas se entrou via "Trocar" e selecionou uma org de outro papel,
-  // respeitamos o activeRole.
-  if (isAdmin && !activeOrg) return <>{children}</>;
+  // Admin sempre tem acesso a qualquer persona (preview)
+  if (isAdmin) return <>{children}</>;
 
-  if (!activeRole || !allow.includes(activeRole)) {
-    return <Navigate to="/select-context" replace />;
-  }
-  if (!activeOrg && allow.some((r) => r !== 'admin')) {
-    // Persona escopada sem org selecionada: força seleção (a menos que tenha 1 só, hook já trata)
-    if (memberships.length === 0) return <Navigate to="/login" replace />;
-  }
-  return <>{children}</>;
+  if (activeRole && allow.includes(activeRole)) return <>{children}</>;
+
+  // Usuário sem papel adequado, mas com memberships → manda escolher
+  if (memberships.length > 0) return <Navigate to="/select-context" replace />;
+  return <Navigate to="/login" replace />;
 }
