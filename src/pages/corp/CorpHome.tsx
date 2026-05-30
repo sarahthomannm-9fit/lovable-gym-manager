@@ -19,7 +19,7 @@ export default function CorpHome() {
   const [engajamento, setEngajamento] = useState<Record<string, number>>({});
   const [faturamento, setFaturamento] = useState<{ mes: string; total: number }[]>([]);
 
-  useEffect(() => { ensureOrgForPersona('corporate').then(() => setReady(true)); }, []);
+  useEffect(() => { ensureOrgForPersona('corporate').finally(() => setReady(true)); }, []);
 
   useEffect(() => {
     if (!activeOrg) return;

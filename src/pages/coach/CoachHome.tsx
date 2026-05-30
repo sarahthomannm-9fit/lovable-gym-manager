@@ -21,7 +21,7 @@ export default function CoachHome() {
   const [historico, setHistorico] = useState<any[]>([]);
   const [marcando, setMarcando] = useState<string | null>(null);
 
-  useEffect(() => { ensureOrgForPersona('professor').then(() => setReady(true)); }, []);
+  useEffect(() => { ensureOrgForPersona('professor').finally(() => setReady(true)); }, []);
 
 
   const carregar = async () => {
