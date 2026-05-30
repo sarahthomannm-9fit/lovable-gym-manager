@@ -32,7 +32,7 @@ export default function SindicoHome() {
 
   const iniciais = (activeOrg?.nome || '??').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
-  useEffect(() => { ensureOrgForPersona('condominio').then((o) => setReady(!!o || !!activeOrg)); }, []);
+  useEffect(() => { ensureOrgForPersona('condominio').finally(() => setReady(true)); }, []);
 
   const carregar = async () => {
     if (!activeOrg) { setReady(true); return; }
