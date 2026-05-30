@@ -1,71 +1,100 @@
-## Diagnóstico do estado atual
+## Plano de implementação
 
-Reproduzi o fluxo no preview e mapeei por que as telas não estão entregues:
+Vou tratar isso como correção crítica de produto: deixar o sistema navegável, com rotas reais, estados de tela consistentes, personas funcionais e ações executivas registrando no banco com toast.
 
-1. **`/sindico` trava em "Carregando…"** — `useOperationalContext.load()` pode lançar (ex.: query a `organization_members` falha silenciosamente) e nunca chama `setLoading(false)`. Resultado: `RoleRoute` fica eternamente no skeleton.
-2. **Admin sem `activeOrg` selecionada** entra em qualquer persona, mas o `useEffect` de cada dashboard tem `if (!activeOrg) return;` e a tela fica vazia, sem call-to-action.
-3. **PersonaLayout não tem sidebar nem links cruzados** — quem entra como Síndico/Coach/Corp/Morador só vê o conteúdo da persona; não há como voltar ao Painel, abrir o Hub de Agentes ou navegar para Admin sem usar URL manual. O admin precisa de navegação livre entre todas as interfaces.
-4. **Rota `/morador` desprotegida por papel** — qualquer authenticated entra, sem fallback de seleção de org para admin preview.
-5. **Sidebar principal não expõe atalhos para as personas**, então a "navegação inconsistente" é real.
-6. **Botões executivos** das personas (Solicitar cobrança, Publicar comunicado, etc.) já gravam em `support_tickets` / `notificacoes`, mas falham silenciosamente quando `activeOrg` está nulo.
+### 1. Estabilizar acesso, sessão e contexto operacional
+- Corrigir o fluxo de `AuthProvider`, `OperationalContextProvider`, `ProtectedRoute` e `RoleRoute` para evitar telas presas em “Carregando”.
+- Garantir que admin navegue por todas as interfaces sem depender de membership.
+- Garantir que usuários não-admin entrem na persona correta via `organization_members`.
+- Ajustar leitura de role/contexto para não falhar silenciosamente quando `user_roles` ou `organization_members` retornarem erro.
+- Se necessário, aplicar ajuste mínimo de RLS/GRANT sem criar novas tabelas: permitir que usuário autenticado leia o próprio papel em `user_roles`, mantendo admin seguro.
 
-## Mudanças propostas
+### 2. Criar navegação única e consistente
+- Criar uma fonte única de navegação para:
+  - Admin/Core Gym Manager
+  - Síndico
+  - Morador/Aluno
+  - Coach/Professor
+  - Corporativo
+  - Hub de Agentes IA
+  - Painel Admin: Retenção, Inadimplência, Pipeline, Agenda
+- Atualizar sidebar e navegação superior para usarem a mesma matriz de rotas.
+- Remover links quebrados, duplicados ou que levam para estados vazios sem orientação.
+- Garantir que todos os itens visíveis tenham rota real e tela renderizável.
 
-### 1. Estabilizar o contexto operacional
-- `useOperationalContext.tsx`: envolver `load()` em `try/finally` para garantir `setLoading(false)`. Logar erro no console.
-- Quando `memberships` query falhar, retornar lista vazia em vez de quebrar.
+### 3. Completar telas e estados de cada persona
+Implementar telas com estados claros: carregando, vazio, erro, pronto, ação executando e sucesso.
 
-### 2. Garantir org ativa quando admin entra em persona
-- Criar helper `ensureOrgForPersona(tipo)` em `useOperationalContext` que, se `isAdmin && !activeOrg`, busca a primeira `organizations` do tipo correspondente e seta como ativa.
-- Chamar dentro de `SindicoHome`, `CoachHome`, `CorpHome`, `MoradorHome` antes de carregar dados. Se ainda assim não houver org, renderizar empty state com botão "Selecionar organização" → `/select-context`.
+#### Síndico
+- Dashboard com métricas, inadimplentes, aulas, comunicados e chamados 9FIT.
+- Fluxo de cobrança: registra em `support_tickets` + toast.
+- Fluxo de comunicado: registra em `notificacoes` + toast.
+- Visual baseado no HTML enviado de Síndico, adaptado ao design system atual.
 
-### 3. PersonaLayout com navegação completa
-- Adicionar barra de navegação superior com links: **Painel (admin)**, **Síndico**, **Coach**, **Corporativo**, **Morador**, **Hub de Agentes**, **Admin · Organizações** — visíveis apenas para admin; usuários não-admin veem apenas as personas que possuem membership.
-- Manter botões "Trocar contexto" e "Sair".
-- Mostrar selector compacto de organização (dropdown) quando o usuário tem múltiplas memberships do mesmo tipo OU é admin.
+#### Coach/Professor
+- Dashboard “Meu dia” baseado no HTML enviado de Professor.
+- Aulas de hoje, agenda, alunos, presença, treinos, histórico e feedback.
+- Ação de presença: registra em `checkins` + toast.
+- Ação de feedback: registra em `support_tickets` ou `pessoa_eventos` conforme encaixe existente, sem nova tabela.
 
-### 4. Sidebar principal expõe personas
-- `AppSidebar.tsx`: nova categoria **"PERSONAS"** com itens Síndico / Coach / Corporativo / Morador / Selecionar contexto, visível para admin (e itens individuais para usuários com membership do papel correspondente).
+#### Corporativo
+- Resumo executivo, funcionários/elegíveis, engajamento, faturamento e exportação CSV.
+- Solicitação de relatório executivo: registra em `support_tickets` + toast.
+- Estados vazios quando não houver empresa, alunos ou pagamentos.
 
-### 5. Proteção e roteamento
-- `App.tsx`: envolver `/morador` em `RoleRoute allow={['user','admin','sindico','corporate','professor']}` para aceitar qualquer authenticated mas registrar a entrada.
-- Adicionar `/painel` como link direto no PersonaLayout para admin (atalho rápido).
+#### Morador/Aluno
+- Área do aluno com próxima aula, pagamentos, presenças, comunicados e inscrição em aula.
+- Inscrição: registra em `aulas_inscritos` + toast.
+- Evitar fallback perigoso que mostra “primeiro aluno” para usuário comum; fallback só no preview admin.
 
-### 6. Persona dashboards — robustez
-Para cada um (`SindicoHome`, `CoachHome`, `CorpHome`, `MoradorHome`):
-- Estado `pageStatus: 'loading' | 'no-org' | 'ready' | 'error'`.
-- Empty state amigável quando `no-org` com CTA "Selecionar organização".
-- Toast claro em falhas das ações (cobrança, comunicado, ticket).
-- Garantir que botões fiquem desabilitados durante operações assíncronas.
+### 4. Garantir painel admin comercializável
+- Validar rotas do painel admin:
+  - `/painel`
+  - `/painel/retencao`
+  - `/painel/inadimplencia`
+  - `/painel/pipeline`
+  - `/painel/agenda`
+- Garantir que a sidebar exponha essas rotas claramente.
+- Manter o core Gym Manager como admin/original, sem quebrar módulos existentes.
 
-### 7. SelectContext — fluxo
-- Após admin clicar em "preview", se nenhuma org existe daquele tipo, criar empty state pedindo para cadastrar via `/admin/organizacoes` (já existe).
-- Mostrar contador de orgs disponíveis em cada card.
+### 5. Modo simulação executivo
+- Padronizar ações executivas para sempre:
+  - validar dados mínimos;
+  - registrar evento no banco existente (`support_tickets`, `system_events`, `notificacoes`, `checkins` ou `aulas_inscritos`);
+  - exibir toast de sucesso/erro;
+  - atualizar a lista/estado após ação.
+- Não criar schema novo sem necessidade.
 
-## Arquivos afetados
+### 6. QA funcional final
+- Validar rotas principais sem tela presa:
+  - `/painel`
+  - `/select-context`
+  - `/sindico`
+  - `/coach`
+  - `/corp`
+  - `/morador`
+  - `/agents`
+- Validar que admin consegue alternar entre todas as personas.
+- Validar que cada persona tem conteúdo, estado vazio e ações funcionais.
+- Validar console/network para identificar erros Supabase ou rotas quebradas.
 
-| Arquivo | Mudança |
-|---|---|
-| `src/hooks/useOperationalContext.tsx` | try/finally em `load`, helper `ensureOrgForPersona` |
-| `src/layouts/PersonaLayout.tsx` | navegação superior completa + selector de org |
-| `src/components/AppSidebar.tsx` | nova categoria "PERSONAS" |
-| `src/components/RoleRoute.tsx` | mensagem clara quando bloqueado |
-| `src/pages/sindico/SindicoHome.tsx` | empty state, ensureOrg, status |
-| `src/pages/coach/CoachHome.tsx` | idem |
-| `src/pages/corp/CorpHome.tsx` | idem |
-| `src/pages/morador/MoradorHome.tsx` | idem + proteção de rota |
-| `src/pages/SelectContext.tsx` | contador, empty state |
-| `src/App.tsx` | RoleRoute em `/morador` |
+## Arquivos principais a atualizar
+- `src/App.tsx`
+- `src/components/RoleRoute.tsx`
+- `src/components/AppSidebar.tsx`
+- `src/layouts/PersonaLayout.tsx`
+- `src/hooks/useOperationalContext.tsx`
+- `src/pages/SelectContext.tsx`
+- `src/pages/sindico/SindicoHome.tsx`
+- `src/pages/coach/CoachHome.tsx`
+- `src/pages/corp/CorpHome.tsx`
+- `src/pages/morador/MoradorHome.tsx`
+- Possível novo arquivo de configuração: `src/config/navigation.ts`
+- Possível novo hook utilitário: `src/hooks/usePersonaWorkspace.ts`
 
-## Fora de escopo
-- Não cria novas tabelas nem migrações (todos os recursos já existem no banco).
-- Não altera regras de negócio dos agentes IA nem o Painel admin.
-- Não muda estilo/design system — apenas adiciona elementos de navegação consistentes com o tema atual.
-
-## Critério de aceitação
-1. Admin entra em `/sindico`, `/coach`, `/corp`, `/morador` direto pela sidebar e a página renderiza dentro de 2s (sem ficar em "Carregando…").
-2. Quando admin não selecionou org, cada persona puxa automaticamente uma org compatível ou mostra empty state com CTA.
-3. PersonaLayout exibe atalhos para todas as outras personas + Painel + Hub de Agentes para admin.
-4. Sidebar principal mostra atalhos para personas para admin.
-5. Botões executivos (cobrança, comunicado, ticket, inscrição) geram registros no banco e mostram toast de sucesso/erro.
-6. Usuário não-admin que não tem membership é redirecionado para `/select-context` com mensagem explicativa.
+## Critério de aceite
+- Nenhum link principal da sidebar/personas fica sem tela real.
+- Admin consegue navegar por core, síndico, coach, corporativo e morador.
+- Cada persona tem dashboard funcional com estados de loading/vazio/erro/pronto.
+- Cada ação executiva grava no Supabase e exibe toast.
+- O sistema deixa de travar em “Carregando” nas rotas de persona.
