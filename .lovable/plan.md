@@ -1,100 +1,70 @@
-## Plano de implementação
 
-Vou tratar isso como correção crítica de produto: deixar o sistema navegável, com rotas reais, estados de tela consistentes, personas funcionais e ações executivas registrando no banco com toast.
+## Plano
 
-### 1. Estabilizar acesso, sessão e contexto operacional
-- Corrigir o fluxo de `AuthProvider`, `OperationalContextProvider`, `ProtectedRoute` e `RoleRoute` para evitar telas presas em “Carregando”.
-- Garantir que admin navegue por todas as interfaces sem depender de membership.
-- Garantir que usuários não-admin entrem na persona correta via `organization_members`.
-- Ajustar leitura de role/contexto para não falhar silenciosamente quando `user_roles` ou `organization_members` retornarem erro.
-- Se necessário, aplicar ajuste mínimo de RLS/GRANT sem criar novas tabelas: permitir que usuário autenticado leia o próprio papel em `user_roles`, mantendo admin seguro.
+### 1. Corrigir bug de "piscar" (flicker)
+O preview fica piscando porque os providers de auth/contexto operacional re-renderizam em loop quando `ensureOrgForPersona` muda estado a cada render. Vou:
+- Em `useOperationalContext.tsx`: estabilizar `ensureOrgForPersona` com `useCallback` sem dependências mutáveis; usar ref para `activeOrg`; só chamar `setActiveOrg` quando o id realmente muda.
+- Em `AuthContext.tsx`: garantir que `setSession` só dispara em mudança real (evita cascata).
+- Nas 3 home pages (Sindico/Coach/Corp): chamar `ensureOrgForPersona` apenas uma vez via `useEffect` com array `[]` + guard.
 
-### 2. Criar navegação única e consistente
-- Criar uma fonte única de navegação para:
-  - Admin/Core Gym Manager
-  - Síndico
-  - Morador/Aluno
-  - Coach/Professor
-  - Corporativo
-  - Hub de Agentes IA
-  - Painel Admin: Retenção, Inadimplência, Pipeline, Agenda
-- Atualizar sidebar e navegação superior para usarem a mesma matriz de rotas.
-- Remover links quebrados, duplicados ou que levam para estados vazios sem orientação.
-- Garantir que todos os itens visíveis tenham rota real e tela renderizável.
+### 2. Banco — novas tabelas para integração FitPro
+Migration criando:
 
-### 3. Completar telas e estados de cada persona
-Implementar telas com estados claros: carregando, vazio, erro, pronto, ação executando e sucesso.
+**`fitmanager_connections`**
+- id uuid PK, professor_id uuid (refs auth.users), api_key_hash text, api_key_prefix text (8 chars visíveis), status text ('active'|'revoked'), last_sync_at timestamptz, created_at, updated_at
+- RLS: professor lê/gerencia só as próprias; admin gerencia todas; service_role full
+- GRANTs para authenticated + service_role
+- Índice em api_key_hash
 
-#### Síndico
-- Dashboard com métricas, inadimplentes, aulas, comunicados e chamados 9FIT.
-- Fluxo de cobrança: registra em `support_tickets` + toast.
-- Fluxo de comunicado: registra em `notificacoes` + toast.
-- Visual baseado no HTML enviado de Síndico, adaptado ao design system atual.
+**`fitmanager_events`**
+- id uuid PK, connection_id uuid (FK), event_type text, fitpro_student_id text, fitpro_professor_id text, payload jsonb, created_at
+- RLS: professor lê eventos da própria conexão; admin lê todos
+- GRANTs
 
-#### Coach/Professor
-- Dashboard “Meu dia” baseado no HTML enviado de Professor.
-- Aulas de hoje, agenda, alunos, presença, treinos, histórico e feedback.
-- Ação de presença: registra em `checkins` + toast.
-- Ação de feedback: registra em `support_tickets` ou `pessoa_eventos` conforme encaixe existente, sem nova tabela.
+### 3. Edge function `fitmanager-api`
+`supabase/functions/fitmanager-api/index.ts` com:
+- CORS via `npm:@supabase/supabase-js@2/cors`
+- Roteamento manual pelo `url.pathname` (sem framework)
+- Validação de inputs com Zod (`npm:zod`)
+- Auth: lê `x-api-key`, faz `sha256` e busca por `api_key_hash`. Se inválida → 401 genérico. Atualiza `last_sync_at`.
+- Endpoints:
+  - `GET /v1/health` → status público
+  - `POST /v1/fitpro/connect` → registra metadados iniciais, retorna info da conexão
+  - `POST /v1/fitpro/sync` → grava evento `sync`
+  - `POST /v1/fitpro/student-context` → busca aluno por id/email e retorna treinos/checkins
+  - `GET /v1/fitpro/students` → lista alunos do professor
+  - `GET /v1/fitpro/classes` → lista aulas do professor
+  - `POST /v1/fitpro/check-in` → cria registro em `checkins`
+  - `GET /v1/fitpro/student-checkins` → checkins do aluno
+- Toda chamada grava em `fitmanager_events`
+- `verify_jwt = false` (auth via api-key)
 
-#### Corporativo
-- Resumo executivo, funcionários/elegíveis, engajamento, faturamento e exportação CSV.
-- Solicitação de relatório executivo: registra em `support_tickets` + toast.
-- Estados vazios quando não houver empresa, alunos ou pagamentos.
+### 4. Geração de API Key (server-side)
+Edge function adicional `fitmanager-api-key` (chamada pelo admin autenticado via JWT):
+- `POST /generate` → gera chave aleatória `fm_live_<32 bytes hex>`, salva hash sha256 + prefix, retorna chave bruta UMA vez
+- `POST /rotate` → revoga atual + gera nova
+- `POST /revoke` → marca status='revoked'
 
-#### Morador/Aluno
-- Área do aluno com próxima aula, pagamentos, presenças, comunicados e inscrição em aula.
-- Inscrição: registra em `aulas_inscritos` + toast.
-- Evitar fallback perigoso que mostra “primeiro aluno” para usuário comum; fallback só no preview admin.
+### 5. UI Admin "Integração com FitPro"
+- Nova página `src/pages/admin/FitProIntegration.tsx`
+- Rota `/admin/fitpro` em `App.tsx` (admin only)
+- Item no sidebar
+- Componentes:
+  - Card "Sua API Key": botão Gerar/Rotacionar/Revogar, status, prefixo, last_sync_at
+  - Dialog mostrando chave bruta com copy-to-clipboard (mostrada uma vez)
+  - Tabela últimos 20 eventos (`fitmanager_events`)
+  - Documentação básica dos endpoints
 
-### 4. Garantir painel admin comercializável
-- Validar rotas do painel admin:
-  - `/painel`
-  - `/painel/retencao`
-  - `/painel/inadimplencia`
-  - `/painel/pipeline`
-  - `/painel/agenda`
-- Garantir que a sidebar exponha essas rotas claramente.
-- Manter o core Gym Manager como admin/original, sem quebrar módulos existentes.
+### 6. QA
+- Verificar que flicker sumiu no `/painel` e personas
+- `curl` no `/v1/health` e `/v1/fitpro/students` com api-key gerada
 
-### 5. Modo simulação executivo
-- Padronizar ações executivas para sempre:
-  - validar dados mínimos;
-  - registrar evento no banco existente (`support_tickets`, `system_events`, `notificacoes`, `checkins` ou `aulas_inscritos`);
-  - exibir toast de sucesso/erro;
-  - atualizar a lista/estado após ação.
-- Não criar schema novo sem necessidade.
-
-### 6. QA funcional final
-- Validar rotas principais sem tela presa:
-  - `/painel`
-  - `/select-context`
-  - `/sindico`
-  - `/coach`
-  - `/corp`
-  - `/morador`
-  - `/agents`
-- Validar que admin consegue alternar entre todas as personas.
-- Validar que cada persona tem conteúdo, estado vazio e ações funcionais.
-- Validar console/network para identificar erros Supabase ou rotas quebradas.
-
-## Arquivos principais a atualizar
-- `src/App.tsx`
-- `src/components/RoleRoute.tsx`
-- `src/components/AppSidebar.tsx`
-- `src/layouts/PersonaLayout.tsx`
-- `src/hooks/useOperationalContext.tsx`
-- `src/pages/SelectContext.tsx`
-- `src/pages/sindico/SindicoHome.tsx`
-- `src/pages/coach/CoachHome.tsx`
-- `src/pages/corp/CorpHome.tsx`
-- `src/pages/morador/MoradorHome.tsx`
-- Possível novo arquivo de configuração: `src/config/navigation.ts`
-- Possível novo hook utilitário: `src/hooks/usePersonaWorkspace.ts`
-
-## Critério de aceite
-- Nenhum link principal da sidebar/personas fica sem tela real.
-- Admin consegue navegar por core, síndico, coach, corporativo e morador.
-- Cada persona tem dashboard funcional com estados de loading/vazio/erro/pronto.
-- Cada ação executiva grava no Supabase e exibe toast.
-- O sistema deixa de travar em “Carregando” nas rotas de persona.
+## Arquivos
+- `src/hooks/useOperationalContext.tsx` (fix flicker)
+- `src/contexts/AuthContext.tsx` (fix flicker)
+- `src/pages/sindico/SindicoHome.tsx`, `coach/CoachHome.tsx`, `corp/CorpHome.tsx` (guard effect)
+- Migration nova
+- `supabase/functions/fitmanager-api/index.ts`
+- `supabase/functions/fitmanager-api-key/index.ts`
+- `src/pages/admin/FitProIntegration.tsx`
+- `src/App.tsx`, `src/components/AppSidebar.tsx`
