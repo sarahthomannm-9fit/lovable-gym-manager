@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -21,17 +21,24 @@ export const useAuth = () => useContext(AuthContext);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const lastUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
+    const apply = (s: Session | null) => {
+      const newId = s?.user?.id ?? null;
+      // Avoid re-render storm: only update when user actually changes
+      if (newId !== lastUserIdRef.current) {
+        lastUserIdRef.current = newId;
+        setSession(s);
+      } else {
+        // still update token silently if same user
+        setSession((prev) => (prev?.access_token === s?.access_token ? prev : s));
+      }
       setLoading(false);
-    });
+    };
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => apply(s));
+    supabase.auth.getSession().then(({ data: { session: s } }) => apply(s));
 
     return () => subscription.unsubscribe();
   }, []);

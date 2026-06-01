@@ -199,6 +199,7 @@ export function AppSidebar() {
       items: [
         { title: "Usuários", icon: Shield, path: "/admin/usuarios", roles: ['admin'] },
         { title: "Organizações", icon: Network, path: "/admin/organizacoes", roles: ['admin'] },
+        { title: "Integração FitPro", icon: Zap, path: "/admin/fitpro", roles: ['admin'] },
       ],
     },
     {

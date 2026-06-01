@@ -1025,6 +1025,77 @@ export type Database = {
         }
         Relationships: []
       }
+      fitmanager_connections: {
+        Row: {
+          api_key_hash: string
+          api_key_prefix: string
+          created_at: string
+          id: string
+          last_sync_at: string | null
+          professor_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          api_key_hash: string
+          api_key_prefix: string
+          created_at?: string
+          id?: string
+          last_sync_at?: string | null
+          professor_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          api_key_hash?: string
+          api_key_prefix?: string
+          created_at?: string
+          id?: string
+          last_sync_at?: string | null
+          professor_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      fitmanager_events: {
+        Row: {
+          connection_id: string | null
+          created_at: string
+          event_type: string
+          fitpro_professor_id: string | null
+          fitpro_student_id: string | null
+          id: string
+          payload: Json
+        }
+        Insert: {
+          connection_id?: string | null
+          created_at?: string
+          event_type: string
+          fitpro_professor_id?: string | null
+          fitpro_student_id?: string | null
+          id?: string
+          payload?: Json
+        }
+        Update: {
+          connection_id?: string | null
+          created_at?: string
+          event_type?: string
+          fitpro_professor_id?: string | null
+          fitpro_student_id?: string | null
+          id?: string
+          payload?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fitmanager_events_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "fitmanager_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       formas_pagamento: {
         Row: {
           created_at: string | null
