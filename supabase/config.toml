@@ -17,3 +17,9 @@ verify_jwt = false
 
 [functions.proposta-b2b-generate]
 verify_jwt = false
+
+[functions.fitmanager-api]
+verify_jwt = false
+
+[functions.fitmanager-api-key]
+verify_jwt = false
