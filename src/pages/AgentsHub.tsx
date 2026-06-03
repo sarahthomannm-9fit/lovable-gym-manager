@@ -23,7 +23,9 @@ import {
   Users,
   DollarSign,
   AlertTriangle,
+  Zap,
 } from 'lucide-react';
+import { skillsForAgent } from '@/lib/agentSkills';
 
 // ============================================
 // AGENT CONFIG
@@ -400,11 +402,13 @@ export default function AgentsHub() {
     setChats((prev) => ({ ...prev, [activeAgentId]: [...prev[activeAgentId], userMsg] }));
     setInput('');
     try {
+      const activeSkills = skillsForAgent(activeAgentId).map((s) => ({ id: s.id, prompt: s.prompt }));
       const { data, error } = await supabase.functions.invoke('agent-hub-chat', {
         body: {
           agentId: activeAgentId,
           history: chats[activeAgentId],
           message: text,
+          skills: activeSkills,
         },
       });
       if (error || data?.error) {
@@ -421,6 +425,53 @@ export default function AgentsHub() {
       toast.error('Erro ao falar com o agente.');
     } finally {
       setSending(false);
+    }
+  }
+
+  async function runAction(action: string, payload?: Record<string, unknown>) {
+    try {
+      const { data, error } = await supabase.functions.invoke('agent-hub-chat', {
+        body: { mode: 'action', agentId: activeAgentId, action, payload },
+      });
+      if (error || !data?.ok) {
+        toast.error(data?.error || error?.message || 'Falha na ação');
+        return;
+      }
+      toast.success(data.message || 'Ação executada');
+      loadMetrics();
+    } catch (e: any) {
+      toast.error(e?.message || 'Erro ao executar ação');
+    }
+  }
+
+  const quickActions: Record<string, { label: string; action: string; prompt?: string }[]> = {
+    sdr: [
+      { label: 'Gerar Script Tier 1 (Ron)', action: '__prompt', prompt: 'Gere a mensagem cirúrgica de abordagem LinkedIn DM para Tier 1 (CEO/C-Level), voz do Ron, máximo 5 linhas.' },
+      { label: 'Cadência SDR Ironman', action: '__prompt', prompt: 'Gere a cadência completa de 5 toques para o Ian ativar os 100 atletas Ironman (Tier 2).' },
+    ],
+    billing: [
+      { label: 'Resumo régua hoje', action: '__prompt', prompt: 'Faça o resumo da régua de inadimplência de hoje: quantos em atraso, total em risco e próximas ações automáticas.' },
+    ],
+    content: [
+      { label: 'Reel "14 Dias Sem Dor"', action: '__prompt', prompt: 'Crie 1 script de Reels para "14 Dias Sem Dor" com prova humana real (Nadir ou Beatriz).' },
+    ],
+    ron: [
+      { label: 'Briefing CEO agora', action: '__prompt', prompt: 'Faça meu briefing executivo agora: 5 bullets com prioridades, riscos e ação imediata.' },
+    ],
+    prep: [],
+    reativacao: [{ label: 'Plano 90d', action: '__prompt', prompt: 'Monte plano de reativação para a base inativa de 90+ dias.' }],
+    upsell: [],
+    b2b: [],
+    onboard: [],
+    suporte: [],
+  };
+
+  function triggerQuickAction(qa: { label: string; action: string; prompt?: string }) {
+    if (qa.action === '__prompt' && qa.prompt) {
+      setInput(qa.prompt);
+      setTimeout(() => handleSend(), 50);
+    } else {
+      runAction(qa.action);
     }
   }
 
@@ -554,6 +605,40 @@ export default function AgentsHub() {
                 )}
               </div>
             </ScrollArea>
+
+            {/* Skills ativas + quick actions */}
+            {(() => {
+              const sk = skillsForAgent(activeAgentId);
+              const qa = quickActions[activeAgentId] || [];
+              if (sk.length === 0 && qa.length === 0) return null;
+              return (
+                <div className="px-3 py-2 border-t border-border/40 bg-muted/30 space-y-2">
+                  {sk.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mr-1">Skills:</span>
+                      {sk.map((s) => (
+                        <Badge key={s.id} variant="outline" className="text-[10px] gap-1" title={s.description}>
+                          <Zap className="w-2.5 h-2.5" /> {s.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  {qa.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {qa.map((a) => (
+                        <Button key={a.label} size="sm" variant="secondary"
+                          className="h-7 text-[11px]"
+                          onClick={() => triggerQuickAction(a)}
+                          disabled={sending}>
+                          {a.label}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             <div className="p-3 border-t border-border/40 flex gap-2">
               <Input
                 value={input}
