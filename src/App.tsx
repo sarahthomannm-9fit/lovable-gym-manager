@@ -19,6 +19,7 @@ import CorpHome from "./pages/corp/CorpHome";
 import OrganizationsAdmin from "./pages/admin/OrganizationsAdmin";
 import MoradorHome from "./pages/morador/MoradorHome";
 import FitProIntegration from "./pages/admin/FitProIntegration";
+import LeadsExtractionPlan from "./pages/cfo/LeadsExtractionPlan";
 
 import NotFound from "./pages/NotFound";
 import { Login } from "./pages/Login";
@@ -120,6 +121,7 @@ const App = () => (
                     <Route path="/morador" element={<ProtectedRoute><RoleRoute allow={['user','sindico','corporate','professor','admin','manager']}><MoradorHome /></RoleRoute></ProtectedRoute>} />
                     <Route path="/admin/organizacoes" element={<Protected><OrganizationsAdmin /></Protected>} />
                     <Route path="/admin/fitpro" element={<Protected><FitProIntegration /></Protected>} />
+                    <Route path="/cfo/leads" element={<Protected><LeadsExtractionPlan /></Protected>} />
                     <Route path="/" element={<Navigate to="/painel" replace />} />
                     <Route path="/agents" element={<Protected><AgentsHub /></Protected>} />
                     <Route path="/admin/usuarios" element={<Protected><UsersAdmin /></Protected>} />

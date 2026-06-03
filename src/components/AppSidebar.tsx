@@ -181,6 +181,7 @@ export function AppSidebar() {
       items: [
         { title: "Hub de Agentes IA", icon: Bot, path: "/agents" },
         { title: "Agente IA", icon: Sparkles, path: "/agente-ia" },
+        { title: "Plano CFO — Leads", icon: Target, path: "/cfo/leads", roles: ['admin'] },
       ],
     },
     {
