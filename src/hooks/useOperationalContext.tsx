@@ -154,11 +154,11 @@ export function useOperationalContext() {
 export function routeForRole(role: AppRole | null): string {
   switch (role) {
     case 'admin':
-    case 'manager':
-    case 'user': return '/painel';
+    case 'manager': return '/painel';
     case 'sindico': return '/sindico';
     case 'professor': return '/coach';
     case 'corporate': return '/corp';
+    case 'user': return '/morador';
     default: return '/select-context';
   }
 }

@@ -34,14 +34,18 @@ export function Login() {
     const role = roleRow?.role;
     const memberships = mems || [];
 
+    const papelToRoute = (p: string) =>
+      p === 'sindico' ? '/sindico' :
+      p === 'professor' ? '/coach' :
+      p === 'corporate' ? '/corp' :
+      p === 'user' ? '/morador' : '/painel';
+
     if (role === 'admin') {
       navigate('/painel');
     } else if (memberships.length === 0) {
-      navigate('/painel');
+      navigate(role === 'user' ? '/morador' : '/painel');
     } else if (memberships.length === 1) {
-      const papel = memberships[0].papel;
-      const target = papel === 'sindico' ? '/sindico' : papel === 'professor' ? '/coach' : papel === 'corporate' ? '/corp' : '/painel';
-      navigate(target);
+      navigate(papelToRoute(memberships[0].papel));
     } else {
       navigate('/select-context');
     }
