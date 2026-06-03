@@ -31,7 +31,7 @@ export default function SelectContext() {
 
   useEffect(() => {
     if (loading) return;
-    if (!isAdmin && memberships.length === 0) navigate('/painel');
+    if (!isAdmin && memberships.length === 0) navigate('/morador');
     else if (!isAdmin && memberships.length === 1) {
       const m = memberships[0];
       setActiveOrg(m.organization);
