@@ -1,70 +1,85 @@
+## Objetivo
+Corrigir os fluxos de acesso das personas Síndico/Morador/Coach e transformar as telas/skills enviadas em experiências utilizáveis dentro do sistema, com agentes capazes de executar ações reais de forma controlada.
 
-## Plano
+## Plano de implementação
 
-### 1. Corrigir bug de "piscar" (flicker)
-O preview fica piscando porque os providers de auth/contexto operacional re-renderizam em loop quando `ensureOrgForPersona` muda estado a cada render. Vou:
-- Em `useOperationalContext.tsx`: estabilizar `ensureOrgForPersona` com `useCallback` sem dependências mutáveis; usar ref para `activeOrg`; só chamar `setActiveOrg` quando o id realmente muda.
-- Em `AuthContext.tsx`: garantir que `setSession` só dispara em mudança real (evita cascata).
-- Nas 3 home pages (Sindico/Coach/Corp): chamar `ensureOrgForPersona` apenas uma vez via `useEffect` com array `[]` + guard.
+1. **Corrigir rotas e fluxo de contexto das personas**
+   - Ajustar o redirecionamento pós-login para levar cada papel ao fluxo correto: síndico, professor/coach, corporativo ou morador.
+   - Corrigir `routeForRole` para usuário/morador ir para `/morador`, não para `/painel`.
+   - Melhorar `/select-context` para admin e usuários comuns conseguirem acessar/previewar Síndico, Morador, Coach e Corporativo sem cair em tela vazia.
+   - Revisar `RoleRoute` para evitar bloqueio indevido em `/morador` e reduzir loops de navegação.
 
-### 2. Banco — novas tabelas para integração FitPro
-Migration criando:
+2. **Estabilizar carregamento das telas Síndico/Morador/Coach**
+   - Garantir que `ensureOrgForPersona` rode uma vez por persona sem depender de renderizações repetidas.
+   - Em Síndico e Coach, carregar dados apenas quando o contexto estiver pronto.
+   - Em Morador, adicionar fallback previsível para preview admin e vínculo por e-mail do aluno, sem piscar ou recarregar em loop.
+   - Adicionar estados vazios claros quando não houver organização/aluno vinculado.
 
-**`fitmanager_connections`**
-- id uuid PK, professor_id uuid (refs auth.users), api_key_hash text, api_key_prefix text (8 chars visíveis), status text ('active'|'revoked'), last_sync_at timestamptz, created_at, updated_at
-- RLS: professor lê/gerencia só as próprias; admin gerencia todas; service_role full
-- GRANTs para authenticated + service_role
-- Índice em api_key_hash
+3. **Implementar as telas/personas solicitadas no prompt anterior**
+   - Refinar **Síndico** com KPIs, inadimplência, aulas do dia, alunos, comunicados e solicitações à 9FIT.
+   - Refinar **Coach/Professor** com agenda do dia, agenda 7 dias, alunos, presença, treinos e histórico.
+   - Refinar **Morador/Aluno** com KPIs, próximas aulas, inscrições, pagamentos e comunicados.
+   - Integrar a navegação dessas telas no menu lateral e na barra interna de personas.
 
-**`fitmanager_events`**
-- id uuid PK, connection_id uuid (FK), event_type text, fitpro_student_id text, fitpro_professor_id text, payload jsonb, created_at
-- RLS: professor lê eventos da própria conexão; admin lê todos
-- GRANTs
+4. **Adicionar a tela CFO/Leads enviada no HTML**
+   - Criar uma página do plano CFO de extração de leads usando o conteúdo do arquivo `cfo_leads_extraction_plan.html` adaptado para React/Tailwind e design tokens.
+   - Incluir métricas, tiers, funil financeiro, LTV, responsáveis e botões de ação.
+   - Adicionar rota e item de menu, provavelmente em 9FIT/Marketing ou Hub de Agentes.
 
-### 3. Edge function `fitmanager-api`
-`supabase/functions/fitmanager-api/index.ts` com:
-- CORS via `npm:@supabase/supabase-js@2/cors`
-- Roteamento manual pelo `url.pathname` (sem framework)
-- Validação de inputs com Zod (`npm:zod`)
-- Auth: lê `x-api-key`, faz `sha256` e busca por `api_key_hash`. Se inválida → 401 genérico. Atualiza `last_sync_at`.
-- Endpoints:
-  - `GET /v1/health` → status público
-  - `POST /v1/fitpro/connect` → registra metadados iniciais, retorna info da conexão
-  - `POST /v1/fitpro/sync` → grava evento `sync`
-  - `POST /v1/fitpro/student-context` → busca aluno por id/email e retorna treinos/checkins
-  - `GET /v1/fitpro/students` → lista alunos do professor
-  - `GET /v1/fitpro/classes` → lista aulas do professor
-  - `POST /v1/fitpro/check-in` → cria registro em `checkins`
-  - `GET /v1/fitpro/student-checkins` → checkins do aluno
-- Toda chamada grava em `fitmanager_events`
-- `verify_jwt = false` (auth via api-key)
+5. **Habilitar skills anexadas para os agentes**
+   - Importar as definições das skills enviadas:
+     - SDR Habilitor
+     - Growth Manager Performance Marketing
+     - Finance Contabilidade
+     - Administrativo RH Junior
+     - Mariana Skill
+     - Instagram Story Funnel Optimizer
+     - Supra Skill
+   - Criar um catálogo interno de skills usado pelo Hub de Agentes.
+   - Mapear skills para agentes existentes:
+     - SDR Agent: `sdr-habilitor`, plano CFO/leads e `process_leads_v3.py` como lógica de geração de abordagem.
+     - Billing/Financeiro: `finance-contabilidade`.
+     - Content/Marketing: `growth-manager-performance-marketing` e `instagram-story-funnel-optimizer`.
+     - Onboarding/Reativação/Suporte: `mariana-skill`.
+     - RON Core: `supra-skill` como orquestração.
+     - RH/Admin: `administrativo-rh-junior`.
 
-### 4. Geração de API Key (server-side)
-Edge function adicional `fitmanager-api-key` (chamada pelo admin autenticado via JWT):
-- `POST /generate` → gera chave aleatória `fm_live_<32 bytes hex>`, salva hash sha256 + prefix, retorna chave bruta UMA vez
-- `POST /rotate` → revoga atual + gera nova
-- `POST /revoke` → marca status='revoked'
+6. **Permitir execução de ações nos agentes**
+   - Atualizar a Edge Function `agent-hub-chat` para validar inputs com Zod e aceitar um modo de ação controlado.
+   - Adicionar ações seguras por agente, por exemplo:
+     - SDR: gerar mensagem personalizada para lead, marcar lead como contatado, agendar follow-up via `system_events`/logs.
+     - Billing: criar notificação de cobrança e registrar log.
+     - Content: criar rascunho em `content_drafts`.
+     - Suporte: classificar/responder ticket.
+     - RON Core: orquestrar e sugerir ação, sem mutação automática quando for arriscado.
+   - Registrar todas as execuções em `agent_logs` com status, input/output e latência.
+   - No frontend, mostrar botões de ações rápidas por agente e o resultado da execução.
 
-### 5. UI Admin "Integração com FitPro"
-- Nova página `src/pages/admin/FitProIntegration.tsx`
-- Rota `/admin/fitpro` em `App.tsx` (admin only)
-- Item no sidebar
-- Componentes:
-  - Card "Sua API Key": botão Gerar/Rotacionar/Revogar, status, prefixo, last_sync_at
-  - Dialog mostrando chave bruta com copy-to-clipboard (mostrada uma vez)
-  - Tabela últimos 20 eventos (`fitmanager_events`)
-  - Documentação básica dos endpoints
+7. **Conectar o plano CFO/leads aos agentes**
+   - Usar o conteúdo do HTML e o script Python enviado como regra de negócio para gerar abordagens por categoria/persona.
+   - Expor no Hub de Agentes ações como “Script Tier 1 LinkedIn” e “Cadência SDR Ironman”.
+   - Opcionalmente salvar mensagens geradas como observação do lead ou rascunho de comunicação, dependendo do dado disponível no banco.
 
-### 6. QA
-- Verificar que flicker sumiu no `/painel` e personas
-- `curl` no `/v1/health` e `/v1/fitpro/students` com api-key gerada
+8. **Verificação final**
+   - Validar navegação: `/login`, `/select-context`, `/sindico`, `/morador`, `/coach`, `/corp`, `/agents` e nova rota CFO.
+   - Validar que as telas não ficam piscando e não redirecionam indevidamente.
+   - Validar que os agentes conseguem responder e executar ações sem expor service role no frontend.
 
-## Arquivos
-- `src/hooks/useOperationalContext.tsx` (fix flicker)
-- `src/contexts/AuthContext.tsx` (fix flicker)
-- `src/pages/sindico/SindicoHome.tsx`, `coach/CoachHome.tsx`, `corp/CorpHome.tsx` (guard effect)
-- Migration nova
-- `supabase/functions/fitmanager-api/index.ts`
-- `supabase/functions/fitmanager-api-key/index.ts`
-- `src/pages/admin/FitProIntegration.tsx`
-- `src/App.tsx`, `src/components/AppSidebar.tsx`
+## Arquivos principais envolvidos
+- `src/App.tsx`
+- `src/components/AppSidebar.tsx`
+- `src/layouts/PersonaLayout.tsx`
+- `src/hooks/useOperationalContext.tsx`
+- `src/pages/Login.tsx`
+- `src/pages/SelectContext.tsx`
+- `src/pages/sindico/SindicoHome.tsx`
+- `src/pages/coach/CoachHome.tsx`
+- `src/pages/morador/MoradorHome.tsx`
+- `src/pages/AgentsHub.tsx`
+- Nova página CFO/leads
+- `supabase/functions/agent-hub-chat/index.ts`
+
+## Observações técnicas
+- Não vou mexer em `types.ts` manualmente.
+- Se for necessário criar tabelas novas para skills/configurações persistentes, a migration terá `GRANT` imediatamente após cada `CREATE TABLE`.
+- As ações dos agentes serão executadas server-side na Edge Function; o frontend nunca receberá `service_role_key`.
