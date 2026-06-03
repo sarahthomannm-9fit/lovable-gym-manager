@@ -605,6 +605,40 @@ export default function AgentsHub() {
                 )}
               </div>
             </ScrollArea>
+
+            {/* Skills ativas + quick actions */}
+            {(() => {
+              const sk = skillsForAgent(activeAgentId);
+              const qa = quickActions[activeAgentId] || [];
+              if (sk.length === 0 && qa.length === 0) return null;
+              return (
+                <div className="px-3 py-2 border-t border-border/40 bg-muted/30 space-y-2">
+                  {sk.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mr-1">Skills:</span>
+                      {sk.map((s) => (
+                        <Badge key={s.id} variant="outline" className="text-[10px] gap-1" title={s.description}>
+                          <Zap className="w-2.5 h-2.5" /> {s.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  {qa.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {qa.map((a) => (
+                        <Button key={a.label} size="sm" variant="secondary"
+                          className="h-7 text-[11px]"
+                          onClick={() => triggerQuickAction(a)}
+                          disabled={sending}>
+                          {a.label}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
             <div className="p-3 border-t border-border/40 flex gap-2">
               <Input
                 value={input}
