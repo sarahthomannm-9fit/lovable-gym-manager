@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Lock, Mail } from 'lucide-react';
+import { routeForRole } from '@/hooks/useOperationalContext';
 
 export function Login() {
   const [email, setEmail] = useState('');
@@ -40,14 +41,14 @@ export function Login() {
       p === 'corporate' ? '/corp' :
       p === 'user' ? '/morador' : '/painel';
 
-    if (role === 'admin') {
-      navigate('/painel');
+    if (role === 'admin' || role === 'manager') {
+      navigate(routeForRole(role), { replace: true });
     } else if (memberships.length === 0) {
-      navigate(role === 'user' ? '/morador' : '/painel');
+      navigate(routeForRole(role ?? 'user'), { replace: true });
     } else if (memberships.length === 1) {
-      navigate(papelToRoute(memberships[0].papel));
+      navigate(papelToRoute(memberships[0].papel), { replace: true });
     } else {
-      navigate('/select-context');
+      navigate('/select-context', { replace: true });
     }
     setLoading(false);
   };

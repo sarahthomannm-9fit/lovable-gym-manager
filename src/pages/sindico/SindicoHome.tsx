@@ -32,7 +32,14 @@ export default function SindicoHome() {
 
   const iniciais = (activeOrg?.nome || '??').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
-  useEffect(() => { ensureOrgForPersona('condominio').finally(() => setReady(true)); }, []);
+  useEffect(() => {
+    let mounted = true;
+    setReady(false);
+    ensureOrgForPersona('condominio').finally(() => {
+      if (mounted) setReady(true);
+    });
+    return () => { mounted = false; };
+  }, [ensureOrgForPersona]);
 
   const carregar = async () => {
     if (!activeOrg) { setReady(true); return; }
@@ -101,7 +108,15 @@ export default function SindicoHome() {
 
   useEffect(() => { carregar(); }, [activeOrg]);
 
-  if (!activeOrg && ready) {
+  if (!ready) {
+    return (
+      <PersonaLayout title="Painel do Síndico" accent={ACCENT}>
+        <div className="min-h-[320px] flex items-center justify-center text-sm text-muted-foreground">Carregando contexto…</div>
+      </PersonaLayout>
+    );
+  }
+
+  if (!activeOrg) {
     return (
       <PersonaLayout title="Painel do Síndico" accent={ACCENT}>
         <PersonaEmptyState message="Nenhum condomínio selecionado. Selecione um contexto para visualizar o painel." />

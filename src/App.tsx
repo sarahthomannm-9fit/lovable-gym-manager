@@ -8,7 +8,7 @@ import { DataIntegrationProvider } from "@/components/DataIntegrationProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { OperationalContextProvider } from "@/hooks/useOperationalContext";
 import { RoleRoute } from "@/components/RoleRoute";
@@ -97,14 +97,26 @@ const Protected = ({ children }: { children: React.ReactNode }) => (
   </ProtectedRoute>
 );
 
+const AuthenticatedDataProviders = ({ children }: { children: React.ReactNode }) => {
+  const { session } = useAuth();
+
+  if (!session) return <>{children}</>;
+
+  return (
+    <SupabaseGymDataProvider>
+      <DataIntegrationProvider>
+        <DemoModeProvider>{children}</DemoModeProvider>
+      </DataIntegrationProvider>
+    </SupabaseGymDataProvider>
+  );
+};
+
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <OperationalContextProvider>
-        <SupabaseGymDataProvider>
-          <DataIntegrationProvider>
-            <DemoModeProvider>
+          <AuthenticatedDataProviders>
               <TooltipProvider>
                 <Toaster />
                 <Sonner />
@@ -170,9 +182,7 @@ const App = () => (
                   </Routes>
                 </BrowserRouter>
               </TooltipProvider>
-            </DemoModeProvider>
-          </DataIntegrationProvider>
-        </SupabaseGymDataProvider>
+          </AuthenticatedDataProviders>
         </OperationalContextProvider>
       </AuthProvider>
     </QueryClientProvider>
