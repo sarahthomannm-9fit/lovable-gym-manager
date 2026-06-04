@@ -8,11 +8,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar, CreditCard, Activity, Bell, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOperationalContext } from '@/hooks/useOperationalContext';
 
 const ACCENT = '#F472B6';
 
 export default function MoradorHome() {
   const { user } = useAuth();
+  const { isAdmin } = useOperationalContext();
+  const [ready, setReady] = useState(false);
   const [aluno, setAluno] = useState<any>(null);
   const [proximas, setProximas] = useState<any[]>([]);
   const [pagamentos, setPagamentos] = useState<any[]>([]);
@@ -21,6 +24,8 @@ export default function MoradorHome() {
 
   useEffect(() => {
     if (!user) return;
+    let mounted = true;
+    setReady(false);
     (async () => {
       // Aluno por email do auth
       const { data: a } = await supabase.from('alunos')
@@ -28,10 +33,11 @@ export default function MoradorHome() {
         .eq('email', user.email || '').maybeSingle();
       // Fallback: pega o primeiro aluno (modo preview admin)
       let al = a;
-      if (!al) {
+      if (!al && isAdmin) {
         const { data: any1 } = await supabase.from('alunos').select('*').limit(1).maybeSingle();
         al = any1;
       }
+      if (!mounted) return;
       setAluno(al);
 
       const hoje = new Date().toISOString().slice(0, 10);
@@ -40,27 +46,35 @@ export default function MoradorHome() {
         .select('id, nome, data_aula, horario_inicio, capacidade_maxima, inscritos_atual')
         .gte('data_aula', hoje).lte('data_aula', proximaSemana)
         .order('data_aula').order('horario_inicio').limit(10);
+      if (!mounted) return;
       setProximas(aulas || []);
 
       if (al?.id) {
         const { data: pgs } = await supabase.from('pagamentos')
           .select('id, valor, data_vencimento, data_pagamento, status, referencia_mes')
           .eq('aluno_id', al.id).order('data_vencimento', { ascending: false }).limit(8);
+        if (!mounted) return;
         setPagamentos(pgs || []);
 
         const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
         const { count } = await supabase.from('checkins')
           .select('id', { count: 'exact', head: true })
           .eq('aluno_id', al.id).gte('data_checkin', inicioMes);
+        if (!mounted) return;
         setPresencas(count || 0);
       }
 
       const { data: nf } = await supabase.from('notificacoes')
         .select('id, titulo, mensagem, created_at, prioridade')
         .order('created_at', { ascending: false }).limit(6);
+      if (!mounted) return;
       setNotifs(nf || []);
-    })();
-  }, [user]);
+      setReady(true);
+    })().catch(() => {
+      if (mounted) setReady(true);
+    });
+    return () => { mounted = false; };
+  }, [user, isAdmin]);
 
   const inscrever = async (aulaId: string, nome: string) => {
     if (!aluno?.id) return toast.error('Aluno não vinculado');
@@ -76,6 +90,15 @@ export default function MoradorHome() {
 
   return (
     <PersonaLayout title="Meu painel" subtitle="Área do aluno" accent={ACCENT}>
+      {!ready ? (
+        <div className="min-h-[320px] flex items-center justify-center text-sm text-muted-foreground">Carregando dados do morador…</div>
+      ) : !aluno ? (
+        <Card className="bg-card/60 border-border/40">
+          <CardContent className="p-5 text-sm text-muted-foreground">
+            Nenhum aluno vinculado a este e-mail. Peça ao administrador para associar seu cadastro.
+          </CardContent>
+        </Card>
+      ) : (<>
       {/* Resumo */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         <Mini icon={Calendar} label="Próxima aula"
@@ -164,6 +187,7 @@ export default function MoradorHome() {
           )}
         </TabsContent>
       </Tabs>
+      </>)}
     </PersonaLayout>
   );
 }
