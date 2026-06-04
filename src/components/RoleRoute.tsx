@@ -4,7 +4,7 @@ import { useOperationalContext } from '@/hooks/useOperationalContext';
 import { AppRole } from '@/hooks/useCurrentUserRole';
 
 export function RoleRoute({ allow, children }: { allow: AppRole[]; children: ReactNode }) {
-  const { loading, isAdmin, activeRole, memberships } = useOperationalContext();
+  const { loading, isAdmin, primaryRole, activeRole, memberships } = useOperationalContext();
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-[#07070A] text-muted-foreground">Carregando…</div>;
@@ -14,6 +14,10 @@ export function RoleRoute({ allow, children }: { allow: AppRole[]; children: Rea
   if (isAdmin) return <>{children}</>;
 
   if (activeRole && allow.includes(activeRole)) return <>{children}</>;
+
+  if (primaryRole && allow.includes(primaryRole)) return <>{children}</>;
+
+  if (memberships.some((m) => allow.includes(m.papel))) return <>{children}</>;
 
   // Usuário sem papel adequado, mas com memberships → manda escolher
   if (memberships.length > 0) return <Navigate to="/select-context" replace />;
