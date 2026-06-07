@@ -20,7 +20,16 @@ export default {
 		extend: {
 			fontFamily: {
 				mono: ['"IBM Plex Mono"', '"Courier New"', 'monospace'],
-				sans: ['"Inter"', 'system-ui', 'sans-serif'],
+				sans: ['"Manrope"', 'system-ui', 'sans-serif'],
+				display: ['"Sora"', 'system-ui', 'sans-serif'],
+			},
+			backgroundImage: {
+				'gradient-gold': 'linear-gradient(135deg, hsl(43 55% 54%), hsl(44 70% 75%))',
+				'gradient-noir': 'linear-gradient(180deg, hsl(0 0% 6%), hsl(0 0% 3%))',
+			},
+			boxShadow: {
+				'gold': '0 8px 32px -8px hsl(43 55% 54% / 0.25)',
+				'elegant': '0 12px 40px -12px hsl(0 0% 0% / 0.5)',
 			},
 			colors: {
 				border: 'hsl(var(--border))',
