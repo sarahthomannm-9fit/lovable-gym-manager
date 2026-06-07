@@ -19,14 +19,14 @@ const ICONS: Record<string, any> = {
 type NavLink = { label: string; path: string; icon: any; accent: string };
 
 const PERSONA_LINKS: NavLink[] = [
-  { label: 'Síndico', path: '/sindico', icon: Building2, accent: '#60A5FA' },
-  { label: 'Coach', path: '/coach', icon: GraduationCap, accent: '#C8FF00' },
-  { label: 'Corporativo', path: '/corp', icon: Briefcase, accent: '#A78BFA' },
-  { label: 'Morador', path: '/morador', icon: User, accent: '#F472B6' },
+  { label: 'Síndico', path: '/sindico', icon: Building2, accent: 'hsl(var(--primary))' },
+  { label: 'Coach', path: '/coach', icon: GraduationCap, accent: 'hsl(var(--primary))' },
+  { label: 'Corporativo', path: '/corp', icon: Briefcase, accent: 'hsl(var(--primary))' },
+  { label: 'Morador', path: '/morador', icon: User, accent: 'hsl(var(--primary))' },
 ];
 
 export function PersonaLayout({
-  title, subtitle, accent = '#C8FF00', children,
+  title, subtitle, accent = 'hsl(var(--primary))', children,
 }: {
   title: string;
   subtitle?: string;
@@ -46,9 +46,9 @@ export function PersonaLayout({
 
   const adminLinks: NavLink[] = isAdmin
     ? [
-        { label: 'Painel admin', path: '/painel', icon: LayoutDashboard, accent: '#C8FF00' },
-        { label: 'Hub Agentes', path: '/agents', icon: Bot, accent: '#C8FF00' },
-        { label: 'Organizações', path: '/admin/organizacoes', icon: Network, accent: '#C8FF00' },
+        { label: 'Painel admin', path: '/painel', icon: LayoutDashboard, accent: 'hsl(var(--primary))' },
+        { label: 'Hub Agentes', path: '/agents', icon: Bot, accent: 'hsl(var(--primary))' },
+        { label: 'Organizações', path: '/admin/organizacoes', icon: Network, accent: 'hsl(var(--primary))' },
       ]
     : [];
 
@@ -64,8 +64,8 @@ export function PersonaLayout({
       });
 
   return (
-    <div className="min-h-screen bg-[#07070A] text-foreground">
-      <header className="border-b border-border/30 bg-card/40 backdrop-blur sticky top-0 z-10">
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="border-b border-border/40 bg-card/60 backdrop-blur-xl sticky top-0 z-10 shadow-elegant">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"

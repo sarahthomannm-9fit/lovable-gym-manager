@@ -228,14 +228,14 @@ export function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader>
-        <div className="px-4 py-4">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 bg-white flex items-center justify-center text-[11px] font-black text-navy font-mono rounded shrink-0">
+        <div className="px-4 py-5 border-b border-sidebar-border/50">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-gradient-gold flex items-center justify-center text-[12px] font-black text-primary-foreground font-display rounded-md shrink-0 shadow-gold">
               9F
             </div>
             <div>
-              <div className="text-[11px] font-bold font-mono text-sidebar-foreground tracking-wider">FITMANAGER</div>
-              <div className="text-[8px] text-sidebar-foreground/35 font-mono tracking-widest">9FIT ECOSYSTEM</div>
+              <div className="text-[12px] font-bold font-display text-sidebar-foreground tracking-wide">FITMANAGER</div>
+              <div className="text-[8px] text-primary/70 font-mono tracking-[0.2em] uppercase mt-0.5">9FIT · Ecosystem</div>
             </div>
           </div>
         </div>
@@ -248,28 +248,35 @@ export function AppSidebar() {
             if (visibleItems.length === 0) return null;
             return (
               <SidebarGroup key={category.category}>
-                <SidebarGroupLabel className="text-[8px] font-mono tracking-[0.14em] font-bold text-sidebar-foreground/20 px-3.5">
+                <SidebarGroupLabel className="text-[9px] font-mono tracking-[0.18em] font-semibold text-primary/50 px-3.5 mt-1">
                   {category.category}
                 </SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>
-                    {visibleItems.map((item) => (
-                      <SidebarMenuItem key={item.path}>
-                        <SidebarMenuButton
-                          onClick={() => navigate(item.path)}
-                          isActive={location.pathname === item.path}
-                          className="w-full justify-start text-xs"
-                        >
-                          <item.icon className="mr-2 h-3.5 w-3.5" />
-                          <span className="flex-1">{item.title}</span>
-                          {item.badge && item.badge > 0 && (
-                            <span className={`ml-auto min-w-[18px] h-[18px] rounded-full ${item.badgeColor || 'bg-destructive'} text-white text-[9px] font-mono font-bold flex items-center justify-center px-1`}>
-                              {item.badge > 99 ? '99+' : item.badge}
-                            </span>
-                          )}
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ))}
+                    {visibleItems.map((item) => {
+                      const isActive = location.pathname === item.path;
+                      return (
+                        <SidebarMenuItem key={item.path}>
+                          <SidebarMenuButton
+                            onClick={() => navigate(item.path)}
+                            isActive={isActive}
+                            className={`w-full justify-start text-xs rounded-md transition-all duration-150 ${
+                              isActive
+                                ? 'bg-primary/10 text-primary border-l-2 border-primary font-semibold'
+                                : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent border-l-2 border-transparent'
+                            }`}
+                          >
+                            <item.icon className={`mr-2 h-3.5 w-3.5 ${isActive ? 'text-primary' : ''}`} />
+                            <span className="flex-1">{item.title}</span>
+                            {item.badge && item.badge > 0 && (
+                              <span className={`ml-auto min-w-[18px] h-[18px] rounded-full ${item.badgeColor || 'bg-destructive'} text-white text-[9px] font-mono font-bold flex items-center justify-center px-1.5 shadow-sm`}>
+                                {item.badge > 99 ? '99+' : item.badge}
+                              </span>
+                            )}
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      );
+                    })}
                   </SidebarMenu>
                 </SidebarGroupContent>
               </SidebarGroup>
@@ -277,17 +284,17 @@ export function AppSidebar() {
           })}
       </SidebarContent>
       <SidebarFooter>
-        <div className="px-3.5 py-2.5 flex items-center gap-2 justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-sidebar-foreground/15 flex items-center justify-center text-[10px] font-bold text-sidebar-foreground font-mono shrink-0">
+        <div className="px-3.5 py-3 flex items-center gap-2 justify-between border-t border-sidebar-border/50">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-gradient-gold flex items-center justify-center text-[11px] font-bold text-primary-foreground font-display shrink-0 shadow-gold">
               R
             </div>
             <div>
               <div className="text-[11px] font-semibold text-sidebar-foreground">Roni</div>
-              <div className="text-[8px] text-sidebar-foreground/35 font-mono tracking-wider">CEO · 9FIT</div>
+              <div className="text-[8px] text-primary/60 font-mono tracking-wider uppercase">CEO · 9FIT</div>
             </div>
           </div>
-          <button onClick={() => signOut()} className="p-1.5 rounded hover:bg-sidebar-foreground/10 text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors" title="Sair">
+          <button onClick={() => signOut()} className="p-1.5 rounded-md hover:bg-sidebar-accent text-sidebar-foreground/50 hover:text-primary transition-colors" title="Sair">
             <LogOut className="w-4 h-4" />
           </button>
         </div>
