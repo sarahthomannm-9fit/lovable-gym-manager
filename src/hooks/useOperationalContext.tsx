@@ -94,13 +94,15 @@ export function OperationalContextProvider({ children }: { children: ReactNode }
   }, [user?.id]);
 
   useEffect(() => {
-    if (authLoading) {
-      setLoading(true);
-      return;
-    }
+    if (authLoading) return;
     const userId = user?.id ?? null;
-    if (userId !== lastUserIdRef.current || loading) load(userId);
-  }, [authLoading, user?.id, load, loading]);
+    if (userId !== lastUserIdRef.current) {
+      load(userId);
+    } else if (lastUserIdRef.current === null && userId === null) {
+      // anonymous: ensure loading flag goes false
+      setLoading(false);
+    }
+  }, [authLoading, user?.id, load]);
 
   const setActiveOrg = useCallback((org: Organization | null) => {
     setActiveOrgState((prev) => (prev?.id === org?.id ? prev : org));
