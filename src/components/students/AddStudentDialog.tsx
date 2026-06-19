@@ -217,7 +217,17 @@ export function AddStudentDialog({ onAddStudent, plans }: AddStudentDialogProps)
           
           <div>
             <Label htmlFor="plano">Plano</Label>
-            <Select value={newStudent.plano_id} onValueChange={(value) => setNewStudent({...newStudent, plano_id: value})}>
+            <Select
+              value={newStudent.plano_id}
+              onValueChange={(value) => {
+                const p = plans.find(pl => pl.id === value);
+                setNewStudent({
+                  ...newStudent,
+                  plano_id: value,
+                  valor_mensalidade: p ? p.preco.toFixed(2) : newStudent.valor_mensalidade,
+                });
+              }}
+            >
               <SelectTrigger><SelectValue placeholder="Selecione o plano" /></SelectTrigger>
               <SelectContent>
                 {plans.map((plan) => (
@@ -227,6 +237,11 @@ export function AddStudentDialog({ onAddStudent, plans }: AddStudentDialogProps)
                 ))}
               </SelectContent>
             </Select>
+            {newStudent.plano_id && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Mensalidade preenchida automaticamente — ajuste se necessário.
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
