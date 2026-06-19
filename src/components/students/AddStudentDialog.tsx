@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
 import { SupabaseStudent } from "@/hooks/useSupabaseStudents";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -110,9 +111,9 @@ export function AddStudentDialog({ onAddStudent, plans }: AddStudentDialogProps)
           });
           const link = `${window.location.origin}/anamnese/${token}`;
           await navigator.clipboard.writeText(link);
-          toast({
-            title: "Aluno cadastrado + Link PAR-Q copiado!",
-            description: `Link da anamnese copiado para a área de transferência. Envie ao aluno.`,
+          sonnerToast.success(`✓ ${studentData.nome} cadastrado com sucesso`, {
+            description: 'Link PAR-Q copiado para a área de transferência. Envie ao aluno via WhatsApp.',
+            duration: 6000,
           });
         }
       } catch (e) {
@@ -217,7 +218,17 @@ export function AddStudentDialog({ onAddStudent, plans }: AddStudentDialogProps)
           
           <div>
             <Label htmlFor="plano">Plano</Label>
-            <Select value={newStudent.plano_id} onValueChange={(value) => setNewStudent({...newStudent, plano_id: value})}>
+            <Select
+              value={newStudent.plano_id}
+              onValueChange={(value) => {
+                const p = plans.find(pl => pl.id === value);
+                setNewStudent({
+                  ...newStudent,
+                  plano_id: value,
+                  valor_mensalidade: p ? p.preco.toFixed(2) : newStudent.valor_mensalidade,
+                });
+              }}
+            >
               <SelectTrigger><SelectValue placeholder="Selecione o plano" /></SelectTrigger>
               <SelectContent>
                 {plans.map((plan) => (
@@ -227,6 +238,11 @@ export function AddStudentDialog({ onAddStudent, plans }: AddStudentDialogProps)
                 ))}
               </SelectContent>
             </Select>
+            {newStudent.plano_id && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Mensalidade preenchida automaticamente — ajuste se necessário.
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">

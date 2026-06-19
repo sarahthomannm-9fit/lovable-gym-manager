@@ -23,14 +23,17 @@ export function Painel() {
   const navigate = useNavigate();
   const { alerts, metrics, loading, refetchAll, insights } = useDataIntegration();
   const [mobileTab, setMobileTab] = useState('critico');
-  const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('fitmanager_onboarding'));
+  const onbKey = 'fitmanager_onboarding';
+  const [showOnboarding, setShowOnboarding] = useState(
+    () => role !== 'user' && !localStorage.getItem(onbKey)
+  );
 
   if (role === 'user') {
     return <PainelAluno />;
   }
 
   if (showOnboarding) {
-    return <OnboardingWizard onComplete={() => setShowOnboarding(false)} />;
+    return <OnboardingWizard storageKey={onbKey} onComplete={() => setShowOnboarding(false)} />;
   }
 
   const fmtR = (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}`;

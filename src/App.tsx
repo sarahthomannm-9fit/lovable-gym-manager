@@ -26,6 +26,7 @@ import { Login } from "./pages/Login";
 import { ForgotPassword } from "./pages/ForgotPassword";
 import { ResetPassword } from "./pages/ResetPassword";
 import { UsersAdmin } from "./pages/UsersAdmin";
+import ResetDemoData from "./pages/admin/ResetDemoData";
 import AgentsHub from "./pages/AgentsHub";
 import { Painel } from "./pages/Painel";
 import { Treinos } from "./pages/Treinos";
@@ -137,6 +138,7 @@ const App = () => (
                     <Route path="/" element={<Navigate to="/painel" replace />} />
                     <Route path="/agents" element={<Protected><AgentsHub /></Protected>} />
                     <Route path="/admin/usuarios" element={<Protected><UsersAdmin /></Protected>} />
+                    <Route path="/admin/reset-demo" element={<Protected><ResetDemoData /></Protected>} />
                     <Route path="/painel" element={<Protected><Painel /></Protected>} />
                     <Route path="/painel/inadimplencia" element={<Protected><Inadimplencia /></Protected>} />
                     <Route path="/painel/retencao" element={<Protected><Retencao /></Protected>} />
