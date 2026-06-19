@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
 import { SupabaseStudent } from "@/hooks/useSupabaseStudents";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -110,9 +111,9 @@ export function AddStudentDialog({ onAddStudent, plans }: AddStudentDialogProps)
           });
           const link = `${window.location.origin}/anamnese/${token}`;
           await navigator.clipboard.writeText(link);
-          toast({
-            title: "Aluno cadastrado + Link PAR-Q copiado!",
-            description: `Link da anamnese copiado para a área de transferência. Envie ao aluno.`,
+          sonnerToast.success(`✓ ${studentData.nome} cadastrado com sucesso`, {
+            description: 'Link PAR-Q copiado para a área de transferência. Envie ao aluno via WhatsApp.',
+            duration: 6000,
           });
         }
       } catch (e) {
