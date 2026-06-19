@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Rocket, Users, CreditCard, Briefcase, ChevronRight } from 'lucide-react';
+import { Rocket, Users, CreditCard, Briefcase, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface OnboardingConfig {
   tamanho: string;
@@ -46,11 +47,46 @@ const STEPS = [
 
 interface OnboardingWizardProps {
   onComplete: () => void;
+  storageKey?: string;
 }
 
-export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
+export function OnboardingWizard({ onComplete, storageKey = 'fitmanager_onboarding' }: OnboardingWizardProps) {
   const [step, setStep] = useState(0);
   const [config, setConfig] = useState<Partial<OnboardingConfig>>({});
+  const [done, setDone] = useState(false);
+
+  const isFinalReview = step === STEPS.length;
+
+  const finish = (cfg: Partial<OnboardingConfig>) => {
+    localStorage.setItem(storageKey, JSON.stringify({ ...cfg, completedAt: new Date().toISOString() }));
+    setDone(true);
+    toast.success('Configuração inicial concluída', { description: 'Redirecionando ao painel...' });
+    setTimeout(() => onComplete(), 700);
+  };
+
+  const skip = () => {
+    localStorage.setItem(storageKey, JSON.stringify({ skipped: true, completedAt: new Date().toISOString() }));
+    onComplete();
+  };
+
+  if (done || isFinalReview) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md text-center">
+          <CardHeader>
+            <CheckCircle2 className="h-14 w-14 mx-auto text-primary mb-2" />
+            <CardTitle>Tudo pronto!</CardTitle>
+            <CardDescription>Seu workspace está configurado.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button className="w-full" onClick={() => finish(config)}>
+              Ir para o painel <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const current = STEPS[step];
   const Icon = current.icon;
@@ -58,13 +94,8 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const handleSelect = (value: string) => {
     const updated = { ...config, [current.key]: value };
     setConfig(updated);
-
-    if (step < STEPS.length - 1) {
-      setStep(step + 1);
-    } else {
-      localStorage.setItem('fitmanager_onboarding', JSON.stringify(updated));
-      onComplete();
-    }
+    if (step < STEPS.length - 1) setStep(step + 1);
+    else setStep(STEPS.length); // review
   };
 
   return (
@@ -72,9 +103,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center gap-2 mb-2">
-            <div className="w-8 h-8 bg-foreground flex items-center justify-center text-[12px] font-black text-background font-mono rounded">
-              9F
-            </div>
+            <div className="w-8 h-8 bg-foreground flex items-center justify-center text-[12px] font-black text-background font-mono rounded">9F</div>
             <span className="text-xs font-mono text-muted-foreground tracking-widest">FITMANAGER</span>
           </div>
           <div className="flex justify-center gap-1.5 mb-4">
@@ -101,6 +130,12 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </Button>
           ))}
+          <div className="pt-2 flex justify-between">
+            {step > 0 ? (
+              <Button variant="ghost" size="sm" onClick={() => setStep(step - 1)}>← Voltar</Button>
+            ) : <div />}
+            <Button variant="ghost" size="sm" onClick={skip}>Pular configuração</Button>
+          </div>
         </CardContent>
       </Card>
     </div>
