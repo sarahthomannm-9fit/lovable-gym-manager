@@ -155,18 +155,12 @@ export function AppSidebar() {
       ],
     },
     {
-      category: "EQUIPE & AVALIAÇÕES",
-      roles: ['admin', 'manager'],
+      category: "INTELIGÊNCIA 9FIT",
       items: [
-        { title: "Funcionários", icon: Briefcase, path: "/funcionarios", roles: ['admin'] },
-        { title: "Avaliações Físicas", icon: Activity, path: "/avaliacoes", roles: ['admin', 'manager'] },
-        { title: "Aulas Experimentais", icon: UserCheck, path: "/experimentais", roles: ['admin', 'manager'] },
-      ],
-    },
-    {
-      category: "TREINOS",
-      items: [
-        { title: "Treinos", icon: Dumbbell, path: "/treinos" },
+        { title: "Hub de Agentes IA", icon: Bot, path: "/agents" },
+        { title: "RON — Agente CEO", icon: Sparkles, path: "/agente-ia" },
+        { title: "Insights por mercado", icon: BarChart3, path: "/insights", roles: ['admin'] },
+        { title: "Plano CFO — Leads", icon: Target, path: "/cfo/leads", roles: ['admin'] },
       ],
     },
     {
