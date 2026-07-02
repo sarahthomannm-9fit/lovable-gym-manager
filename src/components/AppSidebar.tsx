@@ -121,32 +121,46 @@ export function AppSidebar() {
 
   const menuItems: MenuCategory[] = [
     {
-      category: "PRINCIPAL",
+      category: "CENTRAL DE OPERAÇÕES",
       items: [
         { title: "Control Plane", icon: Home, path: "/painel" },
+        { title: "Pipeline comercial", icon: Target, path: "/pipeline", roles: ['admin','manager'] },
+        { title: "Clientes ativos", icon: Building2, path: "/clientes", roles: ['admin','manager'] },
+        { title: "Contratos & Propostas", icon: Receipt, path: "/contratos", roles: ['admin','manager'] },
         { title: "Alunos", icon: Users, path: "/alunos", roles: ['admin', 'manager'], badge: badges.alunosSemFreq || undefined, badgeColor: 'bg-amber-500' },
         { title: "Check-in", icon: UserCheck, path: "/checkin", roles: ['admin', 'manager'] },
-        { title: "Planos", icon: CreditCard, path: "/planos", roles: ['admin'] },
-        { title: "Catálogo (SKUs)", icon: Package, path: "/catalogo", roles: ['admin'] },
+        { title: "Planos & SKUs", icon: Package, path: "/catalogo", roles: ['admin'] },
         { title: "Pagamentos", icon: Receipt, path: "/pagamentos", roles: ['admin'], badge: badges.inadimplentes || undefined, badgeColor: 'bg-destructive' },
-        { title: "Aulas", icon: Calendar, path: "/aulas", roles: ['admin', 'manager'], badge: badges.aulasSemInst || undefined, badgeColor: 'bg-destructive' },
-        { title: "Equipamentos", icon: Dumbbell, path: "/equipamentos", roles: ['admin'] },
-        { title: "Produtos", icon: Package, path: "/produtos", roles: ['admin'] },
       ],
     },
     {
-      category: "EQUIPE & AVALIAÇÕES",
-      roles: ['admin', 'manager'],
+      category: "ASSESSORIA ESPORTIVA",
       items: [
-        { title: "Funcionários", icon: Briefcase, path: "/funcionarios", roles: ['admin'] },
+        { title: "Aulas", icon: Calendar, path: "/aulas", roles: ['admin', 'manager'], badge: badges.aulasSemInst || undefined, badgeColor: 'bg-destructive' },
+        { title: "Planos de Treino", icon: Dumbbell, path: "/planos-treino" },
+        { title: "Treinos", icon: Dumbbell, path: "/treinos" },
         { title: "Avaliações Físicas", icon: Activity, path: "/avaliacoes", roles: ['admin', 'manager'] },
         { title: "Aulas Experimentais", icon: UserCheck, path: "/experimentais", roles: ['admin', 'manager'] },
+        { title: "Coaches & Equipe", icon: Briefcase, path: "/coaches", roles: ['admin'] },
+        { title: "Equipamentos", icon: Dumbbell, path: "/equipamentos", roles: ['admin'] },
       ],
     },
     {
-      category: "TREINOS",
+      category: "MERCADOS",
+      roles: ['admin','manager'],
       items: [
-        { title: "Treinos", icon: Dumbbell, path: "/treinos" },
+        { title: "Condomínios", icon: Building2, path: "/sindico" },
+        { title: "Corporativo", icon: Briefcase, path: "/corp" },
+        { title: "Estúdios / Academias", icon: Dumbbell, path: "/studio" },
+      ],
+    },
+    {
+      category: "INTELIGÊNCIA 9FIT",
+      items: [
+        { title: "Hub de Agentes IA", icon: Bot, path: "/agents" },
+        { title: "RON — Agente CEO", icon: Sparkles, path: "/agente-ia" },
+        { title: "Insights por mercado", icon: BarChart3, path: "/insights", roles: ['admin'] },
+        { title: "Plano CFO — Leads", icon: Target, path: "/cfo/leads", roles: ['admin'] },
       ],
     },
     {
@@ -174,14 +188,6 @@ export function AppSidebar() {
         { title: "Promoções", icon: Gift, path: "/marketing/promocoes" },
         { title: "Automação", icon: Zap, path: "/marketing/automacao" },
         { title: "Insights IA", icon: Sparkles, path: "/marketing/insights-ia" },
-      ],
-    },
-    {
-      category: "INTELIGÊNCIA ARTIFICIAL",
-      items: [
-        { title: "Hub de Agentes IA", icon: Bot, path: "/agents" },
-        { title: "Agente IA", icon: Sparkles, path: "/agente-ia" },
-        { title: "Plano CFO — Leads", icon: Target, path: "/cfo/leads", roles: ['admin'] },
       ],
     },
     {

@@ -20,6 +20,12 @@ import OrganizationsAdmin from "./pages/admin/OrganizationsAdmin";
 import MoradorHome from "./pages/morador/MoradorHome";
 import FitProIntegration from "./pages/admin/FitProIntegration";
 import LeadsExtractionPlan from "./pages/cfo/LeadsExtractionPlan";
+import PipelineComercial from "./pages/comercial/PipelineComercial";
+import Clientes from "./pages/comercial/Clientes";
+import Contratos from "./pages/comercial/Contratos";
+import PlanosTreino from "./pages/treinos/PlanosTreino";
+import StudioHome from "./pages/studio/StudioHome";
+import InsightsMercado from "./pages/insights/InsightsMercado";
 
 import NotFound from "./pages/NotFound";
 import { Login } from "./pages/Login";
@@ -135,6 +141,13 @@ const App = () => (
                     <Route path="/admin/organizacoes" element={<Protected><OrganizationsAdmin /></Protected>} />
                     <Route path="/admin/fitpro" element={<Protected><FitProIntegration /></Protected>} />
                     <Route path="/cfo/leads" element={<Protected><LeadsExtractionPlan /></Protected>} />
+                    <Route path="/pipeline" element={<Protected><PipelineComercial /></Protected>} />
+                    <Route path="/clientes" element={<Protected><Clientes /></Protected>} />
+                    <Route path="/contratos" element={<Protected><Contratos /></Protected>} />
+                    <Route path="/planos-treino" element={<Protected><PlanosTreino /></Protected>} />
+                    <Route path="/studio" element={<Protected><StudioHome /></Protected>} />
+                    <Route path="/insights" element={<Protected><InsightsMercado /></Protected>} />
+                    <Route path="/coaches" element={<Protected><Funcionarios /></Protected>} />
                     <Route path="/" element={<Navigate to="/painel" replace />} />
                     <Route path="/agents" element={<Protected><AgentsHub /></Protected>} />
                     <Route path="/admin/usuarios" element={<Protected><UsersAdmin /></Protected>} />
