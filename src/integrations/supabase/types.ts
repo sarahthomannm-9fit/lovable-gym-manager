@@ -1172,6 +1172,57 @@ export type Database = {
           },
         ]
       }
+      follow_ups: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          data_proxima_acao: string | null
+          descricao: string | null
+          id: string
+          lead_id: string | null
+          proposal_id: string | null
+          proxima_acao: string | null
+          tipo: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          data_proxima_acao?: string | null
+          descricao?: string | null
+          id?: string
+          lead_id?: string | null
+          proposal_id?: string | null
+          proxima_acao?: string | null
+          tipo: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          data_proxima_acao?: string | null
+          descricao?: string | null
+          id?: string
+          lead_id?: string | null
+          proposal_id?: string | null
+          proxima_acao?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "follow_ups_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "follow_ups_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       formas_pagamento: {
         Row: {
           created_at: string | null
@@ -1333,38 +1384,53 @@ export type Database = {
       leads: {
         Row: {
           created_at: string
+          data_evento: string | null
           email: string | null
+          empresa: string | null
           fonte: string | null
           id: string
           nome: string
+          nome_contato: string | null
           observacoes: string | null
+          orcamento_estimado: number | null
           score: number | null
           status: string
           telefone: string | null
+          tipo: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
+          data_evento?: string | null
           email?: string | null
+          empresa?: string | null
           fonte?: string | null
           id?: string
           nome: string
+          nome_contato?: string | null
           observacoes?: string | null
+          orcamento_estimado?: number | null
           score?: number | null
           status?: string
           telefone?: string | null
+          tipo?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
+          data_evento?: string | null
           email?: string | null
+          empresa?: string | null
           fonte?: string | null
           id?: string
           nome?: string
+          nome_contato?: string | null
           observacoes?: string | null
+          orcamento_estimado?: number | null
           score?: number | null
           status?: string
           telefone?: string | null
+          tipo?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1920,6 +1986,56 @@ export type Database = {
           valido_ate?: string | null
         }
         Relationships: []
+      }
+      proposals: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          data_validade: string | null
+          descricao: string | null
+          id: string
+          itens_inclusos: string | null
+          lead_id: string | null
+          status: string
+          titulo: string
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          data_validade?: string | null
+          descricao?: string | null
+          id?: string
+          itens_inclusos?: string | null
+          lead_id?: string | null
+          status?: string
+          titulo: string
+          updated_at?: string
+          valor?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          data_validade?: string | null
+          descricao?: string | null
+          id?: string
+          itens_inclusos?: string | null
+          lead_id?: string | null
+          status?: string
+          titulo?: string
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposals_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       propostas_b2b: {
         Row: {
