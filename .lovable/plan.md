@@ -1,85 +1,114 @@
-## Objetivo
-Corrigir os fluxos de acesso das personas Síndico/Morador/Coach e transformar as telas/skills enviadas em experiências utilizáveis dentro do sistema, com agentes capazes de executar ações reais de forma controlada.
+# Plano — Tornar o 9FIT vendável e operacional
 
-## Plano de implementação
+Consolidei os anexos (spec de 1200 linhas, HTMLs de menu/personas, dossiê SQL, skills e roadmap). Vou entregar em **3 blocos sequenciais** para você aprovar. Cada bloco fecha um "estado utilizável".
 
-1. **Corrigir rotas e fluxo de contexto das personas**
-   - Ajustar o redirecionamento pós-login para levar cada papel ao fluxo correto: síndico, professor/coach, corporativo ou morador.
-   - Corrigir `routeForRole` para usuário/morador ir para `/morador`, não para `/painel`.
-   - Melhorar `/select-context` para admin e usuários comuns conseguirem acessar/previewar Síndico, Morador, Coach e Corporativo sem cair em tela vazia.
-   - Revisar `RoleRoute` para evitar bloqueio indevido em `/morador` e reduzir loops de navegação.
+---
 
-2. **Estabilizar carregamento das telas Síndico/Morador/Coach**
-   - Garantir que `ensureOrgForPersona` rode uma vez por persona sem depender de renderizações repetidas.
-   - Em Síndico e Coach, carregar dados apenas quando o contexto estiver pronto.
-   - Em Morador, adicionar fallback previsível para preview admin e vínculo por e-mail do aluno, sem piscar ou recarregar em loop.
-   - Adicionar estados vazios claros quando não houver organização/aluno vinculado.
+## BLOCO 1 — Fechar contrato (comercial) 🔴
 
-3. **Implementar as telas/personas solicitadas no prompt anterior**
-   - Refinar **Síndico** com KPIs, inadimplência, aulas do dia, alunos, comunicados e solicitações à 9FIT.
-   - Refinar **Coach/Professor** com agenda do dia, agenda 7 dias, alunos, presença, treinos e histórico.
-   - Refinar **Morador/Aluno** com KPIs, próximas aulas, inscrições, pagamentos e comunicados.
-   - Integrar a navegação dessas telas no menu lateral e na barra interna de personas.
+Rotas e menu que faltam para a 9FIT vender uma assessoria.
 
-4. **Adicionar a tela CFO/Leads enviada no HTML**
-   - Criar uma página do plano CFO de extração de leads usando o conteúdo do arquivo `cfo_leads_extraction_plan.html` adaptado para React/Tailwind e design tokens.
-   - Incluir métricas, tiers, funil financeiro, LTV, responsáveis e botões de ação.
-   - Adicionar rota e item de menu, provavelmente em 9FIT/Marketing ou Hub de Agentes.
+**1.1 Reorganizar sidebar** conforme `9fit_menu_reorganizado.html`
 
-5. **Habilitar skills anexadas para os agentes**
-   - Importar as definições das skills enviadas:
-     - SDR Habilitor
-     - Growth Manager Performance Marketing
-     - Finance Contabilidade
-     - Administrativo RH Junior
-     - Mariana Skill
-     - Instagram Story Funnel Optimizer
-     - Supra Skill
-   - Criar um catálogo interno de skills usado pelo Hub de Agentes.
-   - Mapear skills para agentes existentes:
-     - SDR Agent: `sdr-habilitor`, plano CFO/leads e `process_leads_v3.py` como lógica de geração de abordagem.
-     - Billing/Financeiro: `finance-contabilidade`.
-     - Content/Marketing: `growth-manager-performance-marketing` e `instagram-story-funnel-optimizer`.
-     - Onboarding/Reativação/Suporte: `mariana-skill`.
-     - RON Core: `supra-skill` como orquestração.
-     - RH/Admin: `administrativo-rh-junior`.
+- Renomear grupo "PRINCIPAL" → **Central de Operações**
+- Nova seção **Assessoria Esportiva** (Aulas, Planos de Treino, Treinos, Avaliações, Experimentais, Coaches)
+- Nova seção **Mercados** (Condomínios, Corporativo, Estúdios/Academias)
+- Financeiro ganha **Contratos & Propostas** e **Planos & SKUs**
+- Renomear "Funcionários" → **Coaches & Equipe**
+- Remover item "Insights IA" duplicado e "Integração FitPro" (item legacy)
+- Renomear "Agente IA" → **RON — Agente CEO**
+- Novos itens: **Insights por Mercado**, **Relatórios Automáticos**
 
-6. **Permitir execução de ações nos agentes**
-   - Atualizar a Edge Function `agent-hub-chat` para validar inputs com Zod e aceitar um modo de ação controlado.
-   - Adicionar ações seguras por agente, por exemplo:
-     - SDR: gerar mensagem personalizada para lead, marcar lead como contatado, agendar follow-up via `system_events`/logs.
-     - Billing: criar notificação de cobrança e registrar log.
-     - Content: criar rascunho em `content_drafts`.
-     - Suporte: classificar/responder ticket.
-     - RON Core: orquestrar e sugerir ação, sem mutação automática quando for arriscado.
-   - Registrar todas as execuções em `agent_logs` com status, input/output e latência.
-   - No frontend, mostrar botões de ações rápidas por agente e o resultado da execução.
+**1.2 `/pipeline**` — Kanban comercial (leads → prospecção/contato/proposta/negociação/fechado/perdido)
 
-7. **Conectar o plano CFO/leads aos agentes**
-   - Usar o conteúdo do HTML e o script Python enviado como regra de negócio para gerar abordagens por categoria/persona.
-   - Expor no Hub de Agentes ações como “Script Tier 1 LinkedIn” e “Cadência SDR Ironman”.
-   - Opcionalmente salvar mensagens geradas como observação do lead ou rascunho de comunicação, dependendo do dado disponível no banco.
+- Cards com nome, empresa+tipo, fonte, orçamento, avatar
+- Drag & drop atualiza `leads.status`
+- Drawer: histórico `follow_ups` + botão "Registrar follow-up" + botão "Criar proposta" (INSERT em `proposals`)
+- Métricas topo: total, em negociação, fechados/mês, taxa conversão
+- Modal "+ Novo Lead"
 
-8. **Verificação final**
-   - Validar navegação: `/login`, `/select-context`, `/sindico`, `/morador`, `/coach`, `/corp`, `/agents` e nova rota CFO.
-   - Validar que as telas não ficam piscando e não redirecionam indevidamente.
-   - Validar que os agentes conseguem responder e executar ações sem expor service role no frontend.
+**1.3 `/clientes**` — Grid de organizações contratantes
 
-## Arquivos principais envolvidos
-- `src/App.tsx`
-- `src/components/AppSidebar.tsx`
-- `src/layouts/PersonaLayout.tsx`
-- `src/hooks/useOperationalContext.tsx`
-- `src/pages/Login.tsx`
-- `src/pages/SelectContext.tsx`
-- `src/pages/sindico/SindicoHome.tsx`
-- `src/pages/coach/CoachHome.tsx`
-- `src/pages/morador/MoradorHome.tsx`
-- `src/pages/AgentsHub.tsx`
-- Nova página CFO/leads
-- `supabase/functions/agent-hub-chat/index.ts`
+- Cards por org: ícone por tipo, alunos ativos, MRR, inadimplentes, status saudável/atenção
+- Filtros por tipo + busca
+- Drawer com membros + histórico de pagamentos + "Ver como Síndico" (usa `ensureOrgForPersona`)
 
-## Observações técnicas
-- Não vou mexer em `types.ts` manualmente.
-- Se for necessário criar tabelas novas para skills/configurações persistentes, a migration terá `GRANT` imediatamente após cada `CREATE TABLE`.
-- As ações dos agentes serão executadas server-side na Edge Function; o frontend nunca receberá `service_role_key`.
+**1.4 `/contratos**` — 3 tabs
+
+- Propostas (rascunho/enviada/aprovada) com "Gerar contrato" → INSERT em `propostas_b2b`
+- Contratos ativos com HTML embarcado
+- Histórico (recusados/expirados)
+
+---
+
+## BLOCO 2 — Operação (assessoria roda sozinha) 🟡
+
+**2.1 `/planos-treino**` — Módulo hoje vazio no menu Treinos
+
+- Lista de `planos_treino` com nível/objetivo/duração/exercícios
+- Modal "+ Novo Plano" cria em `planos_treino`
+- Editor `/planos-treino/:id`: busca em `exercicios_biblioteca`, adiciona em `plano_exercicios` por semana/dia, drag para reordenar
+- Modal "Atribuir a aluno" → INSERT em `treinos` (trigger `fn_treino_notificar` já dispara push)
+
+**2.2 `/coaches**` (renomeia Funcionários)
+
+- Grid perfil: avatar, cargo, especialidades, horários, comissão
+- Modal "+ Adicionar Coach" com multi-select especialidades e horários por dia
+- Drawer "Ver alunos" (JOIN aulas × aulas_inscritos)
+- Botão "Convidar para o sistema" via edge function (`supabase.auth.admin.inviteUserByEmail`)
+
+**2.3 `/studio**` — Painel Estúdios/Academias
+
+- Estrutura idêntica ao `/sindico`, tabs: Visão Geral, Alunos, Agenda, Financeiro, Falar com 9FIT
+- Aba Visão Geral usa `get_alunos_sem_checkin(15, org_id)`
+
+**2.4 Gaps das personas existentes** (do `personas_roadmap_1.html`)
+
+- Síndico: botão "Falar com 9FIT" (ticket em `support_tickets`), "Aprovar novos moradores"
+- Coach: usar `dashboard_coach()` já existente, botão "Registrar check-in" em `checkins`
+- Morador: grade semanal de aulas, "Inscrever-se em aula" (INSERT `aulas_inscritos`)
+
+---
+
+## BLOCO 3 — Inteligência e blindagem 🟢
+
+**3.1 `/insights**` — BI segmentado por mercado
+
+- 4 KPIs consolidados (MRR, alunos ativos, churn, NPS estimado)
+- Gráficos por mercado (condomínio/corp/estúdio) usando RPCs existentes
+- Filtro de período (30d/3m/6m/12m)
+
+**3.2 `/relatorios**` — 5 cards de relatório
+
+- Mensal do Cliente, Inadimplência, Evolução de Alunos, Financeiro, Engajamento Corporativo
+- Reusa RPCs: `relatorio_faturamento_mensal`, `relatorio_metricas_gerais`, `relatorio_inadimplencia`, `relatorio_receitas_por_plano`, `relatorio_evolucao_receitas`
+- Modal "Gerar Relatório": visualizar, exportar CSV, `window.print()`
+
+**3.3 Habilitar as skills anexadas**
+
+- Registrar em `src/lib/agentSkills.ts` (já existe) as 7 skills: sdr-habilitor, growth-manager, finance-contabilidade, admin-rh-junior, mariana, instagram-funnel, supra
+- Mapear no `AgentsHub` cada agente → skill → ação executável na edge function `agent-hub-chat`
+- Adicionar ações rápidas por agente (gerar mensagem SDR usando `process_leads_v3.py` como regra, criar rascunho em `content_drafts`, classificar ticket)
+
+**3.4 Backend — RLS + multitenancy** (dossiê `files_8.zip`)
+
+- Migration única aplicando bloco 1 (ENABLE RLS em 20 tabelas), blocos 2–5 (policies via `has_role` e `user_has_org`), garantindo `GRANT` em todas as tabelas públicas
+- Adicionar `organization_id` em `aulas` se faltar
+- Semear organizações demo + vincular Rony/Sara em `organization_members`
+- Migration vem via `supabase--migration` (aprovação sua) — sem tocar em `types.ts`
+
+---
+
+## Detalhes técnicos
+
+- **Frontend**: React + Vite, tokens noir & gold já em `index.css` — todas as novas telas usam `bg-primary`, `text-primary`, `glass`, `gradient-gold` (sem hex hardcoded).
+- **Roteamento**: registrar as 8 rotas novas em `src/App.tsx` sob `Protected`+`RoleRoute` (admin/manager para comerciais; professor+admin para /coaches, /planos-treino).
+- **Data**: hooks novos em `src/hooks/` (`useLeads`, `useProposals`, `usePlanosTreino`, `useExercicios`, `useFuncionariosExt`) usando o client Supabase já existente.
+- **Edge function**: expandir `agent-hub-chat` para executar ações por `skillId` com validação Zod e log em `agent_logs`.
+- **Sem mexer** em `types.ts` nem em schemas Supabase reservados.
+
+## Entrega
+
+Vou executar por bloco, um por vez, esperando você validar antes de seguir. Sugestão: começamos pelo **Bloco 1** (pipeline + clientes + contratos + reorganização do menu) porque é o que destrava a venda amanhã.
+
+Confirma que posso implementar o Bloco 1? coonfirmo porem preciso do bloco 2 implementada, ele é o suporte para operaçao acontecer em tempo real, me notifica o que ficar pendente. 
