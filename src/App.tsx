@@ -141,6 +141,13 @@ const App = () => (
                     <Route path="/admin/organizacoes" element={<Protected><OrganizationsAdmin /></Protected>} />
                     <Route path="/admin/fitpro" element={<Protected><FitProIntegration /></Protected>} />
                     <Route path="/cfo/leads" element={<Protected><LeadsExtractionPlan /></Protected>} />
+                    <Route path="/pipeline" element={<Protected><PipelineComercial /></Protected>} />
+                    <Route path="/clientes" element={<Protected><Clientes /></Protected>} />
+                    <Route path="/contratos" element={<Protected><Contratos /></Protected>} />
+                    <Route path="/planos-treino" element={<Protected><PlanosTreino /></Protected>} />
+                    <Route path="/studio" element={<Protected><StudioHome /></Protected>} />
+                    <Route path="/insights" element={<Protected><InsightsMercado /></Protected>} />
+                    <Route path="/coaches" element={<Protected><Funcionarios /></Protected>} />
                     <Route path="/" element={<Navigate to="/painel" replace />} />
                     <Route path="/agents" element={<Protected><AgentsHub /></Protected>} />
                     <Route path="/admin/usuarios" element={<Protected><UsersAdmin /></Protected>} />
