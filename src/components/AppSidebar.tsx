@@ -121,17 +121,37 @@ export function AppSidebar() {
 
   const menuItems: MenuCategory[] = [
     {
-      category: "PRINCIPAL",
+      category: "CENTRAL DE OPERAÇÕES",
       items: [
         { title: "Control Plane", icon: Home, path: "/painel" },
+        { title: "Pipeline comercial", icon: Target, path: "/pipeline", roles: ['admin','manager'] },
+        { title: "Clientes ativos", icon: Building2, path: "/clientes", roles: ['admin','manager'] },
+        { title: "Contratos & Propostas", icon: Receipt, path: "/contratos", roles: ['admin','manager'] },
         { title: "Alunos", icon: Users, path: "/alunos", roles: ['admin', 'manager'], badge: badges.alunosSemFreq || undefined, badgeColor: 'bg-amber-500' },
         { title: "Check-in", icon: UserCheck, path: "/checkin", roles: ['admin', 'manager'] },
-        { title: "Planos", icon: CreditCard, path: "/planos", roles: ['admin'] },
-        { title: "Catálogo (SKUs)", icon: Package, path: "/catalogo", roles: ['admin'] },
+        { title: "Planos & SKUs", icon: Package, path: "/catalogo", roles: ['admin'] },
         { title: "Pagamentos", icon: Receipt, path: "/pagamentos", roles: ['admin'], badge: badges.inadimplentes || undefined, badgeColor: 'bg-destructive' },
+      ],
+    },
+    {
+      category: "ASSESSORIA ESPORTIVA",
+      items: [
         { title: "Aulas", icon: Calendar, path: "/aulas", roles: ['admin', 'manager'], badge: badges.aulasSemInst || undefined, badgeColor: 'bg-destructive' },
+        { title: "Planos de Treino", icon: Dumbbell, path: "/planos-treino" },
+        { title: "Treinos", icon: Dumbbell, path: "/treinos" },
+        { title: "Avaliações Físicas", icon: Activity, path: "/avaliacoes", roles: ['admin', 'manager'] },
+        { title: "Aulas Experimentais", icon: UserCheck, path: "/experimentais", roles: ['admin', 'manager'] },
+        { title: "Coaches & Equipe", icon: Briefcase, path: "/coaches", roles: ['admin'] },
         { title: "Equipamentos", icon: Dumbbell, path: "/equipamentos", roles: ['admin'] },
-        { title: "Produtos", icon: Package, path: "/produtos", roles: ['admin'] },
+      ],
+    },
+    {
+      category: "MERCADOS",
+      roles: ['admin','manager'],
+      items: [
+        { title: "Condomínios", icon: Building2, path: "/sindico" },
+        { title: "Corporativo", icon: Briefcase, path: "/corp" },
+        { title: "Estúdios / Academias", icon: Dumbbell, path: "/studio" },
       ],
     },
     {
