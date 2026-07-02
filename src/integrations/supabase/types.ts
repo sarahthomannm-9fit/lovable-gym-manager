@@ -433,6 +433,7 @@ export type Database = {
           inscritos_atual: number | null
           modalidade: string | null
           nome: string
+          organization_id: string | null
           plano_id: string | null
           professor_id: string | null
           recorrencia: string | null
@@ -453,6 +454,7 @@ export type Database = {
           inscritos_atual?: number | null
           modalidade?: string | null
           nome: string
+          organization_id?: string | null
           plano_id?: string | null
           professor_id?: string | null
           recorrencia?: string | null
@@ -473,6 +475,7 @@ export type Database = {
           inscritos_atual?: number | null
           modalidade?: string | null
           nome?: string
+          organization_id?: string | null
           plano_id?: string | null
           professor_id?: string | null
           recorrencia?: string | null
@@ -481,6 +484,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "aulas_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "aulas_plano_id_fkey"
             columns: ["plano_id"]
@@ -1025,6 +1035,72 @@ export type Database = {
         }
         Relationships: []
       }
+      exercicios_biblioteca: {
+        Row: {
+          ativo: boolean | null
+          categoria: string | null
+          created_at: string | null
+          created_by: string | null
+          dificuldade: string | null
+          equipamento: string | null
+          grupo_muscular: string | null
+          id: string
+          imagem_url: string | null
+          instrucoes: string | null
+          nome: string
+          organization_id: string | null
+          updated_at: string | null
+          video_url: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          categoria?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          dificuldade?: string | null
+          equipamento?: string | null
+          grupo_muscular?: string | null
+          id?: string
+          imagem_url?: string | null
+          instrucoes?: string | null
+          nome: string
+          organization_id?: string | null
+          updated_at?: string | null
+          video_url?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          categoria?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          dificuldade?: string | null
+          equipamento?: string | null
+          grupo_muscular?: string | null
+          id?: string
+          imagem_url?: string | null
+          instrucoes?: string | null
+          nome?: string
+          organization_id?: string | null
+          updated_at?: string | null
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercicios_biblioteca_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercicios_biblioteca_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fitmanager_connections: {
         Row: {
           api_key_hash: string
@@ -1560,6 +1636,66 @@ export type Database = {
           },
         ]
       }
+      plano_exercicios: {
+        Row: {
+          carga_kg: number | null
+          created_at: string | null
+          descanso_seg: number | null
+          dia_semana: number | null
+          exercicio_id: string
+          id: string
+          observacoes: string | null
+          ordem: number | null
+          plano_treino_id: string
+          repeticoes: string | null
+          semana: number | null
+          series: number | null
+        }
+        Insert: {
+          carga_kg?: number | null
+          created_at?: string | null
+          descanso_seg?: number | null
+          dia_semana?: number | null
+          exercicio_id: string
+          id?: string
+          observacoes?: string | null
+          ordem?: number | null
+          plano_treino_id: string
+          repeticoes?: string | null
+          semana?: number | null
+          series?: number | null
+        }
+        Update: {
+          carga_kg?: number | null
+          created_at?: string | null
+          descanso_seg?: number | null
+          dia_semana?: number | null
+          exercicio_id?: string
+          id?: string
+          observacoes?: string | null
+          ordem?: number | null
+          plano_treino_id?: string
+          repeticoes?: string | null
+          semana?: number | null
+          series?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plano_exercicios_exercicio_id_fkey"
+            columns: ["exercicio_id"]
+            isOneToOne: false
+            referencedRelation: "exercicios_biblioteca"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plano_exercicios_plano_treino_id_fkey"
+            columns: ["plano_treino_id"]
+            isOneToOne: false
+            referencedRelation: "planos_treino"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       planos: {
         Row: {
           ativo: boolean | null
@@ -1604,6 +1740,69 @@ export type Database = {
           valor?: number | null
         }
         Relationships: []
+      }
+      planos_treino: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          descricao: string | null
+          dias_semana: number | null
+          id: string
+          nivel: string | null
+          nome: string
+          objetivo: string | null
+          organization_id: string | null
+          professor_id: string | null
+          publico: boolean | null
+          semanas: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          dias_semana?: number | null
+          id?: string
+          nivel?: string | null
+          nome: string
+          objetivo?: string | null
+          organization_id?: string | null
+          professor_id?: string | null
+          publico?: boolean | null
+          semanas?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          dias_semana?: number | null
+          id?: string
+          nivel?: string | null
+          nome?: string
+          objetivo?: string | null
+          organization_id?: string | null
+          professor_id?: string | null
+          publico?: boolean | null
+          semanas?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planos_treino_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planos_treino_professor_id_fkey"
+            columns: ["professor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       produtos: {
         Row: {
@@ -1932,6 +2131,53 @@ export type Database = {
         }
         Relationships: []
       }
+      treino_execucoes: {
+        Row: {
+          aluno_id: string
+          carga_real: Json | null
+          concluido: boolean | null
+          created_at: string | null
+          data_execucao: string
+          duracao_min: number | null
+          humor: number | null
+          id: string
+          observacoes: string | null
+          treino_id: string | null
+        }
+        Insert: {
+          aluno_id: string
+          carga_real?: Json | null
+          concluido?: boolean | null
+          created_at?: string | null
+          data_execucao?: string
+          duracao_min?: number | null
+          humor?: number | null
+          id?: string
+          observacoes?: string | null
+          treino_id?: string | null
+        }
+        Update: {
+          aluno_id?: string
+          carga_real?: Json | null
+          concluido?: boolean | null
+          created_at?: string | null
+          data_execucao?: string
+          duracao_min?: number | null
+          humor?: number | null
+          id?: string
+          observacoes?: string | null
+          treino_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "treino_execucoes_treino_id_fkey"
+            columns: ["treino_id"]
+            isOneToOne: false
+            referencedRelation: "treinos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       treinos: {
         Row: {
           aluno_id: string | null
@@ -1940,6 +2186,11 @@ export type Database = {
           data_inicio: string | null
           descricao: string | null
           id: string
+          nome: string | null
+          organization_id: string | null
+          plano_treino_id: string | null
+          professor_id: string | null
+          status: string | null
           updated_at: string | null
         }
         Insert: {
@@ -1949,6 +2200,11 @@ export type Database = {
           data_inicio?: string | null
           descricao?: string | null
           id?: string
+          nome?: string | null
+          organization_id?: string | null
+          plano_treino_id?: string | null
+          professor_id?: string | null
+          status?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -1958,6 +2214,11 @@ export type Database = {
           data_inicio?: string | null
           descricao?: string | null
           id?: string
+          nome?: string | null
+          organization_id?: string | null
+          plano_treino_id?: string | null
+          professor_id?: string | null
+          status?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -1966,6 +2227,27 @@ export type Database = {
             columns: ["aluno_id"]
             isOneToOne: false
             referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treinos_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treinos_plano_treino_id_fkey"
+            columns: ["plano_treino_id"]
+            isOneToOne: false
+            referencedRelation: "planos_treino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treinos_professor_id_fkey"
+            columns: ["professor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2039,7 +2321,45 @@ export type Database = {
           variabilidade: number
         }[]
       }
+      calcular_mrr: {
+        Args: { p_org_id: string }
+        Returns: {
+          alunos_ativos: number
+          crescimento_pct: number
+          mrr: number
+          receita_mes_anterior: number
+          receita_mes_atual: number
+          ticket_medio: number
+        }[]
+      }
+      criar_notificacao: {
+        Args: {
+          p_canal?: string[]
+          p_destinatario_id: string
+          p_destinatario_tipo?: string
+          p_mensagem: string
+          p_prioridade?: string
+          p_tipo: string
+          p_titulo: string
+        }
+        Returns: string
+      }
+      dashboard_coach: { Args: { p_prof_id: string }; Returns: Json }
+      dashboard_morador: { Args: { p_aluno_id: string }; Returns: Json }
+      dashboard_sindico: { Args: { p_org_id: string }; Returns: Json }
       dashboard_trust: { Args: never; Returns: Json }
+      get_alunos_sem_checkin: {
+        Args: { p_dias?: number; p_org_id?: string }
+        Returns: {
+          aluno_id: string
+          dias_ausente: number
+          email: string
+          nome: string
+          plano_id: string
+          telefone: string
+          ultimo_checkin: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
