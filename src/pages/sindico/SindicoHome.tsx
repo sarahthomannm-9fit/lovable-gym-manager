@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { PersonaLayout, PersonaEmptyState } from '@/layouts/PersonaLayout';
 import { useOperationalContext } from '@/hooks/useOperationalContext';
+import { useOrgRole } from '@/hooks/useOrgRole';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AlertCircle, Inbox, LifeBuoy, MessageSquarePlus, Megaphone } from 'lucide-react';
+import { AlertCircle, Inbox, LifeBuoy, MessageSquarePlus, Megaphone, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 
 const ACCENT = '#60A5FA';
@@ -19,6 +20,7 @@ type Ticket = { id: string; message: string; status: string; created_at: string;
 
 export default function SindicoHome() {
   const { activeOrg, ensureOrgForPersona } = useOperationalContext();
+  const { isComite, canSeeFinancials, canManageComunicados } = useOrgRole();
   const [ready, setReady] = useState(false);
   const [metrics, setMetrics] = useState({ alunos: 0, receita: 0, inadCount: 0, ocupacao: 0 });
   const [inad, setInad] = useState<Inad[]>([]);
