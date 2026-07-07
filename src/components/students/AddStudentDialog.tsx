@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import { SupabaseStudent } from "@/hooks/useSupabaseStudents";
 import { supabase } from "@/integrations/supabase/client";
+import { useOperationalContext } from "@/hooks/useOperationalContext";
 
 interface AddStudentDialogProps {
   onAddStudent: (student: Omit<SupabaseStudent, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
@@ -48,6 +49,7 @@ export function AddStudentDialog({ onAddStudent, plans }: AddStudentDialogProps)
   });
 
   const { toast } = useToast();
+  const { activeOrg } = useOperationalContext();
 
   const toggleDiaAula = (dia: string) => {
     setNewStudent(prev => ({
@@ -88,6 +90,7 @@ export function AddStudentDialog({ onAddStudent, plans }: AddStudentDialogProps)
         categoria_aluno: newStudent.categoria_aluno,
         dias_aula: newStudent.dias_aula,
         dia_pagamento: newStudent.dia_pagamento ? parseInt(newStudent.dia_pagamento) : undefined,
+        ...(activeOrg?.id ? { organization_id: activeOrg.id } as any : {}),
       };
 
       await onAddStudent(studentData);
