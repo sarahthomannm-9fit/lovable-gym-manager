@@ -332,24 +332,33 @@ export default function SindicoHome() {
         </TabsContent>
 
         <TabsContent value="comunicados">
-          <Card className="bg-card/60 border-border/40">
-            <CardContent className="p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <Megaphone className="w-4 h-4" style={{ color: ACCENT }} />
-                <h2 className="font-semibold">Publicar comunicado</h2>
-              </div>
-              <input value={aviso.titulo}
-                     onChange={e => setAviso({ ...aviso, titulo: e.target.value })}
-                     placeholder="Título do aviso"
-                     className="w-full bg-background border border-border/40 rounded-md px-3 py-2 text-sm mb-2" />
-              <Textarea value={aviso.mensagem}
-                        onChange={e => setAviso({ ...aviso, mensagem: e.target.value })}
-                        placeholder="Mensagem para os alunos…" rows={4} className="mb-3" />
-              <Button onClick={enviarComunicado} className="bg-[#60A5FA] text-black hover:bg-[#60A5FA]/90">
-                <Megaphone className="w-4 h-4 mr-1" /> Publicar
-              </Button>
-            </CardContent>
-          </Card>
+          {canManageComunicados ? (
+            <Card className="bg-card/60 border-border/40">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <Megaphone className="w-4 h-4" style={{ color: ACCENT }} />
+                  <h2 className="font-semibold">Publicar comunicado</h2>
+                </div>
+                <input value={aviso.titulo}
+                       onChange={e => setAviso({ ...aviso, titulo: e.target.value })}
+                       placeholder="Título do aviso"
+                       className="w-full bg-background border border-border/40 rounded-md px-3 py-2 text-sm mb-2" />
+                <Textarea value={aviso.mensagem}
+                          onChange={e => setAviso({ ...aviso, mensagem: e.target.value })}
+                          placeholder="Mensagem para os alunos…" rows={4} className="mb-3" />
+                <Button onClick={enviarComunicado} className="bg-[#60A5FA] text-black hover:bg-[#60A5FA]/90">
+                  <Megaphone className="w-4 h-4 mr-1" /> Publicar
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="bg-card/60 border-border/40">
+              <CardContent className="p-5 text-sm text-muted-foreground text-center">
+                <Megaphone className="w-6 h-6 mx-auto mb-2 text-muted-foreground/50" />
+                Modo Comitê: comunicados são apenas leitura. Peça ao síndico para publicar novos avisos.
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="9fit">
