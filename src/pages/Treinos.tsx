@@ -1,15 +1,17 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, User, Calendar, Dumbbell } from "lucide-react";
+import { Plus, User, Calendar, Dumbbell, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { TrainingStats } from "@/components/training/TrainingStats";
 import { AddTrainingDialog } from "@/components/training/AddTrainingDialog";
 import { PageShell } from "@/components/warroom/PageShell";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSupabaseGymData } from "@/contexts/SupabaseGymDataContext";
 import { cn } from "@/lib/utils";
+import { FilaIATreinos } from "@/components/treinos/FilaIATreinos";
 
 interface Treino {
   id: string;
@@ -30,6 +32,7 @@ function classificarTreino(data_fim: string) {
 }
 
 export function Treinos() {
+  const [filaCount, setFilaCount] = useState(0);
   const [treinos, setTreinos] = useState<Treino[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -48,6 +51,11 @@ export function Treinos() {
   };
 
   useEffect(() => { fetchTreinos(); }, []);
+
+  useEffect(() => {
+    supabase.from('treinos_ia_fila').select('id', { count: 'exact', head: true })
+      .eq('status', 'pendente').then(({ count }) => setFilaCount(count || 0));
+  }, []);
 
   const hoje = new Date().toISOString().split('T')[0];
   const vencidos = treinos.filter(t => t.data_fim && t.data_fim < hoje).length;
