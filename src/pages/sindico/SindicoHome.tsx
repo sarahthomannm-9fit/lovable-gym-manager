@@ -198,11 +198,27 @@ export default function SindicoHome() {
       </Card>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-        <MetricCard label="Receita do Mês" value={`R$ ${metrics.receita.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`} />
-        <MetricCard label="Inadimplência" value={`${metrics.inadCount} pessoa${metrics.inadCount !== 1 ? 's' : ''}`} />
+        {canSeeFinancials && (
+          <MetricCard label="Receita do Mês" value={`R$ ${metrics.receita.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`} />
+        )}
+        {canSeeFinancials && (
+          <MetricCard label="Inadimplência" value={`${metrics.inadCount} pessoa${metrics.inadCount !== 1 ? 's' : ''}`} />
+        )}
         <MetricCard label="Ocupação Média" value={metrics.ocupacao ? `${metrics.ocupacao}%` : '--'} />
         <MetricCard label="Status" value={statusSaude.txt} valueCls={statusSaude.cls} />
+        {isComite && (
+          <MetricCard label="Alunos ativos" value={metrics.alunos} />
+        )}
       </div>
+
+      {isComite && (
+        <Card className="mb-4 border-primary/20 bg-primary/5">
+          <CardContent className="p-3 flex items-center gap-2 text-xs">
+            <Eye className="w-3.5 h-3.5 text-primary" />
+            <span className="text-muted-foreground">Você está no <strong className="text-foreground">modo Comitê</strong> — visão consultiva, sem acesso a dados financeiros ou de contrato.</span>
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs defaultValue="visao">
         <TabsList className="mb-4 flex-wrap h-auto">
@@ -210,7 +226,7 @@ export default function SindicoHome() {
           <TabsTrigger value="alunos">Alunos</TabsTrigger>
           <TabsTrigger value="aulas">Aulas</TabsTrigger>
           <TabsTrigger value="comunicados">Comunicados</TabsTrigger>
-          <TabsTrigger value="9fit">Falar com 9FIT</TabsTrigger>
+          {canSeeFinancials && <TabsTrigger value="9fit">Falar com 9FIT</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="visao">
