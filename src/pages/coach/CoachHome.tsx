@@ -96,14 +96,62 @@ export default function CoachHome() {
 
   return (
     <PersonaLayout title="Meu dia" accent={ACCENT}>
-      <Tabs defaultValue="hoje">
-        <TabsList className="mb-4">
+      <Tabs defaultValue={anamnesesFila.length > 0 || filaIACount > 0 ? 'fila' : 'hoje'}>
+        <TabsList className="mb-4 flex-wrap h-auto">
+          <TabsTrigger value="fila" className="relative">
+            <Sparkles className="w-3.5 h-3.5 mr-1.5" /> Fila
+            {(anamnesesFila.length + filaIACount) > 0 && (
+              <span className="ml-2 min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center px-1.5">
+                {anamnesesFila.length + filaIACount}
+              </span>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="hoje">Hoje</TabsTrigger>
           <TabsTrigger value="agenda">Agenda 7d</TabsTrigger>
           <TabsTrigger value="alunos">Meus alunos</TabsTrigger>
           <TabsTrigger value="treinos">Treinos</TabsTrigger>
           <TabsTrigger value="historico">Histórico</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="fila" className="space-y-4">
+          {filaIACount > 0 && (
+            <Card className="bg-primary/5 border-primary/30">
+              <CardContent className="p-4 flex items-center gap-3">
+                <Sparkles className="w-5 h-5 text-primary shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm">{filaIACount} treino{filaIACount>1?'s':''} gerado{filaIACount>1?'s':''} pela IA aguardando aprovação</p>
+                  <p className="text-xs text-muted-foreground">Revise e envie ao aluno em um clique.</p>
+                </div>
+                <Button size="sm" onClick={() => window.location.href = '/treinos'}
+                        style={{ backgroundColor: ACCENT, color: '#000' }}>Ver fila IA</Button>
+              </CardContent>
+            </Card>
+          )}
+          <h2 className="text-sm uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <ClipboardList className="w-4 h-4" /> Anamneses preenchidas sem treino ({anamnesesFila.length})
+          </h2>
+          {anamnesesFila.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhuma anamnese pendente. Bom trabalho!</p>
+          ) : (
+            <div className="space-y-2">
+              {anamnesesFila.map((a: any) => (
+                <Card key={a.id} className="bg-card/60 border-border/40">
+                  <CardContent className="p-4 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{a.alunos?.nome || 'Aluno'}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {a.tipo?.toUpperCase()} · preenchido em {new Date(a.preenchido_em).toLocaleDateString('pt-BR')}
+                      </p>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => window.location.href = '/treinos'}>
+                      Criar treino
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
 
         <TabsContent value="hoje">
           <h2 className="text-sm uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
