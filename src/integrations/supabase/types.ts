@@ -2368,6 +2368,86 @@ export type Database = {
           },
         ]
       }
+      treinos_ia_fila: {
+        Row: {
+          aluno_id: string
+          anamnese_id: string | null
+          aprovado_em: string | null
+          aprovado_por: string | null
+          created_at: string
+          id: string
+          nivel: string | null
+          objetivo: string | null
+          organization_id: string | null
+          plano_treino_id: string | null
+          resumo: string | null
+          status: Database["public"]["Enums"]["treino_ia_status"]
+          sugestao: Json
+          updated_at: string
+        }
+        Insert: {
+          aluno_id: string
+          anamnese_id?: string | null
+          aprovado_em?: string | null
+          aprovado_por?: string | null
+          created_at?: string
+          id?: string
+          nivel?: string | null
+          objetivo?: string | null
+          organization_id?: string | null
+          plano_treino_id?: string | null
+          resumo?: string | null
+          status?: Database["public"]["Enums"]["treino_ia_status"]
+          sugestao?: Json
+          updated_at?: string
+        }
+        Update: {
+          aluno_id?: string
+          anamnese_id?: string | null
+          aprovado_em?: string | null
+          aprovado_por?: string | null
+          created_at?: string
+          id?: string
+          nivel?: string | null
+          objetivo?: string | null
+          organization_id?: string | null
+          plano_treino_id?: string | null
+          resumo?: string | null
+          status?: Database["public"]["Enums"]["treino_ia_status"]
+          sugestao?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "treinos_ia_fila_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treinos_ia_fila_anamnese_id_fkey"
+            columns: ["anamnese_id"]
+            isOneToOne: false
+            referencedRelation: "anamnese_respostas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treinos_ia_fila_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treinos_ia_fila_plano_treino_id_fkey"
+            columns: ["plano_treino_id"]
+            isOneToOne: false
+            referencedRelation: "planos_treino"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -2572,6 +2652,7 @@ export type Database = {
         | "produto_digital"
         | "produto_fisico"
         | "academy"
+      treino_ia_status: "pendente" | "aprovado" | "rejeitado"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2726,6 +2807,7 @@ export const Constants = {
         "produto_fisico",
         "academy",
       ],
+      treino_ia_status: ["pendente", "aprovado", "rejeitado"],
     },
   },
 } as const

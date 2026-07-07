@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { PersonaLayout, PersonaEmptyState } from '@/layouts/PersonaLayout';
 import { useOperationalContext } from '@/hooks/useOperationalContext';
+import { useOrgRole } from '@/hooks/useOrgRole';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AlertCircle, Inbox, LifeBuoy, MessageSquarePlus, Megaphone } from 'lucide-react';
+import { AlertCircle, Inbox, LifeBuoy, MessageSquarePlus, Megaphone, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 
 const ACCENT = '#60A5FA';
@@ -19,6 +20,7 @@ type Ticket = { id: string; message: string; status: string; created_at: string;
 
 export default function SindicoHome() {
   const { activeOrg, ensureOrgForPersona } = useOperationalContext();
+  const { isComite, canSeeFinancials, canManageComunicados } = useOrgRole();
   const [ready, setReady] = useState(false);
   const [metrics, setMetrics] = useState({ alunos: 0, receita: 0, inadCount: 0, ocupacao: 0 });
   const [inad, setInad] = useState<Inad[]>([]);
@@ -196,11 +198,27 @@ export default function SindicoHome() {
       </Card>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-        <MetricCard label="Receita do Mês" value={`R$ ${metrics.receita.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`} />
-        <MetricCard label="Inadimplência" value={`${metrics.inadCount} pessoa${metrics.inadCount !== 1 ? 's' : ''}`} />
+        {canSeeFinancials && (
+          <MetricCard label="Receita do Mês" value={`R$ ${metrics.receita.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`} />
+        )}
+        {canSeeFinancials && (
+          <MetricCard label="Inadimplência" value={`${metrics.inadCount} pessoa${metrics.inadCount !== 1 ? 's' : ''}`} />
+        )}
         <MetricCard label="Ocupação Média" value={metrics.ocupacao ? `${metrics.ocupacao}%` : '--'} />
         <MetricCard label="Status" value={statusSaude.txt} valueCls={statusSaude.cls} />
+        {isComite && (
+          <MetricCard label="Alunos ativos" value={String(metrics.alunos)} />
+        )}
       </div>
+
+      {isComite && (
+        <Card className="mb-4 border-primary/20 bg-primary/5">
+          <CardContent className="p-3 flex items-center gap-2 text-xs">
+            <Eye className="w-3.5 h-3.5 text-primary" />
+            <span className="text-muted-foreground">Você está no <strong className="text-foreground">modo Comitê</strong> — visão consultiva, sem acesso a dados financeiros ou de contrato.</span>
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs defaultValue="visao">
         <TabsList className="mb-4 flex-wrap h-auto">
@@ -208,7 +226,7 @@ export default function SindicoHome() {
           <TabsTrigger value="alunos">Alunos</TabsTrigger>
           <TabsTrigger value="aulas">Aulas</TabsTrigger>
           <TabsTrigger value="comunicados">Comunicados</TabsTrigger>
-          <TabsTrigger value="9fit">Falar com 9FIT</TabsTrigger>
+          {canSeeFinancials && <TabsTrigger value="9fit">Falar com 9FIT</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="visao">
@@ -314,24 +332,33 @@ export default function SindicoHome() {
         </TabsContent>
 
         <TabsContent value="comunicados">
-          <Card className="bg-card/60 border-border/40">
-            <CardContent className="p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <Megaphone className="w-4 h-4" style={{ color: ACCENT }} />
-                <h2 className="font-semibold">Publicar comunicado</h2>
-              </div>
-              <input value={aviso.titulo}
-                     onChange={e => setAviso({ ...aviso, titulo: e.target.value })}
-                     placeholder="Título do aviso"
-                     className="w-full bg-background border border-border/40 rounded-md px-3 py-2 text-sm mb-2" />
-              <Textarea value={aviso.mensagem}
-                        onChange={e => setAviso({ ...aviso, mensagem: e.target.value })}
-                        placeholder="Mensagem para os alunos…" rows={4} className="mb-3" />
-              <Button onClick={enviarComunicado} className="bg-[#60A5FA] text-black hover:bg-[#60A5FA]/90">
-                <Megaphone className="w-4 h-4 mr-1" /> Publicar
-              </Button>
-            </CardContent>
-          </Card>
+          {canManageComunicados ? (
+            <Card className="bg-card/60 border-border/40">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <Megaphone className="w-4 h-4" style={{ color: ACCENT }} />
+                  <h2 className="font-semibold">Publicar comunicado</h2>
+                </div>
+                <input value={aviso.titulo}
+                       onChange={e => setAviso({ ...aviso, titulo: e.target.value })}
+                       placeholder="Título do aviso"
+                       className="w-full bg-background border border-border/40 rounded-md px-3 py-2 text-sm mb-2" />
+                <Textarea value={aviso.mensagem}
+                          onChange={e => setAviso({ ...aviso, mensagem: e.target.value })}
+                          placeholder="Mensagem para os alunos…" rows={4} className="mb-3" />
+                <Button onClick={enviarComunicado} className="bg-[#60A5FA] text-black hover:bg-[#60A5FA]/90">
+                  <Megaphone className="w-4 h-4 mr-1" /> Publicar
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="bg-card/60 border-border/40">
+              <CardContent className="p-5 text-sm text-muted-foreground text-center">
+                <Megaphone className="w-6 h-6 mx-auto mb-2 text-muted-foreground/50" />
+                Modo Comitê: comunicados são apenas leitura. Peça ao síndico para publicar novos avisos.
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="9fit">

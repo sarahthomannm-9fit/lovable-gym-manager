@@ -1,15 +1,17 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, User, Calendar, Dumbbell } from "lucide-react";
+import { Plus, User, Calendar, Dumbbell, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { TrainingStats } from "@/components/training/TrainingStats";
 import { AddTrainingDialog } from "@/components/training/AddTrainingDialog";
 import { PageShell } from "@/components/warroom/PageShell";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSupabaseGymData } from "@/contexts/SupabaseGymDataContext";
 import { cn } from "@/lib/utils";
+import { FilaIATreinos } from "@/components/treinos/FilaIATreinos";
 
 interface Treino {
   id: string;
@@ -30,6 +32,7 @@ function classificarTreino(data_fim: string) {
 }
 
 export function Treinos() {
+  const [filaCount, setFilaCount] = useState(0);
   const [treinos, setTreinos] = useState<Treino[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -48,6 +51,11 @@ export function Treinos() {
   };
 
   useEffect(() => { fetchTreinos(); }, []);
+
+  useEffect(() => {
+    supabase.from('treinos_ia_fila').select('id', { count: 'exact', head: true })
+      .eq('status', 'pendente').then(({ count }) => setFilaCount(count || 0));
+  }, []);
 
   const hoje = new Date().toISOString().split('T')[0];
   const vencidos = treinos.filter(t => t.data_fim && t.data_fim < hoje).length;
@@ -81,41 +89,60 @@ export function Treinos() {
       metrics={shellMetrics}
       actions={<AddTrainingDialog students={students} onSuccess={fetchTreinos} />}
     >
-      <TrainingStats trainings={trainingData} />
+      <Tabs defaultValue={filaCount > 0 ? 'fila-ia' : 'ativos'} className="mt-4">
+        <TabsList className="mb-4">
+          <TabsTrigger value="fila-ia" className="relative data-[state=active]:text-primary">
+            <Sparkles className="w-3.5 h-3.5 mr-1.5" /> Fila IA
+            {filaCount > 0 && (
+              <span className="ml-2 min-w-[20px] h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center px-1.5">
+                {filaCount}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="ativos">Treinos Ativos</TabsTrigger>
+        </TabsList>
 
-      {treinos.length === 0 ? (
-        <Card className="mt-4"><CardContent className="py-12 text-center space-y-4">
-          <Dumbbell className="h-12 w-12 mx-auto text-muted-foreground" />
-          <p className="font-semibold">Nenhum treino cadastrado</p>
-          <p className="text-sm text-muted-foreground">Crie o primeiro treino para seus alunos.</p>
-          <AddTrainingDialog students={students} onSuccess={fetchTreinos} trigger={
-            <Button><Plus className="h-4 w-4 mr-2" />Criar Primeiro Treino</Button>
-          } />
-        </CardContent></Card>
-      ) : (
-        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 mt-4">
-          {treinos.map((treino) => {
-            const cls = classificarTreino(treino.data_fim);
-            return (
-              <Card key={treino.id} className={cn(cls.status === 'Vencido' && 'border-l-4 border-l-[hsl(var(--urgency-critical))]')}>
-                <CardContent className="p-4 space-y-2">
-                  <div className="flex items-start justify-between">
-                    <span className="font-medium text-sm truncate">{treino.descricao || 'Sem descrição'}</span>
-                    <Badge variant={cls.variant} className="text-[10px] shrink-0">{cls.status}</Badge>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <User className="h-3 w-3" /><span>{treino.aluno?.nome || 'N/A'}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
-                    <Calendar className="h-3 w-3" />
-                    <span>{new Date(treino.data_inicio).toLocaleDateString('pt-BR')} – {new Date(treino.data_fim).toLocaleDateString('pt-BR')}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+        <TabsContent value="fila-ia">
+          <FilaIATreinos />
+        </TabsContent>
+
+        <TabsContent value="ativos">
+          <TrainingStats trainings={trainingData} />
+          {treinos.length === 0 ? (
+            <Card className="mt-4"><CardContent className="py-12 text-center space-y-4">
+              <Dumbbell className="h-12 w-12 mx-auto text-muted-foreground" />
+              <p className="font-semibold">Nenhum treino cadastrado</p>
+              <p className="text-sm text-muted-foreground">Crie o primeiro treino para seus alunos.</p>
+              <AddTrainingDialog students={students} onSuccess={fetchTreinos} trigger={
+                <Button><Plus className="h-4 w-4 mr-2" />Criar Primeiro Treino</Button>
+              } />
+            </CardContent></Card>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 mt-4">
+              {treinos.map((treino) => {
+                const cls = classificarTreino(treino.data_fim);
+                return (
+                  <Card key={treino.id} className={cn(cls.status === 'Vencido' && 'border-l-4 border-l-[hsl(var(--urgency-critical))]')}>
+                    <CardContent className="p-4 space-y-2">
+                      <div className="flex items-start justify-between">
+                        <span className="font-medium text-sm truncate">{treino.descricao || 'Sem descrição'}</span>
+                        <Badge variant={cls.variant} className="text-[10px] shrink-0">{cls.status}</Badge>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <User className="h-3 w-3" /><span>{treino.aluno?.nome || 'N/A'}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
+                        <Calendar className="h-3 w-3" />
+                        <span>{new Date(treino.data_inicio).toLocaleDateString('pt-BR')} – {new Date(treino.data_fim).toLocaleDateString('pt-BR')}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </PageShell>
   );
 }

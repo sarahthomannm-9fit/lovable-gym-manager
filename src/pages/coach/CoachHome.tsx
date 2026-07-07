@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Users, UserCheck, Dumbbell, History } from 'lucide-react';
+import { Calendar, Users, UserCheck, Dumbbell, History, ClipboardList, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
 const ACCENT = '#C8FF00';
@@ -19,6 +19,8 @@ export default function CoachHome() {
   const [alunos, setAlunos] = useState<any[]>([]);
   const [treinos, setTreinos] = useState<any[]>([]);
   const [historico, setHistorico] = useState<any[]>([]);
+  const [anamnesesFila, setAnamnesesFila] = useState<any[]>([]);
+  const [filaIACount, setFilaIACount] = useState(0);
   const [marcando, setMarcando] = useState<string | null>(null);
 
   useEffect(() => { ensureOrgForPersona('professor').finally(() => setReady(true)); }, []);
@@ -52,6 +54,22 @@ export default function CoachHome() {
       .select('id, aluno_id, data_checkin, horario_entrada')
       .gte('data_checkin', seteAtras).order('horario_entrada', { ascending: false }).limit(30);
     setHistorico(hi || []);
+
+    // Anamneses preenchidas sem plano de treino ativo
+    const { data: an } = await supabase.from('anamnese_respostas')
+      .select('id, aluno_id, tipo, preenchido_em, alunos(nome, email)')
+      .eq('status', 'preenchido')
+      .order('preenchido_em', { ascending: false }).limit(20);
+    const alIds = (an || []).map((a: any) => a.aluno_id).filter(Boolean);
+    const { data: trAtivos } = alIds.length
+      ? await supabase.from('treinos').select('aluno_id').in('aluno_id', alIds).gte('data_fim', hoje)
+      : { data: [] as any };
+    const comTreino = new Set((trAtivos || []).map((t: any) => t.aluno_id));
+    setAnamnesesFila((an || []).filter((a: any) => !comTreino.has(a.aluno_id)));
+
+    const { count } = await supabase.from('treinos_ia_fila')
+      .select('id', { count: 'exact', head: true }).eq('status', 'pendente');
+    setFilaIACount(count || 0);
   };
 
   useEffect(() => { carregar(); }, [activeOrg]);
@@ -78,14 +96,62 @@ export default function CoachHome() {
 
   return (
     <PersonaLayout title="Meu dia" accent={ACCENT}>
-      <Tabs defaultValue="hoje">
-        <TabsList className="mb-4">
+      <Tabs defaultValue={anamnesesFila.length > 0 || filaIACount > 0 ? 'fila' : 'hoje'}>
+        <TabsList className="mb-4 flex-wrap h-auto">
+          <TabsTrigger value="fila" className="relative">
+            <Sparkles className="w-3.5 h-3.5 mr-1.5" /> Fila
+            {(anamnesesFila.length + filaIACount) > 0 && (
+              <span className="ml-2 min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center px-1.5">
+                {anamnesesFila.length + filaIACount}
+              </span>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="hoje">Hoje</TabsTrigger>
           <TabsTrigger value="agenda">Agenda 7d</TabsTrigger>
           <TabsTrigger value="alunos">Meus alunos</TabsTrigger>
           <TabsTrigger value="treinos">Treinos</TabsTrigger>
           <TabsTrigger value="historico">Histórico</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="fila" className="space-y-4">
+          {filaIACount > 0 && (
+            <Card className="bg-primary/5 border-primary/30">
+              <CardContent className="p-4 flex items-center gap-3">
+                <Sparkles className="w-5 h-5 text-primary shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm">{filaIACount} treino{filaIACount>1?'s':''} gerado{filaIACount>1?'s':''} pela IA aguardando aprovação</p>
+                  <p className="text-xs text-muted-foreground">Revise e envie ao aluno em um clique.</p>
+                </div>
+                <Button size="sm" onClick={() => window.location.href = '/treinos'}
+                        style={{ backgroundColor: ACCENT, color: '#000' }}>Ver fila IA</Button>
+              </CardContent>
+            </Card>
+          )}
+          <h2 className="text-sm uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <ClipboardList className="w-4 h-4" /> Anamneses preenchidas sem treino ({anamnesesFila.length})
+          </h2>
+          {anamnesesFila.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhuma anamnese pendente. Bom trabalho!</p>
+          ) : (
+            <div className="space-y-2">
+              {anamnesesFila.map((a: any) => (
+                <Card key={a.id} className="bg-card/60 border-border/40">
+                  <CardContent className="p-4 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{a.alunos?.nome || 'Aluno'}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {a.tipo?.toUpperCase()} · preenchido em {new Date(a.preenchido_em).toLocaleDateString('pt-BR')}
+                      </p>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => window.location.href = '/treinos'}>
+                      Criar treino
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
 
         <TabsContent value="hoje">
           <h2 className="text-sm uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
