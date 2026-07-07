@@ -207,7 +207,7 @@ export default function SindicoHome() {
         <MetricCard label="Ocupação Média" value={metrics.ocupacao ? `${metrics.ocupacao}%` : '--'} />
         <MetricCard label="Status" value={statusSaude.txt} valueCls={statusSaude.cls} />
         {isComite && (
-          <MetricCard label="Alunos ativos" value={metrics.alunos} />
+          <MetricCard label="Alunos ativos" value={String(metrics.alunos)} />
         )}
       </div>
 
