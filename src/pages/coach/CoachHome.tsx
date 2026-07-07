@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Users, UserCheck, Dumbbell, History } from 'lucide-react';
+import { Calendar, Users, UserCheck, Dumbbell, History, ClipboardList, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
 const ACCENT = '#C8FF00';
@@ -19,6 +19,8 @@ export default function CoachHome() {
   const [alunos, setAlunos] = useState<any[]>([]);
   const [treinos, setTreinos] = useState<any[]>([]);
   const [historico, setHistorico] = useState<any[]>([]);
+  const [anamnesesFila, setAnamnesesFila] = useState<any[]>([]);
+  const [filaIACount, setFilaIACount] = useState(0);
   const [marcando, setMarcando] = useState<string | null>(null);
 
   useEffect(() => { ensureOrgForPersona('professor').finally(() => setReady(true)); }, []);
@@ -52,6 +54,22 @@ export default function CoachHome() {
       .select('id, aluno_id, data_checkin, horario_entrada')
       .gte('data_checkin', seteAtras).order('horario_entrada', { ascending: false }).limit(30);
     setHistorico(hi || []);
+
+    // Anamneses preenchidas sem plano de treino ativo
+    const { data: an } = await supabase.from('anamnese_respostas')
+      .select('id, aluno_id, tipo, preenchido_em, alunos(nome, email)')
+      .eq('status', 'preenchido')
+      .order('preenchido_em', { ascending: false }).limit(20);
+    const alIds = (an || []).map((a: any) => a.aluno_id).filter(Boolean);
+    const { data: trAtivos } = alIds.length
+      ? await supabase.from('treinos').select('aluno_id').in('aluno_id', alIds).gte('data_fim', hoje)
+      : { data: [] as any };
+    const comTreino = new Set((trAtivos || []).map((t: any) => t.aluno_id));
+    setAnamnesesFila((an || []).filter((a: any) => !comTreino.has(a.aluno_id)));
+
+    const { count } = await supabase.from('treinos_ia_fila')
+      .select('id', { count: 'exact', head: true }).eq('status', 'pendente');
+    setFilaIACount(count || 0);
   };
 
   useEffect(() => { carregar(); }, [activeOrg]);
