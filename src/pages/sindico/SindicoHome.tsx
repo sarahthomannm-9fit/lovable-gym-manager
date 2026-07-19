@@ -231,6 +231,46 @@ export default function SindicoHome() {
 
         <TabsContent value="visao">
           <Card className="bg-card/60 border-border/40 mb-4">
+            <CardContent className="p-5 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="font-semibold text-sm uppercase tracking-wide">Relatório do mês</h2>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {activeOrg?.nome || 'Organização'} · Receita R$ {metrics.receita.toFixed(2)} · {metrics.inadCount} inadimplente(s) · Ocupação {metrics.ocupacao}%
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const rows = [
+                    ['Métrica', 'Valor'],
+                    ['Organização', activeOrg?.nome || ''],
+                    ['Alunos ativos', String(metrics.alunos)],
+                    ['Receita do mês (R$)', metrics.receita.toFixed(2)],
+                    ['Inadimplentes (qtd)', String(metrics.inadCount)],
+                    ['Ocupação média (%)', String(metrics.ocupacao)],
+                    [],
+                    ['Inadimplente', 'Dias em atraso', 'Valor (R$)'],
+                    ...inad.map(i => [i.nome, String(i.dias), i.valor.toFixed(2)]),
+                  ];
+                  const csv = rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+                  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `relatorio-sindico-${new Date().toISOString().slice(0, 10)}.csv`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  toast.success('Relatório baixado');
+                }}
+              >
+                Baixar CSV
+              </Button>
+            </CardContent>
+          </Card>
+
+
+          <Card className="bg-card/60 border-border/40 mb-4">
             <CardContent className="p-5">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-semibold text-sm uppercase tracking-wide">Inadimplentes</h2>
