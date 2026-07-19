@@ -89,7 +89,7 @@ export default function VinculosOrfaos() {
       const { error } = await supabase.from('organization_members').insert([{
         user_id: orfao.user_id,
         organization_id: orgId,
-        papel: papel,
+        papel: papel as any,
       }]);
 
       if (error) {
