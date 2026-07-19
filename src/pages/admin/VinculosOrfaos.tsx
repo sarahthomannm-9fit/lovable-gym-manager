@@ -86,11 +86,11 @@ export default function VinculosOrfaos() {
 
     setVinculando(orfao.id);
     try {
-      const { error } = await supabase.from('organization_members').insert({
+      const { error } = await supabase.from('organization_members').insert([{
         user_id: orfao.user_id,
         organization_id: orgId,
-        papel: papel,
-      });
+        papel: papel as any,
+      }]);
 
       if (error) {
         toast.error(`Falha: ${error.message}`);
