@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
           user_id: userId,
           organization_id: org.id,
           papel: papelByTipo[org.tipo] || 'sindico',
-        }, { onConflict: 'organization_id,user_id' });
+        }, { onConflict: 'organization_id,user_id,papel' });
         if (memberError) throw memberError;
       }
     }

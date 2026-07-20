@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Calendar, CreditCard, Activity, Bell, CheckCircle2,
   Dumbbell, Heart, Sparkles, MapPin, Clock, PlayCircle,
+  MessageCircle, QrCode,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -181,6 +182,7 @@ export default function MoradorHome() {
           <TabsTrigger value="hoje" className="text-base px-6">Hoje</TabsTrigger>
           <TabsTrigger value="treino">Meu treino</TabsTrigger>
           <TabsTrigger value="aulas">Aulas</TabsTrigger>
+          <TabsTrigger value="suporte">Suporte</TabsTrigger>
           <TabsTrigger value="mais">Mais</TabsTrigger>
         </TabsList>
 
@@ -245,7 +247,7 @@ export default function MoradorHome() {
               <Card className={`${checkinFeito ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-card/60 border-border/40'}`}>
                 <CardContent className="p-5 flex items-center gap-4">
                   <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${checkinFeito ? 'bg-emerald-500/20' : 'bg-amber-500/15'}`}>
-                    <Heart className={`w-7 h-7 ${checkinFeito ? 'text-emerald-400' : 'text-amber-400'}`} />
+                    {checkinFeito ? <Heart className="w-7 h-7 text-emerald-400" /> : <QrCode className="w-7 h-7 text-amber-400" />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-lg font-semibold">
@@ -392,6 +394,45 @@ export default function MoradorHome() {
                             className="hover:opacity-90 shrink-0">
                       Inscrever
                     </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="suporte" className="space-y-4">
+          <Card className="bg-card/60 border-border/40">
+            <CardContent className="p-5 space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="w-12 h-12 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <MessageCircle className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-lg">Falar com o professor</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Canal direto para dúvidas sobre treino, dor, ajuste de carga ou plantão do condomínio.
+                  </p>
+                </div>
+              </div>
+              <Button asChild variant="premium" className="w-full">
+                <a href={`https://wa.me/?text=${encodeURIComponent('Olá, professor 9FIT. Preciso de suporte no meu treino.')}`} target="_blank" rel="noreferrer">
+                  <MessageCircle className="w-4 h-4" /> Abrir WhatsApp
+                </a>
+              </Button>
+            </CardContent>
+          </Card>
+
+          {notifs.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-sm uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                <Bell className="w-4 h-4" /> Comunicados recentes
+              </h3>
+              {notifs.slice(0, 3).map(n => (
+                <Card key={n.id} className="bg-card/60 border-border/40">
+                  <CardContent className="p-4">
+                    <p className="font-medium text-sm mb-1">{n.titulo}</p>
+                    <p className="text-sm text-muted-foreground">{n.mensagem}</p>
                   </CardContent>
                 </Card>
               ))}
