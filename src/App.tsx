@@ -19,6 +19,7 @@ import CorpHome from "./pages/corp/CorpHome";
 import OrganizationsAdmin from "./pages/admin/OrganizationsAdmin";
 import MoradorHome from "./pages/morador/MoradorHome";
 import FitProIntegration from "./pages/admin/FitProIntegration";
+import Operacao9FIT from "./pages/admin/Operacao9FIT";
 import LeadsExtractionPlan from "./pages/cfo/LeadsExtractionPlan";
 import PipelineComercial from "./pages/comercial/PipelineComercial";
 import Clientes from "./pages/comercial/Clientes";
@@ -140,6 +141,7 @@ const App = () => (
                     <Route path="/morador" element={<ProtectedRoute><RoleRoute allow={['user','sindico','corporate','professor','admin','manager']}><MoradorHome /></RoleRoute></ProtectedRoute>} />
                     <Route path="/admin/organizacoes" element={<Protected><OrganizationsAdmin /></Protected>} />
                     <Route path="/admin/fitpro" element={<Protected><FitProIntegration /></Protected>} />
+                    <Route path="/operacao-9fit" element={<Protected><Operacao9FIT /></Protected>} />
                     <Route path="/cfo/leads" element={<Protected><LeadsExtractionPlan /></Protected>} />
                     <Route path="/pipeline" element={<Protected><PipelineComercial /></Protected>} />
                     <Route path="/clientes" element={<Protected><Clientes /></Protected>} />

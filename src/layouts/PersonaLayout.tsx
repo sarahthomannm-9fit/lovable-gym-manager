@@ -9,6 +9,7 @@ import {
 import {
   LogOut, ArrowLeftRight, Building2, GraduationCap, Briefcase, User,
   LayoutDashboard, Bot, Network,
+  ClipboardCheck,
 } from 'lucide-react';
 
 const ICONS: Record<string, any> = {
@@ -47,6 +48,7 @@ export function PersonaLayout({
   const adminLinks: NavLink[] = isAdmin
     ? [
         { label: 'Painel admin', path: '/painel', icon: LayoutDashboard, accent: 'hsl(var(--primary))' },
+        { label: 'Operação 9FIT', path: '/operacao-9fit', icon: ClipboardCheck, accent: 'hsl(var(--primary))' },
         { label: 'Hub Agentes', path: '/agents', icon: Bot, accent: 'hsl(var(--primary))' },
         { label: 'Organizações', path: '/admin/organizacoes', icon: Network, accent: 'hsl(var(--primary))' },
       ]

@@ -50,6 +50,7 @@ import {
   GraduationCap,
   User,
   ArrowLeftRight,
+  ClipboardCheck,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useCurrentUserRole, AppRole } from "@/hooks/useCurrentUserRole";
@@ -124,6 +125,7 @@ export function AppSidebar() {
       category: "CENTRAL DE OPERAÇÕES",
       items: [
         { title: "Control Plane", icon: Home, path: "/painel" },
+        { title: "Operação 9FIT", icon: ClipboardCheck, path: "/operacao-9fit", roles: ['admin','manager'] },
         { title: "Pipeline comercial", icon: Target, path: "/pipeline", roles: ['admin','manager'] },
         { title: "Clientes ativos", icon: Building2, path: "/clientes", roles: ['admin','manager'] },
         { title: "Contratos & Propostas", icon: Receipt, path: "/contratos", roles: ['admin','manager'] },

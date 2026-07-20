@@ -17,11 +17,22 @@ Deno.serve(async (req) => {
     );
 
     const users = [
-      { email: 'roni.comercial19@gmail.com', password: '54967554' },
-      { email: 'sarahthomannm@gmail.com', password: '54967554' },
+      { email: 'roni.comercial19@gmail.com', password: '54967554', nome: 'Roni' },
+      { email: 'sarahthomannm@gmail.com', password: '54967554', nome: 'Sarah' },
     ];
 
     const results = [];
+    const { data: orgs } = await supabase
+      .from('organizations')
+      .select('id, tipo')
+      .in('tipo', ['condominio', 'corporate', 'professor', 'studio']);
+
+    const papelByTipo: Record<string, string> = {
+      condominio: 'sindico',
+      corporate: 'corporate',
+      professor: 'professor',
+      studio: 'professor',
+    };
 
     for (const u of users) {
       // Try to find existing user
@@ -33,6 +44,7 @@ Deno.serve(async (req) => {
         const { error } = await supabase.auth.admin.updateUserById(existing.id, {
           password: u.password,
           email_confirm: true,
+          user_metadata: { nome: u.nome },
         });
         if (error) throw error;
         userId = existing.id;
@@ -42,19 +54,34 @@ Deno.serve(async (req) => {
           email: u.email,
           password: u.password,
           email_confirm: true,
+          user_metadata: { nome: u.nome },
         });
         if (error) throw error;
         userId = data.user!.id;
         results.push({ email: u.email, action: 'created' });
       }
 
-      // Ensure admin role
-      await supabase.from('user_roles').delete().eq('user_id', userId);
-      const { error: roleError } = await supabase.from('user_roles').insert({
+      const { error: profileError } = await supabase.from('profiles').upsert({
+        id: userId,
+        nome: u.nome,
+        email: u.email,
+      });
+      if (profileError) throw profileError;
+
+      const { error: roleError } = await supabase.from('user_roles').upsert({
         user_id: userId,
         role: 'admin',
-      });
+      }, { onConflict: 'user_id,role' });
       if (roleError) throw roleError;
+
+      for (const org of orgs || []) {
+        const { error: memberError } = await supabase.from('organization_members').upsert({
+          user_id: userId,
+          organization_id: org.id,
+          papel: papelByTipo[org.tipo] || 'sindico',
+        }, { onConflict: 'organization_id,user_id' });
+        if (memberError) throw memberError;
+      }
     }
 
     return new Response(JSON.stringify({ success: true, results }), {
