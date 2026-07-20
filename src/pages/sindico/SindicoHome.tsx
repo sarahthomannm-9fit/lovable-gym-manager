@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AlertCircle, Inbox, LifeBuoy, MessageSquarePlus, Megaphone, Eye } from 'lucide-react';
+import { AlertCircle, Inbox, LifeBuoy, MessageSquarePlus, Megaphone, Eye, QrCode, Dumbbell, ClipboardCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
 const ACCENT = '#60A5FA';
@@ -23,6 +23,7 @@ export default function SindicoHome() {
   const { isComite, canSeeFinancials, canManageComunicados } = useOrgRole();
   const [ready, setReady] = useState(false);
   const [metrics, setMetrics] = useState({ alunos: 0, receita: 0, inadCount: 0, ocupacao: 0 });
+  const [operacao, setOperacao] = useState({ unidades: 0, adesao: 0, checkinsMes: 0, treinosAtivos: 0, plantao: 'Mensal' });
   const [inad, setInad] = useState<Inad[]>([]);
   const [aulasHoje, setAulasHoje] = useState<Aula[]>([]);
   const [aulasSemana, setAulasSemana] = useState<Aula[]>([]);
@@ -49,12 +50,19 @@ export default function SindicoHome() {
     const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
     const seteDias = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
 
+    const { data: orgRow } = await supabase.from('organizations')
+      .select('metadata')
+      .eq('id', activeOrg.id)
+      .maybeSingle();
+
     const { data: alunosOrg } = await supabase.from('alunos')
       .select('id, nome, status, valor_mensalidade, data_matricula')
       .eq('organization_id', activeOrg.id).order('nome');
     const alunoIds = (alunosOrg || []).map(a => a.id);
     const alunoMap = Object.fromEntries((alunosOrg || []).map(a => [a.id, a.nome]));
     setAlunosLista(alunosOrg || []);
+    const ativos = (alunosOrg || []).filter((a: any) => a.status === 'ativo').length;
+    const unidades = Number((orgRow?.metadata as any)?.total_unidades || (orgRow?.metadata as any)?.unidades || Math.max(ativos, 100));
 
     let receita = 0;
     let inadList: Inad[] = [];
@@ -65,12 +73,26 @@ export default function SindicoHome() {
 
       const { data: atr } = await supabase.from('pagamentos')
         .select('id, aluno_id, valor, data_vencimento')
-        .in('aluno_id', alunoIds).eq('status', 'atrasado')
+        .in('aluno_id', alunoIds).in('status', ['atrasado', 'pendente']).lt('data_vencimento', hoje)
         .order('data_vencimento').limit(20);
       inadList = (atr || []).map((p: any) => ({
         id: p.id, nome: alunoMap[p.aluno_id] || 'Aluno', valor: Number(p.valor),
         dias: Math.max(0, Math.floor((Date.now() - new Date(p.data_vencimento).getTime()) / 86400000)),
       }));
+
+      const [{ count: checkinsMes }, { count: treinosAtivos }] = await Promise.all([
+        supabase.from('checkins').select('id', { count: 'exact', head: true }).in('aluno_id', alunoIds).gte('data_checkin', inicioMes),
+        supabase.from('treinos').select('id', { count: 'exact', head: true }).in('aluno_id', alunoIds).lte('data_inicio', hoje).or(`data_fim.is.null,data_fim.gte.${hoje}`),
+      ]);
+      setOperacao({
+        unidades,
+        adesao: unidades ? Math.round((ativos / unidades) * 100) : 0,
+        checkinsMes: checkinsMes || 0,
+        treinosAtivos: treinosAtivos || 0,
+        plantao: (orgRow?.metadata as any)?.plantao_periodicidade || 'Mensal',
+      });
+    } else {
+      setOperacao({ unidades, adesao: 0, checkinsMes: 0, treinosAtivos: 0, plantao: (orgRow?.metadata as any)?.plantao_periodicidade || 'Mensal' });
     }
 
     const { data: aulasFut } = await supabase.from('aulas')
@@ -198,6 +220,8 @@ export default function SindicoHome() {
       </Card>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <MetricCard label="Taxa de adesão" value={operacao.adesao ? `${operacao.adesao}%` : '--'} />
+        <MetricCard label="Check-ins no mês" value={String(operacao.checkinsMes)} />
         {canSeeFinancials && (
           <MetricCard label="Receita do Mês" value={`R$ ${metrics.receita.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`} />
         )}
@@ -230,6 +254,36 @@ export default function SindicoHome() {
         </TabsList>
 
         <TabsContent value="visao">
+          <div className="grid sm:grid-cols-3 gap-3 mb-4">
+            <Card className="bg-card/60 border-border/40">
+              <CardContent className="p-4 flex gap-3">
+                <QrCode className="w-5 h-5 text-primary shrink-0" />
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Onboarding QR</p>
+                  <p className="text-sm font-medium">{operacao.unidades} unidades · {operacao.adesao}% de adesão</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-card/60 border-border/40">
+              <CardContent className="p-4 flex gap-3">
+                <Dumbbell className="w-5 h-5 text-primary shrink-0" />
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Planos ativos</p>
+                  <p className="text-sm font-medium">{operacao.treinosAtivos} treino{operacao.treinosAtivos === 1 ? '' : 's'} em execução</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-card/60 border-border/40">
+              <CardContent className="p-4 flex gap-3">
+                <ClipboardCheck className="w-5 h-5 text-primary shrink-0" />
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Plantão 9FIT</p>
+                  <p className="text-sm font-medium">{operacao.plantao} · QR academia/elevador</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           <Card className="bg-card/60 border-border/40 mb-4">
             <CardContent className="p-5 flex items-center justify-between gap-3">
               <div>
@@ -246,9 +300,15 @@ export default function SindicoHome() {
                     ['Métrica', 'Valor'],
                     ['Organização', activeOrg?.nome || ''],
                     ['Alunos ativos', String(metrics.alunos)],
+                    ['Total de unidades', String(operacao.unidades)],
+                    ['Taxa de adesão (%)', String(operacao.adesao)],
+                    ['Check-ins no mês', String(operacao.checkinsMes)],
+                    ['Treinos ativos', String(operacao.treinosAtivos)],
+                    ['Plantão presencial', operacao.plantao],
                     ['Receita do mês (R$)', metrics.receita.toFixed(2)],
                     ['Inadimplentes (qtd)', String(metrics.inadCount)],
                     ['Ocupação média (%)', String(metrics.ocupacao)],
+                    ['Recomendação 9FIT', operacao.adesao < 15 ? 'Reforçar QR em elevador e comunicado no WhatsApp' : 'Manter cadência de plantão e comunicar evolução mensal'],
                     [],
                     ['Inadimplente', 'Dias em atraso', 'Valor (R$)'],
                     ...inad.map(i => [i.nome, String(i.dias), i.valor.toFixed(2)]),

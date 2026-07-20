@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Users, UserCheck, Dumbbell, History, ClipboardList, Sparkles } from 'lucide-react';
+import { Calendar, Users, UserCheck, Dumbbell, History, ClipboardList, Sparkles, QrCode, Megaphone, FileCheck2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const ACCENT = '#C8FF00';
@@ -22,6 +22,7 @@ export default function CoachHome() {
   const [anamnesesFila, setAnamnesesFila] = useState<any[]>([]);
   const [filaIACount, setFilaIACount] = useState(0);
   const [marcando, setMarcando] = useState<string | null>(null);
+  const [aprovando, setAprovando] = useState<string | null>(null);
 
   useEffect(() => { ensureOrgForPersona('professor').finally(() => setReady(true)); }, []);
 
@@ -92,6 +93,30 @@ export default function CoachHome() {
     else { toast.success(`Presença de ${nome} registrada`); carregar(); }
   };
 
+  const aprovarAnamnese = async (anamnese: any) => {
+    if (!anamnese.aluno_id) return toast.error('Anamnese sem aluno vinculado');
+    setAprovando(anamnese.id);
+    const hoje = new Date().toISOString().slice(0, 10);
+    const fim = new Date(Date.now() + 28 * 86400000).toISOString().slice(0, 10);
+    const nome = anamnese.alunos?.nome || 'aluno';
+    const { error } = await supabase.from('treinos').insert({
+      aluno_id: anamnese.aluno_id,
+      organization_id: activeOrg?.id || null,
+      nome: `Plano inicial 9FIT — ${nome}`,
+      descricao: 'Plano gerado a partir da anamnese e aprovado pelo professor. Ajustar carga e exercícios conforme evolução do aluno.',
+      data_inicio: hoje,
+      data_fim: fim,
+      status: 'ativo',
+    });
+    if (!error) {
+      await supabase.from('anamnese_respostas').update({ status: 'aprovado' }).eq('id', anamnese.id);
+    }
+    setAprovando(null);
+    if (error) return toast.error('Falha ao aprovar treino');
+    toast.success(`Treino de ${nome} aprovado`);
+    carregar();
+  };
+
   const nomeAluno = (id: string) => alunos.find(a => a.id === id)?.nome || id.slice(0, 6);
 
   return (
@@ -111,6 +136,7 @@ export default function CoachHome() {
           <TabsTrigger value="alunos">Meus alunos</TabsTrigger>
           <TabsTrigger value="treinos">Treinos</TabsTrigger>
           <TabsTrigger value="historico">Histórico</TabsTrigger>
+          <TabsTrigger value="operacao">Operação</TabsTrigger>
         </TabsList>
 
         <TabsContent value="fila" className="space-y-4">
@@ -143,8 +169,8 @@ export default function CoachHome() {
                         {a.tipo?.toUpperCase()} · preenchido em {new Date(a.preenchido_em).toLocaleDateString('pt-BR')}
                       </p>
                     </div>
-                    <Button size="sm" variant="outline" onClick={() => window.location.href = '/treinos'}>
-                      Criar treino
+                    <Button size="sm" variant="premium" disabled={aprovando === a.id} onClick={() => aprovarAnamnese(a)}>
+                      {aprovando === a.id ? 'Aprovando…' : 'Aprovar em 1 clique'}
                     </Button>
                   </CardContent>
                 </Card>
@@ -256,6 +282,51 @@ export default function CoachHome() {
               ))}
             </ul>
           )}
+        </TabsContent>
+
+        <TabsContent value="operacao" className="space-y-4">
+          <div className="grid sm:grid-cols-3 gap-3">
+            <Card className="bg-card/60 border-border/40">
+              <CardContent className="p-4 flex gap-3">
+                <QrCode className="w-5 h-5 text-primary shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold">QR instalado</p>
+                  <p className="text-xs text-muted-foreground">Academia, elevador e portaria quando aplicável.</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-card/60 border-border/40">
+              <CardContent className="p-4 flex gap-3">
+                <Megaphone className="w-5 h-5 text-primary shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold">Comunicado enviado</p>
+                  <p className="text-xs text-muted-foreground">Grupo do condomínio com CTA para anamnese.</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-card/60 border-border/40">
+              <CardContent className="p-4 flex gap-3">
+                <FileCheck2 className="w-5 h-5 text-primary shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold">Plantão definido</p>
+                  <p className="text-xs text-muted-foreground">Dia, horário e frequência registrados para prestação de contas.</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          <Card className="bg-card/60 border-border/40">
+            <CardContent className="p-5">
+              <h2 className="font-semibold mb-3">Roteiro de visita Rony</h2>
+              <div className="grid sm:grid-cols-2 gap-3 text-sm text-muted-foreground">
+                {['Estrutura física e equipamentos', 'Pesquisa de uso e horário de pico', 'Perfil do condomínio e WhatsApp oficial', 'Adesão esperada e unidades interessadas', 'Definição do primeiro plantão', 'Próximos passos: QR, comunicado e contrato'].map((item) => (
+                  <div key={item} className="flex items-start gap-2">
+                    <ClipboardList className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </PersonaLayout>
