@@ -42,7 +42,9 @@ export function PersonaLayout({
   const Icon = ICONS[activeRole as string] || Building2;
 
   // Org options visible to user: memberships + (admin only) any saved active org
-  const orgOptions = memberships.map((m) => m.organization);
+  const orgOptions = Array.from(
+    new Map(memberships.map((m) => [m.organization.id, m.organization])).values(),
+  );
   if (activeOrg && !orgOptions.find((o) => o.id === activeOrg.id)) orgOptions.unshift(activeOrg);
 
   const adminLinks: NavLink[] = isAdmin

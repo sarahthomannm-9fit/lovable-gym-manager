@@ -113,7 +113,7 @@ export default function MoradorHome() {
       setReady(true);
     })().catch(() => { if (mounted) setReady(true); });
     return () => { mounted = false; };
-  }, [user, isAdmin]);
+  }, [user?.id, user?.email, isAdmin]);
 
   const inscrever = async (aulaId: string, nome: string) => {
     if (!aluno?.id) return toast.error('Aluno não vinculado');
