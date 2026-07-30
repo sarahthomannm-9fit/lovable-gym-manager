@@ -62,7 +62,7 @@ export default function MoradorHome() {
       const hoje = new Date().toISOString().slice(0, 10);
       const proximaSemana = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
       const { data: aulas } = await supabase.from('aulas')
-        .select('id, nome, data_aula, horario_inicio, capacidade_maxima, inscritos_atual, local')
+        .select('id, nome, data_aula, horario_inicio, capacidade_maxima, inscritos_atual, modalidade')
         .gte('data_aula', hoje).lte('data_aula', proximaSemana)
         .order('data_aula').order('horario_inicio').limit(10);
       if (!mounted) return;
@@ -232,7 +232,7 @@ export default function MoradorHome() {
                       <p className="text-lg font-semibold truncate">{proxAula.nome}</p>
                       <p className="text-sm text-muted-foreground">
                         às {proxAula.horario_inicio?.slice(0, 5)}
-                        {proxAula.local && ` · ${proxAula.local}`}
+                        {proxAula.modalidade && ` · ${proxAula.modalidade}`}
                       </p>
                     </div>
                     <Button size="lg" variant="outline" onClick={() => inscrever(proxAula.id, proxAula.nome)}
@@ -284,7 +284,7 @@ export default function MoradorHome() {
                         <p className="text-sm text-muted-foreground">
                           {new Date(a.data_aula).toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric' })}
                           {' · '}{a.horario_inicio?.slice(0, 5)}
-                          {a.local && <> · <MapPin className="w-3 h-3 inline" /> {a.local}</>}
+                          {a.modalidade && <> · <MapPin className="w-3 h-3 inline" /> {a.modalidade}</>}
                         </p>
                       </div>
                     </CardContent>
