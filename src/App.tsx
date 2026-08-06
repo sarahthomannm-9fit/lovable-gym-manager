@@ -78,6 +78,11 @@ import { Inadimplencia } from "./pages/painel/Inadimplencia";
 import { Retencao } from "./pages/painel/Retencao";
 import { AgendaSemanal } from "./pages/painel/AgendaSemanal";
 import { Pipeline } from "./pages/painel/Pipeline";
+import { ContextSwitcher } from "./components/ContextSwitcher";
+import Home from "./pages/Home";
+import MercadoLista from "./pages/mercados/MercadoLista";
+import RelatoriosAutomaticos from "./pages/relatorios/RelatoriosAutomaticos";
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
