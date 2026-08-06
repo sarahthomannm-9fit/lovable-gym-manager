@@ -78,6 +78,11 @@ import { Inadimplencia } from "./pages/painel/Inadimplencia";
 import { Retencao } from "./pages/painel/Retencao";
 import { AgendaSemanal } from "./pages/painel/AgendaSemanal";
 import { Pipeline } from "./pages/painel/Pipeline";
+import { ContextSwitcher } from "./components/ContextSwitcher";
+import Home from "./pages/Home";
+import MercadoLista from "./pages/mercados/MercadoLista";
+import RelatoriosAutomaticos from "./pages/relatorios/RelatoriosAutomaticos";
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -94,10 +99,14 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => (
   <SidebarProvider>
     <div className="flex min-h-screen w-full">
       <AppSidebar />
-      <main className="flex-1 overflow-auto">{children}</main>
+      <div className="flex-1 flex flex-col min-w-0">
+        <ContextSwitcher />
+        <main className="flex-1 overflow-auto">{children}</main>
+      </div>
     </div>
   </SidebarProvider>
 );
+
 
 const Protected = ({ children }: { children: React.ReactNode }) => (
   <ProtectedRoute>
@@ -150,7 +159,11 @@ const App = () => (
                     <Route path="/studio" element={<Protected><StudioHome /></Protected>} />
                     <Route path="/insights" element={<Protected><InsightsMercado /></Protected>} />
                     <Route path="/coaches" element={<Protected><Funcionarios /></Protected>} />
-                    <Route path="/" element={<Navigate to="/painel" replace />} />
+                   <Route path="/" element={<Navigate to="/home" replace />} />
+                   <Route path="/home" element={<Protected><Home /></Protected>} />
+                   <Route path="/mercados/:tipo" element={<Protected><MercadoLista /></Protected>} />
+                   <Route path="/relatorios/automaticos" element={<Protected><RelatoriosAutomaticos /></Protected>} />
+
                     <Route path="/agents" element={<Protected><AgentsHub /></Protected>} />
                     <Route path="/admin/usuarios" element={<Protected><UsersAdmin /></Protected>} />
                     <Route path="/admin/reset-demo" element={<Protected><ResetDemoData /></Protected>} />
