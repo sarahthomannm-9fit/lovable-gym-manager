@@ -122,63 +122,62 @@ export function AppSidebar() {
 
   const menuItems: MenuCategory[] = [
     {
+      category: "INÍCIO",
+      items: [
+        { title: "Home", icon: Home, path: "/home" },
+        { title: "Trocar contexto", icon: ArrowLeftRight, path: "/select-context" },
+      ],
+    },
+    {
       category: "CENTRAL DE OPERAÇÕES",
       items: [
-        { title: "Control Plane", icon: Home, path: "/painel" },
+        { title: "Visão geral", icon: LayoutDashboard, path: "/painel" },
         { title: "Operação 9FIT", icon: ClipboardCheck, path: "/operacao-9fit", roles: ['admin','manager'] },
         { title: "Pipeline comercial", icon: Target, path: "/pipeline", roles: ['admin','manager'] },
         { title: "Clientes ativos", icon: Building2, path: "/clientes", roles: ['admin','manager'] },
-        { title: "Contratos & Propostas", icon: Receipt, path: "/contratos", roles: ['admin','manager'] },
         { title: "Alunos", icon: Users, path: "/alunos", roles: ['admin', 'manager'], badge: badges.alunosSemFreq || undefined, badgeColor: 'bg-amber-500' },
         { title: "Check-in", icon: UserCheck, path: "/checkin", roles: ['admin', 'manager'] },
-        { title: "Planos & SKUs", icon: Package, path: "/catalogo", roles: ['admin'] },
-        { title: "Pagamentos", icon: Receipt, path: "/pagamentos", roles: ['admin'], badge: badges.inadimplentes || undefined, badgeColor: 'bg-destructive' },
+        { title: "Agenda", icon: Calendar, path: "/painel/agenda" },
       ],
     },
     {
       category: "ASSESSORIA ESPORTIVA",
       items: [
-        { title: "Aulas", icon: Calendar, path: "/aulas", roles: ['admin', 'manager'], badge: badges.aulasSemInst || undefined, badgeColor: 'bg-destructive' },
-        { title: "Planos de Treino", icon: Dumbbell, path: "/planos-treino" },
         { title: "Treinos", icon: Dumbbell, path: "/treinos" },
-        { title: "Avaliações Físicas", icon: Activity, path: "/avaliacoes", roles: ['admin', 'manager'] },
-        { title: "Aulas Experimentais", icon: UserCheck, path: "/experimentais", roles: ['admin', 'manager'] },
-        { title: "Coaches & Equipe", icon: Briefcase, path: "/coaches", roles: ['admin'] },
-        { title: "Equipamentos", icon: Dumbbell, path: "/equipamentos", roles: ['admin'] },
+        { title: "Planos de treino", icon: Dumbbell, path: "/planos-treino" },
+        { title: "Avaliações físicas", icon: Activity, path: "/avaliacoes", roles: ['admin', 'manager'] },
+        { title: "Aulas", icon: Calendar, path: "/aulas", roles: ['admin', 'manager'], badge: badges.aulasSemInst || undefined, badgeColor: 'bg-destructive' },
+        { title: "Aulas experimentais", icon: UserCheck, path: "/experimentais", roles: ['admin', 'manager'] },
+        { title: "Coaches & equipe", icon: Briefcase, path: "/coaches", roles: ['admin'] },
       ],
     },
     {
       category: "MERCADOS",
       roles: ['admin','manager'],
       items: [
-        { title: "Condomínios", icon: Building2, path: "/sindico" },
-        { title: "Corporativo", icon: Briefcase, path: "/corp" },
-        { title: "Estúdios / Academias", icon: Dumbbell, path: "/studio" },
+        { title: "Condomínios", icon: Building2, path: "/mercados/condominios" },
+        { title: "Corporativo", icon: Briefcase, path: "/mercados/corporativo" },
+        { title: "Academias & Studios", icon: Dumbbell, path: "/mercados/academias" },
+        { title: "Professores", icon: GraduationCap, path: "/mercados/professores" },
       ],
     },
     {
-      category: "INTELIGÊNCIA 9FIT",
-      items: [
-        { title: "Hub de Agentes IA", icon: Bot, path: "/agents" },
-        { title: "RON — Agente CEO", icon: Sparkles, path: "/agente-ia" },
-        { title: "Insights por mercado", icon: BarChart3, path: "/insights", roles: ['admin'] },
-        { title: "Plano CFO — Leads", icon: Target, path: "/cfo/leads", roles: ['admin'] },
-      ],
-    },
-    {
-      category: "FINANCEIRO 💰",
+      category: "FINANCEIRO",
       roles: ['admin'],
       items: [
         { title: "Dashboard", icon: BarChart3, path: "/relatorios" },
-        { title: "Fluxo de Pagamentos", icon: ArrowDownCircle, path: "/relatorios/pagamentos" },
-        { title: "Fluxo de Recebimentos", icon: ArrowUpCircle, path: "/relatorios/recebimentos" },
+        { title: "Contratos & propostas", icon: Receipt, path: "/contratos" },
+        { title: "Pagamentos", icon: Receipt, path: "/pagamentos", badge: badges.inadimplentes || undefined, badgeColor: 'bg-destructive' },
+        { title: "Fluxo de pagamentos", icon: ArrowDownCircle, path: "/relatorios/pagamentos" },
+        { title: "Fluxo de recebimentos", icon: ArrowUpCircle, path: "/relatorios/recebimentos" },
         { title: "Cobranças", icon: Receipt, path: "/relatorios/cobrancas" },
+        { title: "Planos & SKUs", icon: Package, path: "/catalogo" },
         { title: "Estratégias & IA", icon: Brain, path: "/relatorios/estrategias" },
-        { title: "Promoções & Cupons", icon: Percent, path: "/relatorios/promocoes-cupons" },
+        { title: "Promoções & cupons", icon: Percent, path: "/relatorios/promocoes-cupons" },
       ],
     },
     {
-      category: "MARKETING",
+      category: "MARKETING & CAPTAÇÃO",
       roles: ['admin'],
       items: [
         { title: "Campanhas", icon: Target, path: "/marketing/campanhas" },
@@ -186,20 +185,19 @@ export function AppSidebar() {
         { title: "Comunicação", icon: MessageSquare, path: "/marketing/comunicacao" },
         { title: "Conversão", icon: TrendingUp, path: "/marketing/conversao" },
         { title: "Funis", icon: Target, path: "/marketing/funis" },
-        { title: "E-mail Marketing", icon: Mail, path: "/marketing/email" },
+        { title: "E-mail marketing", icon: Mail, path: "/marketing/email" },
         { title: "Promoções", icon: Gift, path: "/marketing/promocoes" },
         { title: "Automação", icon: Zap, path: "/marketing/automacao" },
-        { title: "Insights IA", icon: Sparkles, path: "/marketing/insights-ia" },
       ],
     },
     {
-      category: "PERSONAS",
+      category: "CENTRO DE INTELIGÊNCIA",
       items: [
-        { title: "Síndico", icon: Building2, path: "/sindico" },
-        { title: "Coach", icon: GraduationCap, path: "/coach" },
-        { title: "Corporativo", icon: Briefcase, path: "/corp" },
-        { title: "Morador / Aluno", icon: User, path: "/morador" },
-        { title: "Trocar contexto", icon: ArrowLeftRight, path: "/select-context" },
+        { title: "Hub de Agentes", icon: Bot, path: "/agents" },
+        { title: "RON • Agente CEO", icon: Sparkles, path: "/agente-ia" },
+        { title: "Insights de mercado", icon: BarChart3, path: "/insights", roles: ['admin'] },
+        { title: "Plano CFO", icon: Target, path: "/cfo/leads", roles: ['admin'] },
+        { title: "Relatórios automáticos", icon: Receipt, path: "/relatorios/automaticos" },
       ],
     },
     {
@@ -208,7 +206,8 @@ export function AppSidebar() {
       items: [
         { title: "Usuários", icon: Shield, path: "/admin/usuarios", roles: ['admin'] },
         { title: "Organizações", icon: Network, path: "/admin/organizacoes", roles: ['admin'] },
-        { title: "Integração FitPro", icon: Zap, path: "/admin/fitpro", roles: ['admin'] },
+        { title: "Produtos & equipamentos", icon: Package, path: "/produtos", roles: ['admin'] },
+        { title: "Equipamentos", icon: Dumbbell, path: "/equipamentos", roles: ['admin'] },
       ],
     },
     {
@@ -226,6 +225,7 @@ export function AppSidebar() {
       ],
     },
   ];
+
 
   const canSee = (roles?: AppRole[]) => {
     if (!roles) return true;
