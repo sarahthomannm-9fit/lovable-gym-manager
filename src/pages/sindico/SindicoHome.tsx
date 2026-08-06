@@ -227,21 +227,30 @@ export default function SindicoHome() {
         </CardContent>
       </Card>
 
+      {dashError && (
+        <div className="mb-4"><DashboardError message={dashError} onRetry={refreshDash} /></div>
+      )}
+
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-        <MetricCard label="Taxa de adesão" value={operacao.adesao ? `${operacao.adesao}%` : '--'} />
-        <MetricCard label="Check-ins no mês" value={String(operacao.checkinsMes)} />
+        <KpiCard label="Alunos ativos" value={dashLoading ? '…' : (dash?.alunos_ativos ?? metrics.alunos)} hint="via dashboard_sindico" />
+        <KpiCard label="Taxa de adesão" value={operacao.adesao ? `${operacao.adesao}%` : '--'} hint={`${operacao.unidades} unidades`} />
+        <KpiCard label="Check-ins no mês" value={operacao.checkinsMes} />
+        <KpiCard label="Aulas hoje" value={dashLoading ? '…' : (dash?.aulas_hoje ?? 0)} />
         {canSeeFinancials && (
-          <MetricCard label="Receita do Mês" value={`R$ ${metrics.receita.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`} />
+          <KpiCard label="Receita do mês"
+                   value={`R$ ${Number(dash?.receita_mes ?? metrics.receita).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`} />
         )}
         {canSeeFinancials && (
-          <MetricCard label="Inadimplência" value={`${metrics.inadCount} pessoa${metrics.inadCount !== 1 ? 's' : ''}`} />
+          <KpiCard label="Inadimplência"
+                   value={`${dash?.inadimplentes ?? metrics.inadCount} pessoa${(dash?.inadimplentes ?? metrics.inadCount) !== 1 ? 's' : ''}`}
+                   hint={dash ? `R$ ${Number(dash.valor_inadimplencia || 0).toLocaleString('pt-BR', { maximumFractionDigits: 0 })} em aberto` : undefined}
+                   tone={(dash?.inadimplentes ?? metrics.inadCount) > 0 ? 'warning' : 'default'} />
         )}
-        <MetricCard label="Ocupação Média" value={metrics.ocupacao ? `${metrics.ocupacao}%` : '--'} />
-        <MetricCard label="Status" value={statusSaude.txt} valueCls={statusSaude.cls} />
-        {isComite && (
-          <MetricCard label="Alunos ativos" value={String(metrics.alunos)} />
-        )}
+        <KpiCard label="Ocupação média" value={dash?.ocupacao_media != null ? `${dash.ocupacao_media}%` : (metrics.ocupacao ? `${metrics.ocupacao}%` : '--')} />
+        <KpiCard label="Status" value={dash?.status === 'saudavel' ? '✓ Saudável' : statusSaude.txt}
+                 tone={dash?.status === 'saudavel' ? 'positive' : 'warning'} />
       </div>
+
 
       {isComite && (
         <Card className="mb-4 border-primary/20 bg-primary/5">
