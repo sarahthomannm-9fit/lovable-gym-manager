@@ -11,6 +11,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertCircle, Inbox, LifeBuoy, MessageSquarePlus, Megaphone, Eye, QrCode, Dumbbell, ClipboardCheck } from 'lucide-react';
 import { toast } from 'sonner';
+import { usePersonaDashboard, type SindicoDashboard } from '@/hooks/usePersonaDashboard';
+import { KpiCard, DashboardError } from '@/components/dashboard/DashboardKit';
+
 
 const ACCENT = '#60A5FA';
 
