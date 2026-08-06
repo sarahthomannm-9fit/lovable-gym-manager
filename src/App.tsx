@@ -159,7 +159,11 @@ const App = () => (
                     <Route path="/studio" element={<Protected><StudioHome /></Protected>} />
                     <Route path="/insights" element={<Protected><InsightsMercado /></Protected>} />
                     <Route path="/coaches" element={<Protected><Funcionarios /></Protected>} />
-                    <Route path="/" element={<Navigate to="/painel" replace />} />
+                   <Route path="/" element={<Navigate to="/home" replace />} />
+                   <Route path="/home" element={<Protected><Home /></Protected>} />
+                   <Route path="/mercados/:tipo" element={<Protected><MercadoLista /></Protected>} />
+                   <Route path="/relatorios/automaticos" element={<Protected><RelatoriosAutomaticos /></Protected>} />
+
                     <Route path="/agents" element={<Protected><AgentsHub /></Protected>} />
                     <Route path="/admin/usuarios" element={<Protected><UsersAdmin /></Protected>} />
                     <Route path="/admin/reset-demo" element={<Protected><ResetDemoData /></Protected>} />
