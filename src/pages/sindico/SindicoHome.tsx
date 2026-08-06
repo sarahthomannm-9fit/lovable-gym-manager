@@ -33,6 +33,10 @@ export default function SindicoHome() {
   const [aviso, setAviso] = useState({ titulo: '', mensagem: '' });
   const [enviando, setEnviando] = useState(false);
 
+  // Indicadores principais sempre pela RPC oficial
+  const { data: dash, loading: dashLoading, error: dashError, refresh: refreshDash } =
+    usePersonaDashboard<SindicoDashboard>('sindico', activeOrg?.id);
+
   const iniciais = (activeOrg?.nome || '??').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
   useEffect(() => {
@@ -43,6 +47,7 @@ export default function SindicoHome() {
     });
     return () => { mounted = false; };
   }, [ensureOrgForPersona]);
+
 
   const carregar = async () => {
     if (!activeOrg) { setReady(true); return; }
