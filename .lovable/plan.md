@@ -1,56 +1,46 @@
-## Plano de implementação
+# 9FIT — Reorganização do menu, RPCs de dashboard e validação das personas
 
-### 1. Corrigir acesso dos admins Sara e Rony de forma consistente
-- Confirmado no banco: os dois usuários existem, estão com e-mail confirmado e `role = admin`.
-- Atualizar o fluxo de senha usando uma ação confiável no Supabase para forçar novamente a senha `54967554` nos dois usuários.
-- Ajustar a função `setup-users` para ficar idempotente e segura operacionalmente: recria/atualiza os dois admins, confirma e-mail, garante role `admin` e vínculos às organizações base quando existirem.
-- Validar login real no preview com Playwright para os dois e-mails: login → redirecionamento para `/painel` → acesso a `/select-context`, `/sindico` e `/morador` sem travar/piscar.
+Objetivo: aplicar a estrutura enviada (menu reorganizado + prompts) sobre os fluxos já existentes, ligar os painéis das personas às funções oficiais do banco e validar login/acesso de ponta a ponta.
 
-### 2. Transformar `docs/marketing-funcional-9fit.md` em estrutura operacional dentro do app
-- Criar uma tela/hub admin “Operação 9FIT” baseada no documento salvo, com:
-  - posicionamento central “Portaria eletrônica do fitness”;
-  - rotas reais por persona;
-  - checklist de demo/venda;
-  - “o que vender” e “o que nunca comunicar”;
-  - atalhos diretos para Síndico, Coach, Morador, Corporate, Pipeline, Contratos, Relatório e Integração FitPro.
-- Registrar rota protegida para admin, por exemplo `/operacao-9fit`.
-- Adicionar item visível no menu admin: “Operação 9FIT”.
+## Estado atual verificado
 
-### 3. Completar as telas/fluxos com os anexos operacionais
-- Síndico (`/sindico`): evoluir o relatório mensal para seguir o Doc 5:
-  - adesão;
-  - frequência/check-ins;
-  - planos de treino;
-  - plantão presencial;
-  - financeiro resumido;
-  - recomendações 9FIT;
-  - exportação CSV mais completa.
-- Coach (`/coach`): estruturar rotina operacional do Doc 2 e Doc 1:
-  - fila de anamnese;
-  - aprovação/criação de treino;
-  - plantões/visitas;
-  - checklist de QR instalado, comunicado enviado e contrato pendente/assinado.
-- Morador (`/morador`): garantir que a entrega reflita o documento:
-  - Hoje;
-  - treino do dia;
-  - check-in via QR/ação rápida;
-  - aulas;
-  - pagamentos;
-  - comunicados/suporte.
-- Admin/Painel (`/painel` + novo hub): conectar comercial, contratos, organizações, personas e documentação operacional.
+- Organizações: 4 ativas, sem duplicidade (Central Park, TechCorp, Studio Personal 9FIT, Studio Premium SP). Os registros duplicados citados no chat não existem mais.
+- Vínculos: Sara tem `admin` + `sindico` no Central Park (papel duplicado), além de professor/corporate nas demais. Rony tem manager/sindico/professor/corporate.
+- Dashboards: `dashboard_sindico`, `dashboard_coach`, `dashboard_morador` existem no banco, mas só o Studio usa RPC. Síndico, Coach, Morador e Corporativo montam tudo com consultas soltas nas tabelas.
+- Menu: várias entradas da estrutura enviada ainda não existem (Mercados, Relatórios automáticos, Produtos & Equipamentos agrupados) e nomes divergem.
 
-### 4. Dados de uso e rastreabilidade
-- Revisar se os fluxos principais registram eventos nas tabelas já existentes (`system_events`, `checkins`, `pessoa_eventos`, `agent_logs`) sem criar promessa fora de escopo.
-- Quando necessário, adicionar registros leves de eventos nas ações principais: baixar relatório, trocar persona, solicitar cobrança, publicar comunicado, registrar check-in.
+## O que será feito
 
-### 5. Validação final
-- Rodar validação funcional no preview:
-  - login com `roni.comercial19@gmail.com`;
-  - login com `sarahthomannm@gmail.com`;
-  - navegação `/painel` → `/select-context` → `/sindico` → `/morador`;
-  - download CSV do síndico;
-  - acesso ao novo hub “Operação 9FIT”.
-- Corrigir qualquer loop/flicker encontrado antes de finalizar.
+### 1. Limpeza de vínculos (migração)
+- Remover o papel `sindico` duplicado da Sara no Central Park (ela já é `admin` lá).
+- Garantir unicidade de papel por (organização, usuário, papel) permanece intacta.
 
-### Observação de escopo
-Não vou implementar nesta rodada itens explicitamente fora de escopo no documento: assinatura eletrônica de contrato, portal público de onboarding automático de condomínios e BI agregado cross-condomínio.
+### 2. Menu reorganizado conforme o arquivo enviado
+Reescrever a navegação do sidebar nas seções:
+- **Central de Operações** (renomeia "Control Plane"): Control Plane, Pipeline comercial, Clientes ativos, Alunos, Check-in.
+- **Assessoria Esportiva** (nova): Aulas, Planos de treino, Treinos, Avaliações físicas, Aulas experimentais, Coaches.
+- **Mercados** (nova): Condomínios, Corporativo, Estúdios/Academias — cada uma abre uma lista de organizações daquele tipo com KPIs.
+- **Financeiro**: acrescenta Contratos & Propostas; mantém o resto.
+- **Marketing & Captação**: mantém, remove "Insights IA" do menu.
+- **Inteligência 9FIT**: Hub de Agentes, RON — Agente CEO (renomeia), Insights por mercado, Plano CFO, Relatórios automáticos (novo).
+- **Personas**: Síndico, Coach, Corporativo, Morador, Trocar contexto.
+- **Administração**: Usuários, Organizações, Produtos & Equipamentos; Integração FitPro sai do menu (rota continua acessível).
+
+### 3. Telas novas
+- `/mercados/:tipo` — lista organizações do tipo com alunos ativos, receita do mês, adesão e atalho para o painel da persona.
+- `/relatorios/automaticos` — leitura de `agent_reports` com filtro por agente/data e geração sob demanda.
+
+### 4. Painéis das personas ligados às RPCs
+- Síndico, Coach e Morador passam a carregar os números principais via `supabase.rpc('dashboard_sindico'|'dashboard_coach'|'dashboard_morador')`, mantendo as consultas complementares só para listas e ações (check-in, tickets, aprovação de treino).
+- Corporativo usa `dashboard_sindico` da organização corporativa.
+- Tratamento de erro e estado vazio padronizados, sem tela travada em "Carregando".
+
+### 5. Validação autenticada
+- Executar o fluxo real com a sessão do preview: login → `/painel` → `/sindico` → `/coach` → `/corp` → `/morador` → `/select-context`, com screenshots e verificação de console/rede.
+- Conferir que cada persona vê dados (não vazio) e que as ações principais gravam no banco.
+
+## Detalhes técnicos
+
+- Arquivos principais: `src/components/AppSidebar.tsx`, `src/App.tsx`, `src/pages/sindico/SindicoHome.tsx`, `src/pages/coach/CoachHome.tsx`, `src/pages/morador/MoradorHome.tsx`, `src/pages/corp/CorpHome.tsx`, novos `src/pages/mercados/MercadoLista.tsx` e `src/pages/relatorios/RelatoriosAutomaticos.tsx`.
+- Uma única migração: `DELETE` do vínculo duplicado. Nenhuma mudança de schema é necessária — as RPCs e políticas já existem.
+- Nenhuma alteração em `types.ts` (gerado pelo Supabase).
