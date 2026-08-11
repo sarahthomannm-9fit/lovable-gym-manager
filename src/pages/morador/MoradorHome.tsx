@@ -13,6 +13,8 @@ import {
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOperationalContext } from '@/hooks/useOperationalContext';
+import { useAlunoVinculo } from '@/hooks/useAlunoVinculo';
+
 
 const ACCENT = '#F472B6';
 
