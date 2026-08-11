@@ -113,15 +113,20 @@ export default function MoradorHome() {
         }
       }
 
-      const { data: nf } = await supabase.from('notificacoes')
-        .select('id, titulo, mensagem, created_at, prioridade')
-        .order('created_at', { ascending: false }).limit(6);
+      let nf: any[] | null = [];
+      if (al?.id) {
+        const { data } = await supabase.from('notificacoes')
+          .select('id, titulo, mensagem, created_at, prioridade')
+          .eq('destinatario_id', al.id)
+          .order('created_at', { ascending: false }).limit(6);
+        nf = data;
+      }
       if (!mounted) return;
       setNotifs(nf || []);
       setReady(true);
     })().catch(() => { if (mounted) setReady(true); });
     return () => { mounted = false; };
-  }, [user?.id, user?.email, isAdmin]);
+  }, [user?.id, vinculo?.id, vinculoLoading, isAdmin]);
 
   const inscrever = async (aulaId: string, nome: string) => {
     if (!aluno?.id) return toast.error('Aluno não vinculado');
