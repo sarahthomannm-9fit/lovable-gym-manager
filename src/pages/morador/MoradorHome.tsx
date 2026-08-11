@@ -32,6 +32,8 @@ function dataExtenso() {
 export default function MoradorHome() {
   const { user } = useAuth();
   const { isAdmin } = useOperationalContext();
+  const { aluno: vinculo, loading: vinculoLoading } = useAlunoVinculo();
+
   const [ready, setReady] = useState(false);
   const [aluno, setAluno] = useState<any>(null);
   const [proximas, setProximas] = useState<any[]>([]);
