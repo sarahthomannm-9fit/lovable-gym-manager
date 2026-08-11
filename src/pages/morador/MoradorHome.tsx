@@ -44,20 +44,24 @@ export default function MoradorHome() {
   const [salvando, setSalvando] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || vinculoLoading) return;
     let mounted = true;
     setReady(false);
     (async () => {
-      const { data: a } = await supabase.from('alunos')
-        .select('id, nome, status, plano_id, valor_mensalidade, data_matricula')
-        .eq('email', user.email || '').maybeSingle();
-      let al = a;
+      let al: any = null;
+      if (vinculo?.id) {
+        const { data: a } = await supabase.from('alunos')
+          .select('id, nome, status, plano_id, valor_mensalidade, data_matricula')
+          .eq('id', vinculo.id).maybeSingle();
+        al = a;
+      }
       if (!al && isAdmin) {
         const { data: any1 } = await supabase.from('alunos').select('*').limit(1).maybeSingle();
         al = any1;
       }
       if (!mounted) return;
       setAluno(al);
+
 
       const hoje = new Date().toISOString().slice(0, 10);
       const proximaSemana = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
