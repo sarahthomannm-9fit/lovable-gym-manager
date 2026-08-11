@@ -778,21 +778,6 @@ export type Database = {
           },
         ]
       }
-      "cadastro.alunos": {
-        Row: {
-          created_at: string
-          id: number
-        }
-        Insert: {
-          created_at?: string
-          id?: number
-        }
-        Update: {
-          created_at?: string
-          id?: number
-        }
-        Relationships: []
-      }
       campanhas_marketing: {
         Row: {
           alcance: number | null
