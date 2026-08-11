@@ -13,6 +13,8 @@ import {
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOperationalContext } from '@/hooks/useOperationalContext';
+import { useAlunoVinculo } from '@/hooks/useAlunoVinculo';
+
 
 const ACCENT = '#F472B6';
 
@@ -32,6 +34,8 @@ function dataExtenso() {
 export default function MoradorHome() {
   const { user } = useAuth();
   const { isAdmin } = useOperationalContext();
+  const { aluno: vinculo, loading: vinculoLoading } = useAlunoVinculo();
+
   const [ready, setReady] = useState(false);
   const [aluno, setAluno] = useState<any>(null);
   const [proximas, setProximas] = useState<any[]>([]);
@@ -44,20 +48,24 @@ export default function MoradorHome() {
   const [salvando, setSalvando] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || vinculoLoading) return;
     let mounted = true;
     setReady(false);
     (async () => {
-      const { data: a } = await supabase.from('alunos')
-        .select('id, nome, status, plano_id, valor_mensalidade, data_matricula')
-        .eq('email', user.email || '').maybeSingle();
-      let al = a;
+      let al: any = null;
+      if (vinculo?.id) {
+        const { data: a } = await supabase.from('alunos')
+          .select('id, nome, status, plano_id, valor_mensalidade, data_matricula')
+          .eq('id', vinculo.id).maybeSingle();
+        al = a;
+      }
       if (!al && isAdmin) {
         const { data: any1 } = await supabase.from('alunos').select('*').limit(1).maybeSingle();
         al = any1;
       }
       if (!mounted) return;
       setAluno(al);
+
 
       const hoje = new Date().toISOString().slice(0, 10);
       const proximaSemana = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
@@ -105,15 +113,20 @@ export default function MoradorHome() {
         }
       }
 
-      const { data: nf } = await supabase.from('notificacoes')
-        .select('id, titulo, mensagem, created_at, prioridade')
-        .order('created_at', { ascending: false }).limit(6);
+      let nf: any[] | null = [];
+      if (al?.id) {
+        const { data } = await supabase.from('notificacoes')
+          .select('id, titulo, mensagem, created_at, prioridade')
+          .eq('destinatario_id', al.id)
+          .order('created_at', { ascending: false }).limit(6);
+        nf = data;
+      }
       if (!mounted) return;
       setNotifs(nf || []);
       setReady(true);
     })().catch(() => { if (mounted) setReady(true); });
     return () => { mounted = false; };
-  }, [user?.id, user?.email, isAdmin]);
+  }, [user?.id, vinculo?.id, vinculoLoading, isAdmin]);
 
   const inscrever = async (aulaId: string, nome: string) => {
     if (!aluno?.id) return toast.error('Aluno não vinculado');
