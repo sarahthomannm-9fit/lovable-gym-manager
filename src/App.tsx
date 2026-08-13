@@ -167,25 +167,25 @@ const App = () => (
                     <Route path="/coach" element={<ProtectedRoute><RoleRoute allow={['professor','admin']}><CoachHome /></RoleRoute></ProtectedRoute>} />
                     <Route path="/corp" element={<ProtectedRoute><RoleRoute allow={['corporate','admin']}><CorpHome /></RoleRoute></ProtectedRoute>} />
                     <Route path="/morador" element={<ProtectedRoute><RoleRoute allow={['user','sindico','corporate','professor','admin','manager']}><MoradorHome /></RoleRoute></ProtectedRoute>} />
-                    <Route path="/admin/organizacoes" element={<Protected><OrganizationsAdmin /></Protected>} />
-                    <Route path="/admin/fitpro" element={<Protected><FitProIntegration /></Protected>} />
-                    <Route path="/operacao-9fit" element={<Protected><Operacao9FIT /></Protected>} />
-                    <Route path="/cfo/leads" element={<Protected><LeadsExtractionPlan /></Protected>} />
-                    <Route path="/pipeline" element={<Protected><PipelineComercial /></Protected>} />
+                    <Route path="/admin/organizacoes" element={<AdminOnly><OrganizationsAdmin /></AdminOnly>} />
+                    <Route path="/admin/fitpro" element={<AdminOnly><FitProIntegration /></AdminOnly>} />
+                    <Route path="/operacao-9fit" element={<StaffOnly><Operacao9FIT /></StaffOnly>} />
+                    <Route path="/cfo/leads" element={<AdminOnly><LeadsExtractionPlan /></AdminOnly>} />
+                    <Route path="/pipeline" element={<AdminOnly><PipelineComercial /></AdminOnly>} />
                     <Route path="/clientes" element={<Protected><Clientes /></Protected>} />
                     <Route path="/contratos" element={<Protected><Contratos /></Protected>} />
                     <Route path="/planos-treino" element={<Protected><PlanosTreino /></Protected>} />
-                    <Route path="/studio" element={<Protected><StudioHome /></Protected>} />
+                    <Route path="/studio" element={<ProtectedRoute><RoleRoute allow={['admin','manager','professor']}><MainLayout><StudioHome /></MainLayout></RoleRoute></ProtectedRoute>} />
                     <Route path="/insights" element={<Protected><InsightsMercado /></Protected>} />
                     <Route path="/coaches" element={<Protected><Funcionarios /></Protected>} />
                    <Route path="/" element={<Navigate to="/home" replace />} />
                    <Route path="/home" element={<Protected><Home /></Protected>} />
                    <Route path="/mercados/:tipo" element={<Protected><MercadoLista /></Protected>} />
-                   <Route path="/relatorios/automaticos" element={<Protected><RelatoriosAutomaticos /></Protected>} />
+                   <Route path="/relatorios/automaticos" element={<StaffOnly><RelatoriosAutomaticos /></StaffOnly>} />
 
-                    <Route path="/agents" element={<Protected><AgentsHub /></Protected>} />
-                    <Route path="/admin/usuarios" element={<Protected><UsersAdmin /></Protected>} />
-                    <Route path="/admin/reset-demo" element={<Protected><ResetDemoData /></Protected>} />
+                    <Route path="/agents" element={<StaffOnly><AgentsHub /></StaffOnly>} />
+                    <Route path="/admin/usuarios" element={<AdminOnly><UsersAdmin /></AdminOnly>} />
+                    <Route path="/admin/reset-demo" element={<AdminOnly><ResetDemoData /></AdminOnly>} />
                     <Route path="/painel" element={<Protected><Painel /></Protected>} />
                     <Route path="/painel/inadimplencia" element={<Protected><Inadimplencia /></Protected>} />
                     <Route path="/painel/retencao" element={<Protected><Retencao /></Protected>} />
@@ -198,12 +198,12 @@ const App = () => (
                     <Route path="/checkin" element={<Protected><SupabaseCheckIn /></Protected>} />
                     <Route path="/equipamentos" element={<Protected><Equipment /></Protected>} />
                     <Route path="/treinos" element={<Protected><Treinos /></Protected>} />
-                    <Route path="/relatorios" element={<Protected><Relatorios /></Protected>} />
-                    <Route path="/relatorios/pagamentos" element={<Protected><FluxoPagamentos /></Protected>} />
-                    <Route path="/relatorios/recebimentos" element={<Protected><FluxoRecebimentos /></Protected>} />
-                    <Route path="/relatorios/cobrancas" element={<Protected><Cobrancas /></Protected>} />
-                    <Route path="/relatorios/estrategias" element={<Protected><EstrategiasIA /></Protected>} />
-                    <Route path="/relatorios/promocoes-cupons" element={<Protected><PromocoesCupons /></Protected>} />
+                    <Route path="/relatorios" element={<StaffOnly><Relatorios /></StaffOnly>} />
+                    <Route path="/relatorios/pagamentos" element={<StaffOnly><FluxoPagamentos /></StaffOnly>} />
+                    <Route path="/relatorios/recebimentos" element={<StaffOnly><FluxoRecebimentos /></StaffOnly>} />
+                    <Route path="/relatorios/cobrancas" element={<StaffOnly><Cobrancas /></StaffOnly>} />
+                    <Route path="/relatorios/estrategias" element={<StaffOnly><EstrategiasIA /></StaffOnly>} />
+                    <Route path="/relatorios/promocoes-cupons" element={<StaffOnly><PromocoesCupons /></StaffOnly>} />
                     <Route path="/marketing/campanhas" element={<Protected><Campanhas /></Protected>} />
                     <Route path="/marketing/captacao" element={<Protected><Captacao /></Protected>} />
                     <Route path="/marketing/comunicacao" element={<Protected><Comunicacao /></Protected>} />
@@ -217,7 +217,7 @@ const App = () => (
                     <Route path="/catalogo" element={<Protected><Catalogo /></Protected>} />
                     <Route path="/produtos" element={<Protected><Produtos /></Protected>} />
                     <Route path="/9fit" element={<Protected><Dashboard9FIT /></Protected>} />
-                    <Route path="/9fit/ceo" element={<Protected><CEODashboard /></Protected>} />
+                    <Route path="/9fit/ceo" element={<AdminOnly><CEODashboard /></AdminOnly>} />
                     <Route path="/9fit/consultoria" element={<Protected><ConsultoriaDashboard /></Protected>} />
                     <Route path="/9fit/concierge" element={<Protected><ConciergeDashboard /></Protected>} />
                     <Route path="/9fit/trust" element={<Protected><TrustDashboard /></Protected>} />
