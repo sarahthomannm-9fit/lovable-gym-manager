@@ -115,12 +115,19 @@ const Protected = ({ children }: { children: React.ReactNode }) => (
 );
 
 const AuthenticatedDataProviders = ({ children }: { children: React.ReactNode }) => {
-  const { session } = useAuth();
+  const { user } = useAuth();
 
-  if (!session) return <>{children}</>;
+  // Keyed and gated on user id (not the whole session object) so that a
+  // token refresh — which produces a new `session` object for the *same*
+  // user — doesn't remount SupabaseGymDataProvider and its child hooks.
+  // Before this, every session object change re-triggered the full set of
+  // student/payment/plan/class/etc fetches from scratch, which is why the
+  // Supabase logs showed each of those queries firing 2-3x back to back
+  // right after login.
+  if (!user) return <>{children}</>;
 
   return (
-    <SupabaseGymDataProvider>
+    <SupabaseGymDataProvider key={user.id}>
       <DataIntegrationProvider>
         <DemoModeProvider>{children}</DemoModeProvider>
       </DataIntegrationProvider>
