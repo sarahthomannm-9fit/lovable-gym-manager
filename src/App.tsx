@@ -114,6 +114,25 @@ const Protected = ({ children }: { children: React.ReactNode }) => (
   </ProtectedRoute>
 );
 
+/** Somente admin */
+const AdminOnly = ({ children }: { children: React.ReactNode }) => (
+  <ProtectedRoute>
+    <RoleRoute allow={['admin']}>
+      <MainLayout>{children}</MainLayout>
+    </RoleRoute>
+  </ProtectedRoute>
+);
+
+/** Admin + manager (gestão/relatórios) */
+const StaffOnly = ({ children }: { children: React.ReactNode }) => (
+  <ProtectedRoute>
+    <RoleRoute allow={['admin', 'manager']}>
+      <MainLayout>{children}</MainLayout>
+    </RoleRoute>
+  </ProtectedRoute>
+);
+
+
 const AuthenticatedDataProviders = ({ children }: { children: React.ReactNode }) => {
   const { session } = useAuth();
 
