@@ -76,7 +76,7 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { role } = useCurrentUserRole();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
   const { pagamentos, alunos, checkins, leads, aulas } = useDataIntegration();
 
   // Dynamic badge counts
@@ -145,6 +145,7 @@ export function AppSidebar() {
       items: [
         { title: "Treinos", icon: Dumbbell, path: "/treinos" },
         { title: "Planos de treino", icon: Dumbbell, path: "/planos-treino" },
+        { title: "Studio", icon: Sparkles, path: "/studio", roles: ['admin', 'manager', 'professor'] },
         { title: "Avaliações físicas", icon: Activity, path: "/avaliacoes", roles: ['admin', 'manager'] },
         { title: "Aulas", icon: Calendar, path: "/aulas", roles: ['admin', 'manager'], badge: badges.aulasSemInst || undefined, badgeColor: 'bg-destructive' },
         { title: "Aulas experimentais", icon: UserCheck, path: "/experimentais", roles: ['admin', 'manager'] },
@@ -193,11 +194,11 @@ export function AppSidebar() {
     {
       category: "CENTRO DE INTELIGÊNCIA",
       items: [
-        { title: "Hub de Agentes", icon: Bot, path: "/agents" },
+        { title: "Hub de Agentes", icon: Bot, path: "/agents", roles: ['admin','manager'] },
         { title: "RON • Agente CEO", icon: Sparkles, path: "/agente-ia" },
         { title: "Insights de mercado", icon: BarChart3, path: "/insights", roles: ['admin'] },
         { title: "Plano CFO", icon: Target, path: "/cfo/leads", roles: ['admin'] },
-        { title: "Relatórios automáticos", icon: Receipt, path: "/relatorios/automaticos" },
+        { title: "Relatórios automáticos", icon: Receipt, path: "/relatorios/automaticos", roles: ['admin','manager'] },
       ],
     },
     {
@@ -232,6 +233,10 @@ export function AppSidebar() {
     if (!role) return true;
     return roles.includes(role);
   };
+
+  const nomeUsuario = (user?.user_metadata as any)?.nome || user?.email?.split('@')[0] || 'Usuário';
+  const inicial = nomeUsuario.charAt(0).toUpperCase();
+  const roleLabel = role ? role.charAt(0).toUpperCase() + role.slice(1) : '9FIT';
 
   return (
     <Sidebar>
@@ -293,16 +298,16 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter>
         <div className="px-3.5 py-3 flex items-center gap-2 justify-between border-t border-sidebar-border/50">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 rounded-full bg-gradient-gold flex items-center justify-center text-[11px] font-bold text-primary-foreground font-display shrink-0 shadow-gold">
-              R
+              {inicial}
             </div>
-            <div>
-              <div className="text-[11px] font-semibold text-sidebar-foreground">Roni</div>
-              <div className="text-[8px] text-primary/60 font-mono tracking-wider uppercase">CEO · 9FIT</div>
+            <div className="min-w-0">
+              <div className="text-[11px] font-semibold text-sidebar-foreground truncate">{nomeUsuario}</div>
+              <div className="text-[8px] text-primary/60 font-mono tracking-wider uppercase">{roleLabel} · 9FIT</div>
             </div>
           </div>
-          <button onClick={() => signOut()} className="p-1.5 rounded-md hover:bg-sidebar-accent text-sidebar-foreground/50 hover:text-primary transition-colors" title="Sair">
+          <button onClick={() => signOut()} className="p-1.5 rounded-md hover:bg-sidebar-accent text-sidebar-foreground/50 hover:text-primary transition-colors shrink-0" title="Sair">
             <LogOut className="w-4 h-4" />
           </button>
         </div>
