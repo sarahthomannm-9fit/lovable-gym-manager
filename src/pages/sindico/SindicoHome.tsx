@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AlertCircle, Inbox, LifeBuoy, MessageSquarePlus, Megaphone, Eye, QrCode, Dumbbell, ClipboardCheck } from 'lucide-react';
+import { AlertCircle, Inbox, LifeBuoy, MessageSquarePlus, Megaphone, Eye, QrCode, Dumbbell, ClipboardCheck, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePersonaDashboard, type SindicoDashboard } from '@/hooks/usePersonaDashboard';
 import { KpiCard, DashboardError } from '@/components/dashboard/DashboardKit';
@@ -35,6 +35,7 @@ export default function SindicoHome() {
   const [mensagem, setMensagem] = useState('');
   const [aviso, setAviso] = useState({ titulo: '', mensagem: '' });
   const [enviando, setEnviando] = useState(false);
+  const [orgTemUnidadesEsperadas, setOrgTemUnidadesEsperadas] = useState(false);
 
   // Indicadores principais sempre pela RPC oficial
   const { data: dash, loading: dashLoading, error: dashError, refresh: refreshDash } =
@@ -62,6 +63,11 @@ export default function SindicoHome() {
       .select('metadata')
       .eq('id', activeOrg.id)
       .maybeSingle();
+
+    // Se o cadastro do condomínio já indica um número esperado de unidades/alunos,
+    // isso ajuda a distinguir "condomínio novo, sem alunos mesmo" de "vínculo quebrado".
+    const unidadesEsperadas = Number((orgRow?.metadata as any)?.total_unidades || (orgRow?.metadata as any)?.unidades || 0);
+    setOrgTemUnidadesEsperadas(unidadesEsperadas > 0);
 
     const { data: alunosOrg } = await supabase.from('alunos')
       .select('id, nome, status, valor_mensalidade, data_matricula')
@@ -208,6 +214,12 @@ export default function SindicoHome() {
     ? { txt: '⚠ Atenção', cls: 'text-amber-400' }
     : { txt: '✓ Saudável', cls: 'text-emerald-400' };
 
+  // Sinal de possível problema de vínculo: a organização tem cadastro (metadata com
+  // unidades esperadas) mas a consulta direta não retornou nenhum aluno vinculado.
+  // Isso é diferente de "condomínio novo, ainda sem alunos" — nesse caso não há
+  // unidades esperadas cadastradas, então não mostramos o aviso.
+  const possivelProblemaDeVinculo = !dashLoading && !dashError && metrics.alunos === 0 && orgTemUnidadesEsperadas;
+
   return (
     <PersonaLayout title="Painel do Síndico" accent={ACCENT}>
       <Card className="bg-card/60 border-border/40 mb-4">
@@ -229,6 +241,23 @@ export default function SindicoHome() {
 
       {dashError && (
         <div className="mb-4"><DashboardError message={dashError} onRetry={refreshDash} /></div>
+      )}
+
+      {possivelProblemaDeVinculo && (
+        <Card className="mb-4 border-amber-500/30 bg-amber-500/5">
+          <CardContent className="p-4 flex items-start gap-3">
+            <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <div className="text-xs">
+              <p className="font-medium text-amber-400">Nenhum aluno vinculado a este condomínio</p>
+              <p className="text-muted-foreground mt-1">
+                Este condomínio tem unidades cadastradas, mas nenhum aluno aparece vinculado a ele.
+                Isso pode indicar que o vínculo (<code className="font-mono">alunos.user_id</code> /
+                {' '}<code className="font-mono">organization_id</code>) ainda não foi feito para esta
+                organização — verifique antes de considerar o painel "vazio".
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
@@ -417,7 +446,15 @@ export default function SindicoHome() {
                       <TableCell className="text-xs text-muted-foreground">{a.data_matricula}</TableCell>
                     </TableRow>
                   ))}
-                  {!alunosLista.length && <TableRow><TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-6">Nenhum aluno.</TableCell></TableRow>}
+                  {!alunosLista.length && (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-6">
+                        {orgTemUnidadesEsperadas
+                          ? 'Nenhum aluno vinculado ainda. Verifique o vínculo do aluno com esta organização.'
+                          : 'Nenhum aluno.'}
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
