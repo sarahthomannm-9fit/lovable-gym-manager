@@ -7,13 +7,14 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Building2, GraduationCap, Briefcase, User, ChevronDown, LogOut, ArrowLeftRight } from 'lucide-react';
+import { Building2, GraduationCap, Briefcase, User, ChevronDown, LogOut, ArrowLeftRight, Sparkles } from 'lucide-react';
 
 const PERSONAS = [
   { label: 'Síndico', path: '/sindico', icon: Building2 },
   { label: 'Coach', path: '/coach', icon: GraduationCap },
   { label: 'Corporativo', path: '/corp', icon: Briefcase },
   { label: 'Morador', path: '/morador', icon: User },
+  { label: 'Studio', path: '/studio', icon: Sparkles, roles: ['admin', 'manager', 'professor'] },
 ];
 
 /** Seletor de contexto no topo: Usuário → Organização → Persona (troca sem logout) */
@@ -26,6 +27,13 @@ export function ContextSwitcher() {
   if (activeOrg && !orgs.find((o) => o.id === activeOrg.id)) orgs.unshift(activeOrg as any);
 
   const nome = (user?.user_metadata as any)?.nome || user?.email?.split('@')[0] || 'Usuário';
+
+  const canSeePersona = (roles?: string[]) => {
+    if (!roles) return true;
+    if (isAdmin) return true;
+    if (!primaryRole) return true;
+    return roles.includes(primaryRole);
+  };
 
   return (
     <header className="h-12 shrink-0 border-b border-border/40 bg-card/40 backdrop-blur-xl sticky top-0 z-20 flex items-center gap-2 px-3">
@@ -50,7 +58,7 @@ export function ContextSwitcher() {
           ))}
           <DropdownMenuSeparator />
           <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Persona</DropdownMenuLabel>
-          {PERSONAS.map((p) => (
+          {PERSONAS.filter((p) => canSeePersona((p as any).roles)).map((p) => (
             <DropdownMenuItem key={p.path} className="text-xs" onClick={() => navigate(p.path)}>
               <p.icon className="w-3.5 h-3.5 mr-2" /> {p.label}
             </DropdownMenuItem>
