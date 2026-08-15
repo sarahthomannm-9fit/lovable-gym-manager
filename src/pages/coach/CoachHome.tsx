@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar, Users, UserCheck, Dumbbell, History, ClipboardList, Sparkles, QrCode, Megaphone, FileCheck2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { CriarTreinoDialog } from '@/components/CriarTreinoDialog';
 
 const ACCENT = '#C8FF00';
 
@@ -140,6 +141,13 @@ export default function CoachHome() {
         </TabsList>
 
         <TabsContent value="fila" className="space-y-4">
+          <div className="flex justify-end">
+            <CriarTreinoDialog
+              alunos={alunos.map(a => ({ id: a.id, nome: a.nome }))}
+              organizationId={activeOrg?.id}
+              onCriado={carregar}
+            />
+          </div>
           {filaIACount > 0 && (
             <Card className="bg-primary/5 border-primary/30">
               <CardContent className="p-4 flex items-center gap-3">
@@ -248,9 +256,16 @@ export default function CoachHome() {
         </TabsContent>
 
         <TabsContent value="treinos">
-          <h2 className="text-sm uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
-            <Dumbbell className="w-4 h-4" /> Treinos prescritos
-          </h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+              <Dumbbell className="w-4 h-4" /> Treinos prescritos
+            </h2>
+            <CriarTreinoDialog
+              alunos={alunos.map(a => ({ id: a.id, nome: a.nome }))}
+              organizationId={activeOrg?.id}
+              onCriado={carregar}
+            />
+          </div>
           {treinos.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum treino criado.</p> : (
             <div className="space-y-2">
               {treinos.map(t => (
