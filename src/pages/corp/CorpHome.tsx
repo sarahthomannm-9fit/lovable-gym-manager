@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Users, TrendingUp, Activity, Download, DollarSign, FileText } from 'lucide-react';
 import { toast } from 'sonner';
+import { MonthlyBarChart } from '@/components/charts/MonthlyBarChart';
 
 const ACCENT = '#A78BFA';
 
@@ -58,6 +59,12 @@ export default function CorpHome() {
   const adesao = alunos.length ? Math.round(ativos / alunos.length * 100) : 0;
   const ativosEngajados = Object.values(engajamento).filter(n => n >= 4).length;
   const totalFat = faturamento.reduce((s, f) => s + f.total, 0);
+
+  const mesLabel = (ym: string) => {
+    const [ano, mes] = ym.split('-');
+    const nomes = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+    return nomes[Number(mes) - 1] || ym;
+  };
 
   const exportarCSV = () => {
     if (!alunos.length) return toast.error('Nada a exportar');
@@ -180,14 +187,25 @@ export default function CorpHome() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="faturamento">
+        <TabsContent value="faturamento" className="space-y-4">
+          <Card className="bg-card/60 border-border/40">
+            <CardContent className="p-5">
+              <h2 className="font-semibold text-sm uppercase tracking-wide mb-4">Faturamento — últimos 6 meses</h2>
+              <MonthlyBarChart
+                data={faturamento.map(f => ({ mes: mesLabel(f.mes), valor: f.total }))}
+                accent={ACCENT}
+                valueLabel="Faturamento"
+                formatValue={(v) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+              />
+            </CardContent>
+          </Card>
           <Card className="bg-card/60 border-border/40">
             <CardContent className="p-5">
               {faturamento.length === 0 ? <p className="text-sm text-muted-foreground">Sem dados.</p> : (
                 <ul className="space-y-2">
                   {faturamento.map(f => (
                     <li key={f.mes} className="flex items-center justify-between">
-                      <span className="text-sm">{f.mes}</span>
+                      <span className="text-sm">{mesLabel(f.mes)}</span>
                       <span className="font-semibold">R$ {f.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                     </li>
                   ))}
