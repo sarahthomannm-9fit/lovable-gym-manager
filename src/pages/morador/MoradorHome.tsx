@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Calendar, CreditCard, Activity, Bell, CheckCircle2,
   Dumbbell, Heart, Sparkles, MapPin, Clock, PlayCircle,
-  MessageCircle, QrCode,
+  MessageCircle, QrCode, TrendingUp, TrendingDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -41,6 +41,7 @@ export default function MoradorHome() {
   const [proximas, setProximas] = useState<any[]>([]);
   const [pagamentos, setPagamentos] = useState<any[]>([]);
   const [presencas, setPresencas] = useState(0);
+  const [presencasMesAnterior, setPresencasMesAnterior] = useState<number | null>(null);
   const [notifs, setNotifs] = useState<any[]>([]);
   const [treinoAtivo, setTreinoAtivo] = useState<any>(null);
   const [exerciciosHoje, setExerciciosHoje] = useState<any[]>([]);
@@ -83,12 +84,23 @@ export default function MoradorHome() {
         if (!mounted) return;
         setPagamentos(pgs || []);
 
-        const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
-        const { count } = await supabase.from('checkins')
-          .select('id', { count: 'exact', head: true })
-          .eq('aluno_id', al.id).gte('data_checkin', inicioMes);
+        const agora = new Date();
+        const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1).toISOString().slice(0, 10);
+        const inicioMesAnterior = new Date(agora.getFullYear(), agora.getMonth() - 1, 1).toISOString().slice(0, 10);
+        const fimMesAnterior = new Date(agora.getFullYear(), agora.getMonth(), 0).toISOString().slice(0, 10);
+
+        const [{ count: countAtual }, { count: countAnterior }] = await Promise.all([
+          supabase.from('checkins').select('id', { count: 'exact', head: true })
+            .eq('aluno_id', al.id).gte('data_checkin', inicioMes),
+          supabase.from('checkins').select('id', { count: 'exact', head: true })
+            .eq('aluno_id', al.id).gte('data_checkin', inicioMesAnterior).lte('data_checkin', fimMesAnterior),
+        ]);
         if (!mounted) return;
-        setPresencas(count || 0);
+        setPresencas(countAtual || 0);
+        // Só mostramos a comparação percentual se o aluno já treinava no mês anterior —
+        // um aluno novo (0 presenças no mês passado) não tem uma base real de comparação,
+        // e "+∞%" ou "0 → N" não é uma informação honesta de evolução.
+        setPresencasMesAnterior(countAnterior && countAnterior > 0 ? countAnterior : null);
 
         // Check-in de hoje
         const { data: ck } = await supabase.from('checkins')
@@ -167,6 +179,9 @@ export default function MoradorHome() {
   const nomeCurto = aluno?.nome?.split(' ')[0] || '';
   const proxAula = proximas[0];
   const pgPendentes = pagamentos.filter(p => p.status !== 'pago').length;
+  const variacaoPercentual = presencasMesAnterior
+    ? Math.round(((presencas - presencasMesAnterior) / presencasMesAnterior) * 100)
+    : null;
 
   if (!ready) {
     return (
@@ -279,6 +294,34 @@ export default function MoradorHome() {
                 </CardContent>
               </Card>
             </div>
+          </div>
+
+          {/* Sua evolução */}
+          <div>
+            <h2 className="text-sm uppercase tracking-wider text-muted-foreground mb-3">
+              Sua evolução
+            </h2>
+            <Card className="bg-card/60 border-border/40">
+              <CardContent className="p-5 flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-3xl font-bold">{presencas}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {presencas === 1 ? 'treino' : 'treinos'} este mês
+                  </p>
+                </div>
+                {variacaoPercentual !== null && (
+                  <div className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold ${
+                    variacaoPercentual >= 0
+                      ? 'bg-emerald-500/15 text-emerald-400'
+                      : 'bg-amber-500/15 text-amber-400'
+                  }`}>
+                    {variacaoPercentual >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                    {variacaoPercentual >= 0 ? '+' : ''}{variacaoPercentual}%
+                    <span className="font-normal text-xs opacity-80">vs. mês anterior</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
           {/* Próximas atividades do condomínio */}
