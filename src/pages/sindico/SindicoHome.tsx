@@ -13,6 +13,8 @@ import { AlertCircle, Inbox, LifeBuoy, MessageSquarePlus, Megaphone, Eye, QrCode
 import { toast } from 'sonner';
 import { usePersonaDashboard, type SindicoDashboard } from '@/hooks/usePersonaDashboard';
 import { KpiCard, DashboardError } from '@/components/dashboard/DashboardKit';
+import { ProximoEventoCard, type EventoCondominio } from '@/components/ProximoEventoCard';
+import { CriarEventoDialog } from '@/components/CriarEventoDialog';
 
 
 const ACCENT = '#60A5FA';
@@ -32,6 +34,7 @@ export default function SindicoHome() {
   const [aulasSemana, setAulasSemana] = useState<Aula[]>([]);
   const [alunosLista, setAlunosLista] = useState<any[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [eventos, setEventos] = useState<EventoCondominio[]>([]);
   const [mensagem, setMensagem] = useState('');
   const [aviso, setAviso] = useState({ titulo: '', mensagem: '' });
   const [enviando, setEnviando] = useState(false);
@@ -77,6 +80,12 @@ export default function SindicoHome() {
     setAlunosLista(alunosOrg || []);
     const ativos = (alunosOrg || []).filter((a: any) => a.status === 'ativo').length;
     const unidades = Number((orgRow?.metadata as any)?.total_unidades || (orgRow?.metadata as any)?.unidades || Math.max(ativos, 100));
+
+    const { data: ev } = await supabase.from('eventos_condominio')
+      .select('id, nome, data_evento, horario_inicio, horario_fim, local')
+      .eq('organization_id', activeOrg.id).eq('ativo', true)
+      .gte('data_evento', hoje).order('data_evento').limit(5);
+    setEventos(ev || []);
 
     let receita = 0;
     let inadList: Inad[] = [];
@@ -300,6 +309,18 @@ export default function SindicoHome() {
         </TabsList>
 
         <TabsContent value="visao">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm uppercase tracking-wider text-muted-foreground">Eventos do condomínio</h2>
+            {canManageComunicados && (
+              <CriarEventoDialog organizationId={activeOrg.id} onCriado={carregar} accent={ACCENT} />
+            )}
+          </div>
+          {eventos.length > 0 && (
+            <div className="mb-4">
+              <ProximoEventoCard eventos={eventos} accent={ACCENT} />
+            </div>
+          )}
+
           <div className="grid sm:grid-cols-3 gap-3 mb-4">
             <Card className="bg-card/60 border-border/40">
               <CardContent className="p-4 flex gap-3">
