@@ -139,6 +139,15 @@ export function useFuncionarios() {
     );
   }, [funcionarios]);
 
+  // Inclui todos os profissionais habilitados a assinar uma avaliação física —
+  // não só professor/personal, mas também nutricionista e fisioterapeuta, que
+  // agora têm papel próprio (app_role) e policy de escrita em avaliacoes_fisicas.
+  const getAvaliadores = useCallback(() => {
+    return funcionarios.filter(f =>
+      f.ativo && ['professor', 'personal', 'nutricionista', 'fisioterapeuta'].includes(f.cargo)
+    );
+  }, [funcionarios]);
+
   useEffect(() => {
     fetchFuncionarios();
   }, [fetchFuncionarios]);
@@ -150,6 +159,7 @@ export function useFuncionarios() {
     updateFuncionario,
     deleteFuncionario,
     getProfessores,
+    getAvaliadores,
     refetch: fetchFuncionarios,
   };
 }
