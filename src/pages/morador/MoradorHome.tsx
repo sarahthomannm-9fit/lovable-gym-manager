@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Calendar, CreditCard, Activity, Bell, CheckCircle2,
   Dumbbell, Heart, Sparkles, MapPin, Clock, PlayCircle,
-  MessageCircle, QrCode,
+  MessageCircle, QrCode, Scale, Percent,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -46,6 +46,7 @@ export default function MoradorHome() {
   const [exerciciosHoje, setExerciciosHoje] = useState<any[]>([]);
   const [checkinFeito, setCheckinFeito] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  const [ultimaAvaliacao, setUltimaAvaliacao] = useState<any>(null);
 
   useEffect(() => {
     if (!user || vinculoLoading) return;
@@ -111,6 +112,12 @@ export default function MoradorHome() {
             .eq('dia_semana', diaSemana).order('ordem').limit(8);
           setExerciciosHoje(pes || []);
         }
+
+        // Última avaliação física (bioimpedância, IMC, etc — inclui as feitas no Health Day)
+        const { data: av } = await supabase.from('avaliacoes_fisicas')
+          .select('id, data_avaliacao, peso, altura, imc, percentual_gordura, massa_muscular, agua_corporal')
+          .eq('aluno_id', al.id).order('data_avaliacao', { ascending: false }).limit(1).maybeSingle();
+        if (mounted) setUltimaAvaliacao(av);
       }
 
       let nf: any[] | null = [];
@@ -460,6 +467,45 @@ export default function MoradorHome() {
             <Mini icon={CreditCard} label="Pagamentos" value={pgPendentes ? `${pgPendentes} pendente${pgPendentes>1?'s':''}` : 'Em dia'}
                   valueCls={pgPendentes ? 'text-amber-400' : 'text-emerald-400'} />
           </div>
+
+          {ultimaAvaliacao && (
+            <>
+              <h3 className="text-sm uppercase tracking-wider text-muted-foreground">Sua última avaliação física</h3>
+              <Card className="bg-card/60 border-border/40">
+                <CardContent className="p-5 space-y-3">
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(ultimaAvaliacao.data_avaliacao).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {ultimaAvaliacao.peso != null && (
+                      <div className="flex items-center gap-2">
+                        <Scale className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm">{ultimaAvaliacao.peso} kg</span>
+                      </div>
+                    )}
+                    {ultimaAvaliacao.imc != null && (
+                      <div className="flex items-center gap-2">
+                        <Activity className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm">IMC {Number(ultimaAvaliacao.imc).toFixed(1)}</span>
+                      </div>
+                    )}
+                    {ultimaAvaliacao.percentual_gordura != null && (
+                      <div className="flex items-center gap-2">
+                        <Percent className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm">{ultimaAvaliacao.percentual_gordura}% gordura</span>
+                      </div>
+                    )}
+                    {ultimaAvaliacao.massa_muscular != null && (
+                      <div className="flex items-center gap-2">
+                        <Dumbbell className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm">{ultimaAvaliacao.massa_muscular} kg músc.</span>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
 
           <h3 className="text-sm uppercase tracking-wider text-muted-foreground">Pagamentos</h3>
           <Card className="bg-card/60 border-border/40">
