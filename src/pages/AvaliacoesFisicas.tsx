@@ -30,7 +30,7 @@ import { ptBR } from 'date-fns/locale';
 export function AvaliacoesFisicas() {
   const { avaliacoes, loading, addAvaliacao, getAvaliacoesByAluno } = useAvaliacoesFisicas();
   const { students } = useSupabaseGymData();
-  const { getProfessores } = useFuncionarios();
+  const { getAvaliadores } = useFuncionarios();
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedAluno, setSelectedAluno] = useState<string>('');
@@ -53,7 +53,10 @@ export function AvaliacoesFisicas() {
     proxima_avaliacao: '',
   });
 
-  const professores = getProfessores();
+  // Inclui professor/personal/nutricionista/fisioterapeuta — qualquer profissional
+  // habilitado a assinar uma avaliação (relevante especialmente para o Health Day,
+  // onde nutricionista e fisioterapeuta também atendem e precisam constar como avaliador).
+  const avaliadores = getAvaliadores();
 
   const filteredAvaliacoes = avaliacoes.filter(a => {
     const aluno = students.find(s => s.id === a.aluno_id);
@@ -191,9 +194,9 @@ export function AvaliacoesFisicas() {
                       <SelectValue placeholder="Selecione o avaliador" />
                     </SelectTrigger>
                     <SelectContent>
-                      {professores.map(prof => (
+                      {avaliadores.map(prof => (
                         <SelectItem key={prof.id} value={prof.id}>
-                          {prof.nome}
+                          {prof.nome} {prof.cargo !== 'professor' && prof.cargo !== 'personal' ? `· ${prof.cargo}` : ''}
                         </SelectItem>
                       ))}
                     </SelectContent>
