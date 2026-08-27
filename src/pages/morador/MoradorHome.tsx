@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOperationalContext } from '@/hooks/useOperationalContext';
 import { useAlunoVinculo } from '@/hooks/useAlunoVinculo';
+import { ProximoEventoCard, type EventoCondominio } from '@/components/ProximoEventoCard';
 
 
 const ACCENT = '#F472B6';
@@ -39,6 +40,7 @@ export default function MoradorHome() {
   const [ready, setReady] = useState(false);
   const [aluno, setAluno] = useState<any>(null);
   const [proximas, setProximas] = useState<any[]>([]);
+  const [eventos, setEventos] = useState<EventoCondominio[]>([]);
   const [pagamentos, setPagamentos] = useState<any[]>([]);
   const [presencas, setPresencas] = useState(0);
   const [presencasMesAnterior, setPresencasMesAnterior] = useState<number | null>(null);
@@ -56,7 +58,7 @@ export default function MoradorHome() {
       let al: any = null;
       if (vinculo?.id) {
         const { data: a } = await supabase.from('alunos')
-          .select('id, nome, status, plano_id, valor_mensalidade, data_matricula')
+          .select('id, nome, status, plano_id, valor_mensalidade, data_matricula, organization_id')
           .eq('id', vinculo.id).maybeSingle();
         al = a;
       }
@@ -76,6 +78,14 @@ export default function MoradorHome() {
         .order('data_aula').order('horario_inicio').limit(10);
       if (!mounted) return;
       setProximas(aulas || []);
+
+      if (al?.organization_id) {
+        const { data: ev } = await supabase.from('eventos_condominio')
+          .select('id, nome, data_evento, horario_inicio, horario_fim, local')
+          .eq('organization_id', al.organization_id).eq('ativo', true)
+          .gte('data_evento', hoje).order('data_evento').limit(3);
+        if (mounted) setEventos(ev || []);
+      }
 
       if (al?.id) {
         const { data: pgs } = await supabase.from('pagamentos')
@@ -323,6 +333,16 @@ export default function MoradorHome() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Próximo evento do condomínio */}
+          {eventos.length > 0 && (
+            <div>
+              <h2 className="text-sm uppercase tracking-wider text-muted-foreground mb-3">
+                Próximo evento
+              </h2>
+              <ProximoEventoCard eventos={eventos} accent={ACCENT} />
+            </div>
+          )}
 
           {/* Próximas atividades do condomínio */}
           {proximas.length > 0 && (
