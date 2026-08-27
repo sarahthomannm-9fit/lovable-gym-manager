@@ -37,8 +37,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => apply(s));
-    supabase.auth.getSession().then(({ data: { session: s } }) => apply(s));
+    // IMPORTANT: only register the auth state listener. Do NOT also call
+    // supabase.auth.getSession() here — the two together can deadlock:
+    // getSession() acquires an internal lock, and if onAuthStateChange fires
+    // (e.g. SIGNED_IN right after a fresh login) while that lock is held,
+    // the callback can be left waiting indefinitely, leaving `loading` stuck
+    // at `true` forever (the screen never leaves "Carregando...", only a
+    // manual refresh recovers because it resets the SDK's internal state).
+    //
+    // onAuthStateChange already fires once synchronously on subscribe with
+    // the current session (event "INITIAL_SESSION"), so it alone is enough
+    // to both read the existing session and react to future changes.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+      apply(s);
+    });
 
     return () => subscription.unsubscribe();
   }, []);
