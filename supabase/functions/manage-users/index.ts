@@ -26,9 +26,17 @@ Deno.serve(async (req) => {
     );
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsErr } = await supabaseAuth.auth.getClaims(token);
-    if (claimsErr || !claimsData?.claims) return json({ error: 'Token inválido' }, 401);
-    const callerId = claimsData.claims.sub as string;
+    // NOTE: this SDK version (2.45.0, loaded from esm.sh) does not have
+    // auth.getClaims() — that method was added in a later release. Calling it
+    // threw "supabaseAuth.auth.getClaims is not a function" on every request,
+    // which made this entire function fail with 500 before it ever reached
+    // the "create user" logic. auth.getUser(token) is the stable, always
+    // -available equivalent (same one used by link-aluno-user and
+    // proposta-b2b-generate) — it validates the JWT against the Auth server
+    // and returns the real, verified user.
+    const { data: userData, error: userErr } = await supabaseAuth.auth.getUser(token);
+    if (userErr || !userData?.user) return json({ error: 'Token inválido' }, 401);
+    const callerId = userData.user.id;
 
     // Verify caller is admin
     const { data: isAdminData, error: isAdminErr } = await supabaseAuth.rpc('is_admin', { _user_id: callerId });
