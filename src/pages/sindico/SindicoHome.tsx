@@ -13,6 +13,7 @@ import { AlertCircle, Inbox, LifeBuoy, MessageSquarePlus, Megaphone, Eye, QrCode
 import { toast } from 'sonner';
 import { usePersonaDashboard, type SindicoDashboard } from '@/hooks/usePersonaDashboard';
 import { KpiCard, DashboardError } from '@/components/dashboard/DashboardKit';
+import { MonthlyBarChart } from '@/components/charts/MonthlyBarChart';
 
 
 const ACCENT = '#60A5FA';
@@ -20,6 +21,12 @@ const ACCENT = '#60A5FA';
 type Inad = { id: string; nome: string; valor: number; dias: number };
 type Aula = { id: string; nome: string; horario_inicio: string; capacidade: number; inscritos: number; professor: string; data: string };
 type Ticket = { id: string; message: string; status: string; created_at: string; agent_response: string | null };
+
+const mesLabel = (ym: string) => {
+  const [, mes] = ym.split('-');
+  const nomes = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+  return nomes[Number(mes) - 1] || ym;
+};
 
 export default function SindicoHome() {
   const { activeOrg, ensureOrgForPersona } = useOperationalContext();
@@ -36,6 +43,7 @@ export default function SindicoHome() {
   const [aviso, setAviso] = useState({ titulo: '', mensagem: '' });
   const [enviando, setEnviando] = useState(false);
   const [orgTemUnidadesEsperadas, setOrgTemUnidadesEsperadas] = useState(false);
+  const [engajamentoMensal, setEngajamentoMensal] = useState<{ mes: string; checkins: number }[]>([]);
 
   // Indicadores principais sempre pela RPC oficial
   const { data: dash, loading: dashLoading, error: dashError, refresh: refreshDash } =
@@ -105,8 +113,24 @@ export default function SindicoHome() {
         treinosAtivos: treinosAtivos || 0,
         plantao: (orgRow?.metadata as any)?.plantao_periodicidade || 'Mensal',
       });
+
+      // Engajamento mensal (check-ins) dos últimos 6 meses — mesmo padrão de
+      // agregação usado em CorpHome.faturamento, aqui aplicado a check-ins em vez
+      // de pagamentos, já que "engajamento" no Brandbook não é uma métrica financeira.
+      const seisMeses = new Date();
+      seisMeses.setMonth(seisMeses.getMonth() - 5);
+      const inicioJanela = new Date(seisMeses.getFullYear(), seisMeses.getMonth(), 1).toISOString().slice(0, 10);
+      const { data: ckHist } = await supabase.from('checkins')
+        .select('data_checkin').in('aluno_id', alunoIds).gte('data_checkin', inicioJanela);
+      const buckets: Record<string, number> = {};
+      (ckHist || []).forEach((c: any) => {
+        const k = (c.data_checkin || '').slice(0, 7);
+        buckets[k] = (buckets[k] || 0) + 1;
+      });
+      setEngajamentoMensal(Object.entries(buckets).sort().map(([mes, checkins]) => ({ mes, checkins })));
     } else {
       setOperacao({ unidades, adesao: 0, checkinsMes: 0, treinosAtivos: 0, plantao: (orgRow?.metadata as any)?.plantao_periodicidade || 'Mensal' });
+      setEngajamentoMensal([]);
     }
 
     const { data: aulasFut } = await supabase.from('aulas')
@@ -300,6 +324,17 @@ export default function SindicoHome() {
         </TabsList>
 
         <TabsContent value="visao">
+          <Card className="bg-card/60 border-border/40 mb-4">
+            <CardContent className="p-5">
+              <h2 className="font-semibold text-sm uppercase tracking-wide mb-4">Engajamento mensal — últimos 6 meses</h2>
+              <MonthlyBarChart
+                data={engajamentoMensal.map(e => ({ mes: mesLabel(e.mes), valor: e.checkins }))}
+                accent={ACCENT}
+                valueLabel="Check-ins"
+              />
+            </CardContent>
+          </Card>
+
           <div className="grid sm:grid-cols-3 gap-3 mb-4">
             <Card className="bg-card/60 border-border/40">
               <CardContent className="p-4 flex gap-3">
