@@ -6,8 +6,12 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+} from '@/components/ui/dialog';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
-import { UserPlus, Shield, ShieldCheck, ShieldAlert, Trash2, KeyRound } from 'lucide-react';
+import { UserPlus, Shield, ShieldCheck, ShieldAlert, Trash2, KeyRound, Link2, Copy, UserX } from 'lucide-react';
 import { useCurrentUserRole } from '@/hooks/useCurrentUserRole';
 import { Navigate } from 'react-router-dom';
 
@@ -19,16 +23,34 @@ interface UserRow {
   role: AppRole;
 }
 
+interface AlunoSemAcesso {
+  id: string;
+  nome: string;
+  email: string | null;
+}
+
 export function UsersAdmin() {
   const { isAdmin, loading: roleLoading } = useCurrentUserRole();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // form
+  // form criação de usuário "solto" (sem vínculo com aluno)
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<AppRole>('user');
   const [submitting, setSubmitting] = useState(false);
+
+  // alunos sem acesso vinculado
+  const [alunosSemAcesso, setAlunosSemAcesso] = useState<AlunoSemAcesso[]>([]);
+  const [loadingAlunos, setLoadingAlunos] = useState(false);
+
+  // modal "criar acesso" para um aluno
+  const [linkDialogAluno, setLinkDialogAluno] = useState<AlunoSemAcesso | null>(null);
+  const [linkEmail, setLinkEmail] = useState('');
+  const [linkMode, setLinkMode] = useState<'password' | 'magiclink'>('password');
+  const [linkPassword, setLinkPassword] = useState('');
+  const [linkSubmitting, setLinkSubmitting] = useState(false);
+  const [generatedMagicLink, setGeneratedMagicLink] = useState<string | null>(null);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -43,8 +65,26 @@ export function UsersAdmin() {
     setLoading(false);
   };
 
+  const fetchAlunosSemAcesso = async () => {
+    setLoadingAlunos(true);
+    const { data, error } = await supabase
+      .from('alunos')
+      .select('id, nome, email')
+      .is('user_id', null)
+      .order('nome');
+    if (error) {
+      toast.error('Erro ao carregar alunos sem acesso');
+    } else {
+      setAlunosSemAcesso(data || []);
+    }
+    setLoadingAlunos(false);
+  };
+
   useEffect(() => {
-    if (isAdmin) fetchUsers();
+    if (isAdmin) {
+      fetchUsers();
+      fetchAlunosSemAcesso();
+    }
   }, [isAdmin]);
 
   if (roleLoading) return <div className="p-8 text-muted-foreground">Carregando...</div>;
@@ -97,6 +137,61 @@ export function UsersAdmin() {
     else { toast.success('Permissão atualizada'); fetchUsers(); }
   };
 
+  const openLinkDialog = (aluno: AlunoSemAcesso) => {
+    setLinkDialogAluno(aluno);
+    setLinkEmail(aluno.email || '');
+    setLinkMode('password');
+    setLinkPassword('');
+    setGeneratedMagicLink(null);
+  };
+
+  const closeLinkDialog = () => {
+    setLinkDialogAluno(null);
+    setLinkEmail('');
+    setLinkPassword('');
+    setGeneratedMagicLink(null);
+  };
+
+  const handleCreateAndLink = async () => {
+    if (!linkDialogAluno) return;
+    if (!linkEmail.trim()) {
+      toast.error('Informe um e-mail.');
+      return;
+    }
+    if (linkMode === 'password' && linkPassword.length < 6) {
+      toast.error('Senha precisa ter ao menos 6 caracteres.');
+      return;
+    }
+    setLinkSubmitting(true);
+    const { data, error } = await supabase.functions.invoke('manage-users', {
+      body: {
+        action: 'create_and_link_aluno',
+        alunoId: linkDialogAluno.id,
+        email: linkEmail.trim(),
+        password: linkMode === 'password' ? linkPassword : undefined,
+      },
+    });
+    if (error || data?.error) {
+      toast.error(data?.error || 'Erro ao criar acesso');
+    } else {
+      toast.success(`Acesso criado para ${linkDialogAluno.nome}!`);
+      if (data?.magic_link) {
+        setGeneratedMagicLink(data.magic_link);
+      } else {
+        closeLinkDialog();
+      }
+      fetchAlunosSemAcesso();
+      fetchUsers();
+    }
+    setLinkSubmitting(false);
+  };
+
+  const copyMagicLink = () => {
+    if (!generatedMagicLink) return;
+    navigator.clipboard.writeText(generatedMagicLink);
+    toast.success('Link copiado!');
+  };
+
   const roleIcon = (r: AppRole) =>
     r === 'admin' ? <ShieldAlert className="w-3 h-3" /> :
     r === 'manager' ? <ShieldCheck className="w-3 h-3" /> :
@@ -115,6 +210,40 @@ export function UsersAdmin() {
           Crie, remova e gerencie permissões dos usuários do FitManager.
         </p>
       </div>
+
+      <Card className="border-amber-500/30">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <UserX className="w-4 h-4 text-amber-500" /> Alunos sem acesso ({alunosSemAcesso.length})
+          </CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            Alunos cadastrados que ainda não têm login para acessar o app. Crie o acesso abaixo.
+          </p>
+        </CardHeader>
+        <CardContent>
+          {loadingAlunos ? (
+            <div className="text-sm text-muted-foreground">Carregando...</div>
+          ) : alunosSemAcesso.length === 0 ? (
+            <div className="text-sm text-muted-foreground text-center py-6">
+              Todos os alunos já têm acesso vinculado. 🎉
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {alunosSemAcesso.map((a) => (
+                <div key={a.id} className="flex items-center justify-between p-3 rounded-md border border-amber-500/20 bg-amber-500/5">
+                  <div>
+                    <div className="text-sm font-medium text-foreground">{a.nome}</div>
+                    <div className="text-xs text-muted-foreground">{a.email || 'sem e-mail cadastrado'}</div>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => openLinkDialog(a)} className="gap-1.5">
+                    <Link2 className="w-3.5 h-3.5" /> Criar acesso
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -197,6 +326,65 @@ export function UsersAdmin() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={!!linkDialogAluno} onOpenChange={(open) => !open && closeLinkDialog()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Criar acesso para {linkDialogAluno?.nome}</DialogTitle>
+            <DialogDescription>
+              Escolha como o aluno vai receber o acesso ao app.
+            </DialogDescription>
+          </DialogHeader>
+
+          {generatedMagicLink ? (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Acesso criado! Envie este link para o aluno entrar sem senha:
+              </p>
+              <div className="flex items-center gap-2">
+                <Input readOnly value={generatedMagicLink} className="text-xs" />
+                <Button size="icon" variant="outline" onClick={copyMagicLink}><Copy className="w-4 h-4" /></Button>
+              </div>
+              <p className="text-xs text-muted-foreground">O link expira após o primeiro uso ou em um curto período — envie o quanto antes.</p>
+              <DialogFooter>
+                <Button onClick={closeLinkDialog}>Concluir</Button>
+              </DialogFooter>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs">E-mail do aluno</Label>
+                <Input type="email" value={linkEmail} onChange={(e) => setLinkEmail(e.target.value)} />
+              </div>
+
+              <RadioGroup value={linkMode} onValueChange={(v) => setLinkMode(v as 'password' | 'magiclink')}>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="password" id="mode-password" />
+                  <Label htmlFor="mode-password" className="text-sm font-normal">Definir senha manualmente</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="magiclink" id="mode-magiclink" />
+                  <Label htmlFor="mode-magiclink" className="text-sm font-normal">Gerar link mágico (sem senha)</Label>
+                </div>
+              </RadioGroup>
+
+              {linkMode === 'password' && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Senha (mín 6 caracteres)</Label>
+                  <Input type="text" value={linkPassword} onChange={(e) => setLinkPassword(e.target.value)} />
+                </div>
+              )}
+
+              <DialogFooter>
+                <Button variant="ghost" onClick={closeLinkDialog}>Cancelar</Button>
+                <Button onClick={handleCreateAndLink} disabled={linkSubmitting}>
+                  {linkSubmitting ? 'Criando...' : 'Criar acesso'}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
