@@ -10,7 +10,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { OperationalContextProvider } from "@/hooks/useOperationalContext";
+import { OperationalContextProvider, routeForRole, useOperationalContext } from "@/hooks/useOperationalContext";
 import { RoleRoute } from "@/components/RoleRoute";
 import SelectContext from "./pages/SelectContext";
 import SindicoHome from "./pages/sindico/SindicoHome";
@@ -133,6 +133,19 @@ const StaffOnly = ({ children }: { children: React.ReactNode }) => (
   </ProtectedRoute>
 );
 
+/**
+ * Landing pós-login. Redireciona por papel em vez de mandar todo mundo para
+ * /home (dashboard operacional de staff). Moradores, síndicos, coaches e
+ * corporativos vão direto para sua persona; admin/manager seguem para /home.
+ */
+const RoleLanding = () => {
+  const { loading, primaryRole, isAdmin } = useOperationalContext();
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center bg-[#07070A] text-muted-foreground">Carregando…</div>;
+  }
+  if (isAdmin) return <Navigate to="/home" replace />;
+  return <Navigate to={routeForRole(primaryRole)} replace />;
+};
 
 const AuthenticatedDataProviders = ({ children }: { children: React.ReactNode }) => {
   const { session } = useAuth();
@@ -180,25 +193,25 @@ const App = () => (
                     <Route path="/studio" element={<ProtectedRoute><RoleRoute allow={['admin','manager','professor']}><MainLayout><StudioHome /></MainLayout></RoleRoute></ProtectedRoute>} />
                     <Route path="/insights" element={<Protected><InsightsMercado /></Protected>} />
                     <Route path="/coaches" element={<Protected><Funcionarios /></Protected>} />
-                   <Route path="/" element={<Navigate to="/home" replace />} />
-                   <Route path="/home" element={<Protected><Home /></Protected>} />
+                   <Route path="/" element={<ProtectedRoute><RoleLanding /></ProtectedRoute>} />
+                   <Route path="/home" element={<StaffOnly><Home /></StaffOnly>} />
                    <Route path="/mercados/:tipo" element={<Protected><MercadoLista /></Protected>} />
                    <Route path="/relatorios/automaticos" element={<StaffOnly><RelatoriosAutomaticos /></StaffOnly>} />
 
                     <Route path="/agents" element={<StaffOnly><AgentsHub /></StaffOnly>} />
                     <Route path="/admin/usuarios" element={<AdminOnly><UsersAdmin /></AdminOnly>} />
                     <Route path="/admin/reset-demo" element={<AdminOnly><ResetDemoData /></AdminOnly>} />
-                    <Route path="/painel" element={<Protected><Painel /></Protected>} />
-                    <Route path="/painel/inadimplencia" element={<Protected><Inadimplencia /></Protected>} />
-                    <Route path="/painel/retencao" element={<Protected><Retencao /></Protected>} />
+                    <Route path="/painel" element={<StaffOnly><Painel /></StaffOnly>} />
+                    <Route path="/painel/inadimplencia" element={<StaffOnly><Inadimplencia /></StaffOnly>} />
+                    <Route path="/painel/retencao" element={<StaffOnly><Retencao /></StaffOnly>} />
                     <Route path="/painel/agenda" element={<Protected><AgendaSemanal /></Protected>} />
-                    <Route path="/painel/pipeline" element={<Protected><Pipeline /></Protected>} />
-                    <Route path="/alunos" element={<Protected><SupabaseStudents /></Protected>} />
-                    <Route path="/planos" element={<Protected><SupabasePlans /></Protected>} />
+                    <Route path="/painel/pipeline" element={<StaffOnly><Pipeline /></StaffOnly>} />
+                    <Route path="/alunos" element={<StaffOnly><SupabaseStudents /></StaffOnly>} />
+                    <Route path="/planos" element={<StaffOnly><SupabasePlans /></StaffOnly>} />
                     <Route path="/aulas" element={<Protected><SupabaseClasses /></Protected>} />
-                    <Route path="/pagamentos" element={<Protected><SupabasePayments /></Protected>} />
-                    <Route path="/checkin" element={<Protected><SupabaseCheckIn /></Protected>} />
-                    <Route path="/equipamentos" element={<Protected><Equipment /></Protected>} />
+                    <Route path="/pagamentos" element={<StaffOnly><SupabasePayments /></StaffOnly>} />
+                    <Route path="/checkin" element={<StaffOnly><SupabaseCheckIn /></StaffOnly>} />
+                    <Route path="/equipamentos" element={<StaffOnly><Equipment /></StaffOnly>} />
                     <Route path="/treinos" element={<Protected><Treinos /></Protected>} />
                     <Route path="/relatorios" element={<StaffOnly><Relatorios /></StaffOnly>} />
                     <Route path="/relatorios/pagamentos" element={<StaffOnly><FluxoPagamentos /></StaffOnly>} />
@@ -206,29 +219,29 @@ const App = () => (
                     <Route path="/relatorios/cobrancas" element={<StaffOnly><Cobrancas /></StaffOnly>} />
                     <Route path="/relatorios/estrategias" element={<StaffOnly><EstrategiasIA /></StaffOnly>} />
                     <Route path="/relatorios/promocoes-cupons" element={<StaffOnly><PromocoesCupons /></StaffOnly>} />
-                    <Route path="/marketing/campanhas" element={<Protected><Campanhas /></Protected>} />
-                    <Route path="/marketing/captacao" element={<Protected><Captacao /></Protected>} />
-                    <Route path="/marketing/comunicacao" element={<Protected><Comunicacao /></Protected>} />
-                    <Route path="/marketing/conversao" element={<Protected><Conversao /></Protected>} />
-                    <Route path="/marketing/funis" element={<Protected><Funis /></Protected>} />
-                    <Route path="/marketing/email" element={<Protected><EmailMarketing /></Protected>} />
-                    <Route path="/marketing/promocoes" element={<Protected><Promocoes /></Protected>} />
-                    <Route path="/marketing/insights-ia" element={<Protected><InsightsIA /></Protected>} />
-                    <Route path="/marketing/automacao" element={<Protected><Automacao /></Protected>} />
+                    <Route path="/marketing/campanhas" element={<StaffOnly><Campanhas /></StaffOnly>} />
+                    <Route path="/marketing/captacao" element={<StaffOnly><Captacao /></StaffOnly>} />
+                    <Route path="/marketing/comunicacao" element={<StaffOnly><Comunicacao /></StaffOnly>} />
+                    <Route path="/marketing/conversao" element={<StaffOnly><Conversao /></StaffOnly>} />
+                    <Route path="/marketing/funis" element={<StaffOnly><Funis /></StaffOnly>} />
+                    <Route path="/marketing/email" element={<StaffOnly><EmailMarketing /></StaffOnly>} />
+                    <Route path="/marketing/promocoes" element={<StaffOnly><Promocoes /></StaffOnly>} />
+                    <Route path="/marketing/insights-ia" element={<StaffOnly><InsightsIA /></StaffOnly>} />
+                    <Route path="/marketing/automacao" element={<StaffOnly><Automacao /></StaffOnly>} />
                     <Route path="/agente-ia" element={<Protected><AgenteIA /></Protected>} />
-                    <Route path="/catalogo" element={<Protected><Catalogo /></Protected>} />
-                    <Route path="/produtos" element={<Protected><Produtos /></Protected>} />
-                    <Route path="/9fit" element={<Protected><Dashboard9FIT /></Protected>} />
+                    <Route path="/catalogo" element={<StaffOnly><Catalogo /></StaffOnly>} />
+                    <Route path="/produtos" element={<StaffOnly><Produtos /></StaffOnly>} />
+                    <Route path="/9fit" element={<StaffOnly><Dashboard9FIT /></StaffOnly>} />
                     <Route path="/9fit/ceo" element={<AdminOnly><CEODashboard /></AdminOnly>} />
-                    <Route path="/9fit/consultoria" element={<Protected><ConsultoriaDashboard /></Protected>} />
-                    <Route path="/9fit/concierge" element={<Protected><ConciergeDashboard /></Protected>} />
-                    <Route path="/9fit/trust" element={<Protected><TrustDashboard /></Protected>} />
-                    <Route path="/9fit/network" element={<Protected><NetworkDashboard /></Protected>} />
-                    <Route path="/9fit/automation" element={<Protected><AutomationDashboard /></Protected>} />
-                    <Route path="/9fit/store" element={<Protected><StoreDashboard /></Protected>} />
-                    <Route path="/funcionarios" element={<Protected><Funcionarios /></Protected>} />
+                    <Route path="/9fit/consultoria" element={<StaffOnly><ConsultoriaDashboard /></StaffOnly>} />
+                    <Route path="/9fit/concierge" element={<StaffOnly><ConciergeDashboard /></StaffOnly>} />
+                    <Route path="/9fit/trust" element={<StaffOnly><TrustDashboard /></StaffOnly>} />
+                    <Route path="/9fit/network" element={<StaffOnly><NetworkDashboard /></StaffOnly>} />
+                    <Route path="/9fit/automation" element={<StaffOnly><AutomationDashboard /></StaffOnly>} />
+                    <Route path="/9fit/store" element={<StaffOnly><StoreDashboard /></StaffOnly>} />
+                    <Route path="/funcionarios" element={<StaffOnly><Funcionarios /></StaffOnly>} />
                     <Route path="/avaliacoes" element={<Protected><AvaliacoesFisicas /></Protected>} />
-                    <Route path="/experimentais" element={<Protected><AulasExperimentais /></Protected>} />
+                    <Route path="/experimentais" element={<StaffOnly><AulasExperimentais /></StaffOnly>} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </BrowserRouter>
