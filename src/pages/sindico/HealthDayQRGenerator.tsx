@@ -5,8 +5,9 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { useOperationalContext } from '@/hooks/useOperationalContext';
+import { useOrgRole } from '@/hooks/useOrgRole';
 import { toast } from 'sonner';
-import { QrCode, Printer, Plus, Users, CalendarClock } from 'lucide-react';
+import { QrCode, Printer, Plus, Users, CalendarClock, Eye } from 'lucide-react';
 
 const ACCENT = '#60A5FA';
 
@@ -23,9 +24,14 @@ type EventoHealthDay = {
  * Gerador de QR do Health Day — aba do painel do Síndico.
  * Cria/lista eventos do tipo Health Day e exibe o QR para impressão ou tela na recepção.
  * QR aponta para /morador/health-day/:eventoId/confirmar
+ *
+ * Criação/edição é restrita a síndico (não-comitê), espelhando a policy RLS
+ * `eventos_write_staff` (admin | manager | sindico) já existente em eventos_condominio.
+ * Comitê enxerga a lista/QR em modo leitura, igual ao padrão do restante do painel.
  */
 export default function HealthDayQRGenerator() {
   const { activeOrg } = useOperationalContext();
+  const { canManageComunicados: podeGerenciar, isComite, loading: orgRoleLoading } = useOrgRole();
   const [eventos, setEventos] = useState<EventoHealthDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [criando, setCriando] = useState(false);
@@ -66,6 +72,7 @@ export default function HealthDayQRGenerator() {
   useEffect(() => { carregar(); }, [activeOrg]);
 
   const criarEvento = async () => {
+    if (!podeGerenciar) return toast.error('Apenas o síndico pode criar eventos');
     if (!activeOrg) return toast.error('Selecione um condomínio');
     if (!novo.data_evento) return toast.error('Escolha a data do Health Day');
     setCriando(true);
@@ -113,42 +120,51 @@ export default function HealthDayQRGenerator() {
     win.print();
   };
 
-  if (loading) {
+  if (loading || orgRoleLoading) {
     return <div className="text-sm text-muted-foreground p-6">Carregando…</div>;
   }
 
   return (
     <div className="space-y-6">
-      <Card className="bg-card/60 border-border/40">
-        <CardContent className="p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Plus className="w-4 h-4" style={{ color: ACCENT }} />
-            <h2 className="font-semibold">Criar novo Health Day</h2>
-          </div>
-          <div className="grid sm:grid-cols-3 gap-3 mb-3">
-            <Input
-              value={novo.nome}
-              onChange={e => setNovo({ ...novo, nome: e.target.value })}
-              placeholder="Nome do evento"
-            />
-            <Input
-              type="date"
-              value={novo.data_evento}
-              onChange={e => setNovo({ ...novo, data_evento: e.target.value })}
-            />
-            <Input
-              type="number"
-              min={1}
-              value={novo.vagas_totais}
-              onChange={e => setNovo({ ...novo, vagas_totais: e.target.value })}
-              placeholder="Vagas totais"
-            />
-          </div>
-          <Button onClick={criarEvento} disabled={criando} className="bg-[#60A5FA] text-black hover:bg-[#60A5FA]/90">
-            {criando ? 'Criando…' : 'Criar Health Day'}
-          </Button>
-        </CardContent>
-      </Card>
+      {podeGerenciar ? (
+        <Card className="bg-card/60 border-border/40">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Plus className="w-4 h-4" style={{ color: ACCENT }} />
+              <h2 className="font-semibold">Criar novo Health Day</h2>
+            </div>
+            <div className="grid sm:grid-cols-3 gap-3 mb-3">
+              <Input
+                value={novo.nome}
+                onChange={e => setNovo({ ...novo, nome: e.target.value })}
+                placeholder="Nome do evento"
+              />
+              <Input
+                type="date"
+                value={novo.data_evento}
+                onChange={e => setNovo({ ...novo, data_evento: e.target.value })}
+              />
+              <Input
+                type="number"
+                min={1}
+                value={novo.vagas_totais}
+                onChange={e => setNovo({ ...novo, vagas_totais: e.target.value })}
+                placeholder="Vagas totais"
+              />
+            </div>
+            <Button onClick={criarEvento} disabled={criando} className="bg-[#60A5FA] text-black hover:bg-[#60A5FA]/90">
+              {criando ? 'Criando…' : 'Criar Health Day'}
+            </Button>
+          </CardContent>
+        </Card>
+      ) : isComite ? (
+        <Card className="bg-card/60 border-border/40">
+          <CardContent className="p-4 flex items-center gap-2 text-xs text-muted-foreground">
+            <Eye className="w-3.5 h-3.5" />
+            Modo Comitê: visão consultiva. Peça ao síndico para criar ou editar eventos Health Day.
+          </CardContent>
+        </Card>
+      ) : null}
 
       {eventos.length === 0 ? (
         <Card className="bg-card/60 border-border/40">
