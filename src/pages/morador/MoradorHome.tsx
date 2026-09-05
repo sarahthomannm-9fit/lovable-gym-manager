@@ -8,12 +8,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Calendar, CreditCard, Activity, Bell, CheckCircle2,
   Dumbbell, Heart, Sparkles, MapPin, Clock, PlayCircle,
-  MessageCircle, QrCode, Scale, Percent,
+  MessageCircle, QrCode, Scale, Percent, HeartPulse,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOperationalContext } from '@/hooks/useOperationalContext';
 import { useAlunoVinculo } from '@/hooks/useAlunoVinculo';
+import { useNavigate } from 'react-router-dom';
 
 
 const ACCENT = '#F472B6';
@@ -35,6 +36,7 @@ export default function MoradorHome() {
   const { user } = useAuth();
   const { isAdmin } = useOperationalContext();
   const { aluno: vinculo, loading: vinculoLoading } = useAlunoVinculo();
+  const navigate = useNavigate();
 
   const [ready, setReady] = useState(false);
   const [aluno, setAluno] = useState<any>(null);
@@ -47,6 +49,8 @@ export default function MoradorHome() {
   const [checkinFeito, setCheckinFeito] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [ultimaAvaliacao, setUltimaAvaliacao] = useState<any>(null);
+  const [healthDay, setHealthDay] = useState<any>(null);
+  const [healthDayInscrito, setHealthDayInscrito] = useState(false);
 
   useEffect(() => {
     if (!user || vinculoLoading) return;
@@ -56,7 +60,7 @@ export default function MoradorHome() {
       let al: any = null;
       if (vinculo?.id) {
         const { data: a } = await supabase.from('alunos')
-          .select('id, nome, status, plano_id, valor_mensalidade, data_matricula')
+          .select('id, nome, status, plano_id, valor_mensalidade, data_matricula, organization_id')
           .eq('id', vinculo.id).maybeSingle();
         al = a;
       }
@@ -76,6 +80,27 @@ export default function MoradorHome() {
         .order('data_aula').order('horario_inicio').limit(10);
       if (!mounted) return;
       setProximas(aulas || []);
+
+      // Próximo Health Day ativo do condomínio do aluno
+      if (al?.organization_id) {
+        const { data: hd } = await supabase.from('eventos_condominio')
+          .select('id, nome, data_evento, vagas_totais')
+          .eq('organization_id', al.organization_id)
+          .eq('ativo', true)
+          .ilike('nome', '%health day%')
+          .gte('data_evento', hoje)
+          .order('data_evento', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        if (mounted && hd) {
+          setHealthDay(hd);
+          if (al?.id) {
+            const { data: insc } = await supabase.from('health_day_inscricoes')
+              .select('id, status').eq('evento_id', hd.id).eq('aluno_id', al.id).maybeSingle();
+            if (mounted) setHealthDayInscrito(!!insc && insc.status === 'confirmado');
+          }
+        }
+      }
 
       if (al?.id) {
         const { data: pgs } = await supabase.from('pagamentos')
@@ -259,6 +284,30 @@ export default function MoradorHome() {
                             className="shrink-0 text-base h-12">
                       Participar
                     </Button>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Health Day — próximo evento ativo do condomínio */}
+              {healthDay && (
+                <Card className={healthDayInscrito ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-gradient-to-br from-pink-500/10 to-transparent border-pink-500/30'}>
+                  <CardContent className="p-5 flex items-center gap-4">
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${healthDayInscrito ? 'bg-emerald-500/20' : 'bg-pink-500/15'}`}>
+                      <HeartPulse className={`w-7 h-7 ${healthDayInscrito ? 'text-emerald-400' : 'text-pink-400'}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-lg font-semibold truncate">{healthDay.nome}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {healthDayInscrito ? 'Presença confirmada ✓ · ' : ''}
+                        {new Date(healthDay.data_evento).toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })}
+                      </p>
+                    </div>
+                    {!healthDayInscrito && (
+                      <Button size="lg" onClick={() => navigate(`/morador/health-day/${healthDay.id}/confirmar`)}
+                              className="shrink-0 text-base h-12 bg-pink-500 hover:bg-pink-600 text-white">
+                        Confirmar presença
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               )}
