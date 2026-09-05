@@ -18,6 +18,7 @@ import CoachHome from "./pages/coach/CoachHome";
 import CorpHome from "./pages/corp/CorpHome";
 import OrganizationsAdmin from "./pages/admin/OrganizationsAdmin";
 import MoradorHome from "./pages/morador/MoradorHome";
+import HealthDayCheckin from "./pages/morador/HealthDayCheckin";
 import FitProIntegration from "./pages/admin/FitProIntegration";
 import Operacao9FIT from "./pages/admin/Operacao9FIT";
 import LeadsExtractionPlan from "./pages/cfo/LeadsExtractionPlan";
@@ -167,6 +168,7 @@ const App = () => (
                     <Route path="/coach" element={<ProtectedRoute><RoleRoute allow={['professor','admin']}><CoachHome /></RoleRoute></ProtectedRoute>} />
                     <Route path="/corp" element={<ProtectedRoute><RoleRoute allow={['corporate','admin']}><CorpHome /></RoleRoute></ProtectedRoute>} />
                     <Route path="/morador" element={<ProtectedRoute><RoleRoute allow={['user','sindico','corporate','professor','admin','manager']}><MoradorHome /></RoleRoute></ProtectedRoute>} />
+                    <Route path="/morador/health-day/:eventoId/confirmar" element={<ProtectedRoute><RoleRoute allow={['user','sindico','corporate','professor','admin','manager']}><HealthDayCheckin /></RoleRoute></ProtectedRoute>} />
                     <Route path="/admin/organizacoes" element={<AdminOnly><OrganizationsAdmin /></AdminOnly>} />
                     <Route path="/admin/fitpro" element={<AdminOnly><FitProIntegration /></AdminOnly>} />
                     <Route path="/operacao-9fit" element={<StaffOnly><Operacao9FIT /></StaffOnly>} />
