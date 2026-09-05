@@ -9,10 +9,11 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AlertCircle, Inbox, LifeBuoy, MessageSquarePlus, Megaphone, Eye, QrCode, Dumbbell, ClipboardCheck, ShieldAlert } from 'lucide-react';
+import { AlertCircle, Inbox, LifeBuoy, MessageSquarePlus, Megaphone, Eye, QrCode, Dumbbell, ClipboardCheck, ShieldAlert, HeartPulse } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePersonaDashboard, type SindicoDashboard } from '@/hooks/usePersonaDashboard';
 import { KpiCard, DashboardError } from '@/components/dashboard/DashboardKit';
+import HealthDayQRGenerator from './HealthDayQRGenerator';
 
 
 const ACCENT = '#60A5FA';
@@ -295,6 +296,7 @@ export default function SindicoHome() {
           <TabsTrigger value="visao">Visão geral</TabsTrigger>
           <TabsTrigger value="alunos">Alunos</TabsTrigger>
           <TabsTrigger value="aulas">Aulas</TabsTrigger>
+          <TabsTrigger value="healthday">Health Day</TabsTrigger>
           <TabsTrigger value="comunicados">Comunicados</TabsTrigger>
           {canSeeFinancials && <TabsTrigger value="9fit">Falar com 9FIT</TabsTrigger>}
         </TabsList>
@@ -483,6 +485,14 @@ export default function SindicoHome() {
               </Table>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="healthday">
+          <div className="flex items-center gap-2 mb-4">
+            <HeartPulse className="w-4 h-4" style={{ color: ACCENT }} />
+            <h2 className="font-semibold">Health Day</h2>
+          </div>
+          <HealthDayQRGenerator />
         </TabsContent>
 
         <TabsContent value="comunicados">
