@@ -55,14 +55,14 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#07070A] px-4">
-      <Card className="w-full max-w-md border-border/30 bg-card/80 backdrop-blur">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <Card className="w-full max-w-md rounded-sm border-border/60 bg-card shadow-elegant">
         <CardHeader className="text-center space-y-2">
-          <div className="mx-auto w-12 h-12 rounded-lg bg-[#C8FF00]/10 flex items-center justify-center mb-2">
-            <Lock className="w-6 h-6 text-[#C8FF00]" />
+          <div className="mx-auto w-12 h-12 rounded-sm bg-primary/10 flex items-center justify-center mb-2">
+            <Lock className="w-6 h-6 text-primary" />
           </div>
-          <CardTitle className="text-2xl font-bold text-foreground">FitManager</CardTitle>
-          <p className="text-sm text-muted-foreground">Acesse o painel de gestão</p>
+          <CardTitle className="text-2xl font-bold text-foreground">NINE LIVING</CardTitle>
+          <p className="text-sm text-muted-foreground">Saúde que conecta · Acesse seu espaço</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
@@ -98,7 +98,7 @@ export function Login() {
             </div>
             <Button
               type="submit"
-              className="w-full bg-[#C8FF00] text-black hover:bg-[#C8FF00]/90 font-semibold"
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
               disabled={loading}
             >
               {loading ? 'Entrando...' : 'Entrar'}
