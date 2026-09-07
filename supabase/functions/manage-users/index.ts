@@ -5,7 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-type AppRole = 'admin' | 'manager' | 'user';
+type AppRole = 'admin' | 'manager' | 'user' | 'sindico' | 'professor' | 'corporate';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -66,10 +66,24 @@ Deno.serve(async (req) => {
         });
         if (createErr) throw createErr;
         const userId = created.user!.id;
-        const r: AppRole = (['admin', 'manager', 'user'].includes(role) ? role : 'user') as AppRole;
+        const r: AppRole = (['admin', 'manager', 'user', 'sindico', 'professor', 'corporate'].includes(role) ? role : 'user') as AppRole;
         await admin.from('user_roles').delete().eq('user_id', userId);
         const { error: roleErr } = await admin.from('user_roles').insert({ user_id: userId, role: r });
         if (roleErr) throw roleErr;
+        return json({ success: true, user_id: userId });
+      }
+
+      case 'create_for_organization': {
+        const { email, password, role, organizationId, papel } = body as { email: string; password: string; role: AppRole; organizationId: string; papel: string };
+        if (!email || !password || !organizationId) return json({ error: 'email, password e organizationId obrigatórios' }, 400);
+        const { data: created, error: createErr } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
+        if (createErr) throw createErr;
+        const userId = created.user!.id;
+        const r: AppRole = (['admin', 'manager', 'user', 'sindico', 'professor', 'corporate'].includes(role) ? role : 'user') as AppRole;
+        const { error: roleErr } = await admin.from('user_roles').insert({ user_id: userId, role: r });
+        if (roleErr) throw roleErr;
+        const { error: memberErr } = await admin.from('organization_members').insert({ organization_id: organizationId, user_id: userId, papel: papel || r });
+        if (memberErr) throw memberErr;
         return json({ success: true, user_id: userId });
       }
 
@@ -97,7 +111,7 @@ Deno.serve(async (req) => {
       case 'set_role': {
         const { userId, role } = body as { userId: string; role: AppRole };
         if (!userId || !role) return json({ error: 'userId e role obrigatórios' }, 400);
-        if (!['admin', 'manager', 'user'].includes(role)) return json({ error: 'role inválido' }, 400);
+        if (!['admin', 'manager', 'user', 'sindico', 'professor', 'corporate'].includes(role)) return json({ error: 'role inválido' }, 400);
         await admin.from('user_roles').delete().eq('user_id', userId);
         const { error } = await admin.from('user_roles').insert({ user_id: userId, role });
         if (error) throw error;
@@ -119,3 +133,4 @@ function json(payload: unknown, status = 200) {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 }
+
