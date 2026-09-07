@@ -70,7 +70,7 @@ export default function SindicoHome() {
     const { data: activationData } = await supabase.rpc('organization_activation_metrics', { p_organization_id: activeOrg.id });
     if (activationData) setActivation(activationData);
     const { data: actionRows } = await supabase.from('organization_activation_alert_actions')
-      .select('id, alert_type, action_label, created_at, acted_by').eq('organization_id', activeOrg.id)
+      .select('id, alert_type, action_label, created_at, acted_by, resolved_at').eq('organization_id', activeOrg.id)
       .order('created_at', { ascending: false }).limit(8);
     setActivationActions(actionRows || []);
     const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
@@ -388,7 +388,14 @@ export default function SindicoHome() {
                     <span className="font-medium">{action.action_label}</span>
                     <span className="text-muted-foreground ml-2">({action.alert_type.replaceAll('_', ' ')})</span>
                   </div>
-                  <span className="text-muted-foreground shrink-0">{new Date(action.created_at).toLocaleString('pt-BR')}</span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={action.resolved_at ? "text-emerald-400" : "text-amber-400"}>{action.resolved_at ? "Concluída" : "Aberta"}</span>
+                    {!action.resolved_at && <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={async () => {
+                      await supabase.rpc('resolve_activation_alert_action', { p_action_id: action.id });
+                      carregar();
+                    }}>Concluir</Button>}
+                    <span className="text-muted-foreground">{new Date(action.created_at).toLocaleString('pt-BR')}</span>
+                  </div>
                 </div>
               ))}
             </div>
