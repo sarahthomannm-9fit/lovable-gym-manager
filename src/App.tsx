@@ -19,6 +19,7 @@ import CoachHome from "./pages/coach/CoachHome";
 import ReviewQueue from "./pages/coach/ReviewQueue";
 import CorpHome from "./pages/corp/CorpHome";
 import OrganizationsAdmin from "./pages/admin/OrganizationsAdmin";
+import PrescriptionAudit from "./pages/admin/PrescriptionAudit";
 import MoradorHome from "./pages/morador/MoradorHome";
 import OnboardingMorador from "./pages/morador/OnboardingMorador";
 import Events from "./pages/morador/Events";
@@ -185,6 +186,7 @@ const App = () => (
                     <Route path="/morador/onboarding" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MainLayout><OnboardingMorador /></MainLayout></RoleRoute></ProtectedRoute>} />
                     <Route path="/morador/eventos" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MainLayout><Events /></MainLayout></RoleRoute></ProtectedRoute>} />
                     <Route path="/admin/organizacoes" element={<AdminOnly><OrganizationsAdmin /></AdminOnly>} />
+                    <Route path="/admin/auditoria-prescricoes" element={<AdminOnly><PrescriptionAudit /></AdminOnly>} />
                     <Route path="/admin/fitpro" element={<AdminOnly><FitProIntegration /></AdminOnly>} />
                     <Route path="/operacao-9fit" element={<StaffOnly><Operacao9FIT /></StaffOnly>} />
                     <Route path="/cfo/leads" element={<AdminOnly><LeadsExtractionPlan /></AdminOnly>} />
