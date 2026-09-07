@@ -42,6 +42,13 @@ Deno.serve(async (req) => {
         if (Number(m.checkins_30_dias || 0) === 0) recommendations.push('publicar comunicado de ativação');
         if (Number(m.eventos_publicados || 0) === 0) recommendations.push('agendar Health Day');
         output = { accepted: true, dispatched: true, agent_id: task.agent_id, task_key: task.task_key, organization_id: orgId, metrics: m, recommendations, processed_at: new Date().toISOString() };
+      } else if (task.agent_id === 'seguranca') {
+        const input = (task.input || {}) as Record<string, unknown>;
+        const restrictions = Array.isArray(input.restrictions) ? input.restrictions.map(String) : [];
+        const redFlags = ['dor forte', 'cirurgia recente', 'lesão aguda', 'tontura', 'dor no peito', 'falta de ar'];
+        const normalized = restrictions.join(' ').toLowerCase();
+        const highRisk = redFlags.some(flag => normalized.includes(flag));
+        output = { accepted: true, dispatched: true, agent_id: task.agent_id, task_key: task.task_key, risk: highRisk ? 'high' : restrictions.length ? 'moderate' : 'low', blocked: highRisk, requires_professor_review: highRisk || restrictions.length > 0, matched_flags: redFlags.filter(flag => normalized.includes(flag)), processed_at: new Date().toISOString() };
       } else {
         output = { accepted: true, dispatched: true, agent_id: task.agent_id, task_key: task.task_key, processed_at: new Date().toISOString() };
       }
