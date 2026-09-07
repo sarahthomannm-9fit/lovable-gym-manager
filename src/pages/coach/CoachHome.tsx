@@ -11,7 +11,7 @@ import { Calendar, Users, UserCheck, Dumbbell, History, ClipboardList, Sparkles,
 import { toast } from 'sonner';
 import { CriarTreinoDialog } from '@/components/CriarTreinoDialog';
 
-const ACCENT = '#C8FF00';
+const ACCENT = '#1B6E6E';
 
 export default function CoachHome() {
   const { activeOrg, ensureOrgForPersona, isAdmin } = useOperationalContext();
@@ -161,7 +161,7 @@ export default function CoachHome() {
                   <p className="text-xs text-muted-foreground">Revise e envie ao aluno em um clique.</p>
                 </div>
                 <Button size="sm" onClick={() => window.location.href = '/treinos'}
-                        style={{ backgroundColor: ACCENT, color: '#000' }}>Ver fila IA</Button>
+                        style={{ backgroundColor: ACCENT, color: '#FFFFFF' }}>Ver fila IA</Button>
               </CardContent>
             </Card>
           )}
@@ -208,7 +208,7 @@ export default function CoachHome() {
                         {a.horario_inicio?.slice(0,5)}–{a.horario_fim?.slice(0,5)} · {a.inscritos_atual ?? 0}/{a.capacidade_maxima ?? '—'}
                       </p>
                     </div>
-                    <Badge variant="outline" className="border-[#C8FF00]/40 text-[#C8FF00]">Em curso</Badge>
+                    <Badge variant="outline" className="border-[#1B6E6E]/40 text-[#1B6E6E]">Em curso</Badge>
                   </CardContent>
                 </Card>
               ))}
@@ -248,7 +248,7 @@ export default function CoachHome() {
                   </div>
                   <Button size="sm" variant="outline" disabled={marcando === al.id}
                           onClick={() => marcarPresenca(al.id, al.nome)}
-                          className="shrink-0 border-[#C8FF00]/40 text-[#C8FF00] hover:bg-[#C8FF00]/10">
+                          className="shrink-0 border-[#1B6E6E]/40 text-[#1B6E6E] hover:bg-[#1B6E6E]/10">
                     <UserCheck className="w-3 h-3 mr-1" />
                     {marcando === al.id ? '…' : 'Presença'}
                   </Button>
