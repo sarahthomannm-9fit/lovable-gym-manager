@@ -122,9 +122,9 @@ export default function OrganizationsAdmin() {
   const profileName = (uid: string) => profiles.find((p) => p.id === uid)?.nome || uid.slice(0, 8);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="min-h-full bg-background p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Organizações</h1>
+        <div><p className="text-[10px] font-mono tracking-[0.18em] uppercase text-primary/70">NINE LIVING · ADMIN</p><h1 className="font-display text-3xl font-normal tracking-tight">Condomínios</h1><p className="text-sm text-muted-foreground">Cadastre o condomínio, equipe e infraestrutura em uma jornada única.</p></div>
         <Dialog open={wizardOpen} onOpenChange={(v) => v ? setWizardOpen(true) : closeWizard()}>
           <DialogTrigger asChild><Button variant="default"><Plus className="w-4 h-4 mr-1" /> Onboarding guiado</Button></DialogTrigger>
           <DialogContent className="max-w-xl"><DialogHeader><DialogTitle>Onboarding do condomínio · etapa {wizardStep} de 4</DialogTitle></DialogHeader>
@@ -132,7 +132,7 @@ export default function OrganizationsAdmin() {
             {wizardStep === 1 && <div className="space-y-3"><div><Label>Nome do condomínio</Label><Input autoFocus value={draft.nome} onChange={(e) => setDraft({ ...draft, nome: e.target.value })} placeholder="Ex.: Residencial Alto das Palmeiras" /></div><div><Label>CNPJ (opcional)</Label><Input value={draft.cnpj} onChange={(e) => setDraft({ ...draft, cnpj: e.target.value })} /></div></div>}
             {wizardStep === 2 && <div className="space-y-3"><div><Label>Total de unidades</Label><Input type="number" min="0" value={draft.unidades} onChange={(e) => setDraft({ ...draft, unidades: e.target.value })} /></div><div><Label>Equipamentos (separe por vírgula)</Label><Input value={draft.equipamentos} onChange={(e) => setDraft({ ...draft, equipamentos: e.target.value })} placeholder="Halteres, esteira, bicicleta, colchonetes" /><p className="text-xs text-muted-foreground">As fotos e a validação visual entram no inventário da próxima etapa.</p></div></div>}
             {wizardStep === 3 && <div className="space-y-3"><div><Label>Síndico responsável</Label><Select value={draft.sindico} onValueChange={(v) => setDraft({ ...draft, sindico: v })}><SelectTrigger><SelectValue placeholder="Selecione um usuário existente" /></SelectTrigger><SelectContent>{profiles.map((p) => <SelectItem key={p.id} value={p.id}>{p.nome} — {p.email}</SelectItem>)}</SelectContent></Select></div><div><Label>Professores</Label><div className="max-h-40 overflow-y-auto rounded-md border p-2 space-y-1">{profiles.map((p) => <label key={p.id} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={draft.professores.includes(p.id)} onChange={() => toggleProfessor(p.id)} />{p.nome} — {p.email}</label>)}</div></div></div>}
-            {wizardStep === 4 && <div className="rounded-lg border p-4 space-y-2 text-sm"><p><strong>Condomínio:</strong> {draft.nome || '—'}</p><p><strong>Unidades:</strong> {draft.unidades || 'Não informado'}</p><p><strong>Infraestrutura:</strong> {draft.equipamentos || 'A validar'}</p><p><strong>Síndico:</strong> {draft.sindico || 'Não definido'}</p><p><strong>Professores selecionados:</strong> {draft.professores.length}</p><p className="text-primary">O cadastro ficará pendente de validação da infraestrutura.</p></div>}
+            {wizardStep === 4 && <div className="rounded-sm border p-4 space-y-2 text-sm"><p><strong>Condomínio:</strong> {draft.nome || '—'}</p><p><strong>Unidades:</strong> {draft.unidades || 'Não informado'}</p><p><strong>Infraestrutura:</strong> {draft.equipamentos || 'A validar'}</p><p><strong>Síndico:</strong> {draft.sindico || 'Não definido'}</p><p><strong>Professores selecionados:</strong> {draft.professores.length}</p><p className="text-primary">O cadastro ficará pendente de validação da infraestrutura.</p></div>}
             <div className="flex justify-between pt-3"><Button variant="ghost" disabled={wizardStep === 1} onClick={() => setWizardStep((s) => s - 1)}>Voltar</Button>{wizardStep < 4 ? <Button onClick={() => setWizardStep((s) => s + 1)}>Continuar</Button> : <Button onClick={createOrganization}>Criar condomínio</Button>}</div>
           </DialogContent>
         </Dialog>
@@ -163,7 +163,7 @@ export default function OrganizationsAdmin() {
         </Dialog>
       </div>
 
-      <Card>
+      <Card className="rounded-sm shadow-elegant">
         <CardContent className="p-0">
           <Table>
             <TableHeader><TableRow>
