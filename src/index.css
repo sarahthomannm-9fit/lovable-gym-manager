@@ -6,7 +6,7 @@
 
 @layer base {
   :root {
-    /* Nine Living — dark by default */
+    /* Nine Living — paper and ink default */
     --background: 60 10% 96%;
     --foreground: 210 18% 11%;
 
