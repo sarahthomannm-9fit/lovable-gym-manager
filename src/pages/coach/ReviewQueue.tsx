@@ -18,8 +18,7 @@ export default function ReviewQueue() {
   };
   useEffect(() => { load(); }, []);
   const decide = async (id: string, status: 'aprovado' | 'rejeitado') => {
-    const { data: auth } = await supabase.auth.getUser();
-    const { error } = await (supabase as any).from('treinos_ia_fila').update({ status, aprovado_por: auth.user?.id || null, aprovado_em: new Date().toISOString() }).eq('id', id);
+    const { error } = await (supabase as any).rpc('review_student_safety', { p_queue_id: id, p_decision: status });
     if (error) return toast.error(error.message);
     toast.success(status === 'aprovado' ? 'Caso aprovado para prescrição.' : 'Caso rejeitado e devolvido para revisão.');
     load();
