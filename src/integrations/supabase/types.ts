@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "13.0.4"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -1023,6 +1023,62 @@ export type Database = {
         }
         Relationships: []
       }
+      eventos_condominio: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          criado_por: string | null
+          data_evento: string
+          descricao: string | null
+          horario_fim: string | null
+          horario_inicio: string | null
+          id: string
+          local: string | null
+          nome: string
+          organization_id: string
+          updated_at: string
+          vagas_totais: number | null
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          criado_por?: string | null
+          data_evento: string
+          descricao?: string | null
+          horario_fim?: string | null
+          horario_inicio?: string | null
+          id?: string
+          local?: string | null
+          nome: string
+          organization_id: string
+          updated_at?: string
+          vagas_totais?: number | null
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          criado_por?: string | null
+          data_evento?: string
+          descricao?: string | null
+          horario_fim?: string | null
+          horario_inicio?: string | null
+          id?: string
+          local?: string | null
+          nome?: string
+          organization_id?: string
+          updated_at?: string
+          vagas_totais?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eventos_condominio_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exercicios_biblioteca: {
         Row: {
           ativo: boolean | null
@@ -1320,6 +1376,45 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      health_day_inscricoes: {
+        Row: {
+          aluno_id: string
+          created_at: string
+          evento_id: string
+          id: string
+          status: string
+        }
+        Insert: {
+          aluno_id: string
+          created_at?: string
+          evento_id: string
+          id?: string
+          status?: string
+        }
+        Update: {
+          aluno_id?: string
+          created_at?: string
+          evento_id?: string
+          id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "health_day_inscricoes_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "health_day_inscricoes_evento_id_fkey"
+            columns: ["evento_id"]
+            isOneToOne: false
+            referencedRelation: "eventos_condominio"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       historico_planos: {
         Row: {
@@ -2492,9 +2587,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      publish_workout: { Args: { p_request_id: string; p_payload: Json }; Returns: string }
-      student_workout: { Args: Record<PropertyKey, never>; Returns: Json }
-      save_workout_session: { Args: { p_treino_id: string; p_action: string; p_progress?: Json; p_feedback?: string }; Returns: Json }
       analise_faturamento_avancada: {
         Args: never
         Returns: {
@@ -2626,6 +2718,8 @@ export type Database = {
         | "sindico"
         | "professor"
         | "corporate"
+        | "nutricionista"
+        | "fisioterapeuta"
       entitlement_status: "ativo" | "suspenso" | "expirado"
       pessoa_status:
         | "lead"
@@ -2659,12 +2753,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2688,11 +2782,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2713,11 +2807,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2738,11 +2832,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2755,11 +2849,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2778,6 +2872,8 @@ export const Constants = {
         "sindico",
         "professor",
         "corporate",
+        "nutricionista",
+        "fisioterapeuta",
       ],
       entitlement_status: ["ativo", "suspenso", "expirado"],
       pessoa_status: [
