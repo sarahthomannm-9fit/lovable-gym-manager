@@ -89,7 +89,7 @@ export default function MoradorHome() {
           .select('id, nome, data_evento, horario_inicio, horario_fim, local')
           .eq('organization_id', al.organization_id).eq('ativo', true)
           .gte('data_evento', hoje).order('data_evento').limit(3);
-        if (mounted) { setEventos(ev || []); const { data: announcementsData } = await (supabase as any).from('organization_announcements').select('id,titulo,mensagem,publico,created_at').eq('organization_id', al.organization_id).eq('status', 'publicado').in('publico', ['condominio','moradores']).order('created_at', { ascending: false }).limit(5); setAnnouncements(announcementsData || []); }
+        if (mounted) { setEventos(ev || []); const { data: announcementsData } = await (supabase as any).rpc('resident_announcements', { p_aluno_id: al.id }); setAnnouncements((announcementsData || []).slice(0, 5)); }
       }
 
       if (al?.id) {
