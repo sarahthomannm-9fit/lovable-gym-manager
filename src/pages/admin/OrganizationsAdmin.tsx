@@ -31,6 +31,8 @@ export default function OrganizationsAdmin() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState(1);
   const [draft, setDraft] = useState<Draft>(initialDraft);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState('sindico');
 
   const load = async () => {
     const [{ data: o }, { data: p }] = await Promise.all([
@@ -101,6 +103,8 @@ export default function OrganizationsAdmin() {
     if (selected?.id === id) setSelected(null);
     load();
   };
+
+  const sendInvite = async () => { if (!selected || !inviteEmail.trim()) return toast.error('Informe o e-mail.'); const { error } = await (supabase as any).rpc('create_organization_invite', { p_organization_id: selected.id, p_email: inviteEmail.trim(), p_papel: inviteRole }); if (error) return toast.error(error.message); toast.success('Convite criado.'); setInviteEmail(''); };
 
   const addMember = async () => {
     if (!selected || !newMember.user_id) return toast.error('Selecione usuário');
@@ -197,6 +201,8 @@ export default function OrganizationsAdmin() {
           <Button onClick={addFacility}><Plus className="w-4 h-4 mr-1" /> Adicionar equipamento</Button>
           <Table><TableHeader><TableRow><TableHead>Foto</TableHead><TableHead>Ambiente</TableHead><TableHead>Equipamento</TableHead><TableHead>Qtd.</TableHead><TableHead>Status</TableHead><TableHead /></TableRow></TableHeader><TableBody>{facilities.map((f) => <TableRow key={f.id}><TableCell>{facilityPhotoUrls[f.id] ? <img src={facilityPhotoUrls[f.id]} alt={`Foto de ${f.nome}`} className="h-10 w-10 rounded object-cover" /> : <span className="text-xs text-muted-foreground">Sem foto</span>}</TableCell><TableCell>{f.ambiente}</TableCell><TableCell>{f.nome}</TableCell><TableCell>{f.quantidade}</TableCell><TableCell className="text-xs uppercase">{f.status}</TableCell><TableCell className="text-right">{f.status === 'pendente' && <Button size="sm" onClick={() => approveFacility(f.id, 'aprovado')}>Aprovar</Button>}{f.status === 'aprovado' && <Button size="sm" variant="ghost" onClick={() => approveFacility(f.id, 'inativo')}>Desativar</Button>}</TableCell></TableRow>)}{!facilities.length && <TableRow><TableCell colSpan={6} className="text-center py-4 text-muted-foreground">Nenhum equipamento cadastrado.</TableCell></TableRow>}</TableBody></Table>
         </CardContent></Card>
+
+        <Card className="rounded-sm shadow-elegant"><CardHeader><CardTitle>Convidar responsável</CardTitle><p className="text-sm text-muted-foreground">Envie um convite para síndico ou professor aceitar o acesso.</p></CardHeader><CardContent className="flex flex-wrap gap-2 items-end"><div className="flex-1 min-w-[220px]"><Label>E-mail</Label><Input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="responsavel@email.com" /></div><div><Label>Papel</Label><Select value={inviteRole} onValueChange={setInviteRole}><SelectTrigger className="w-40"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="sindico">Síndico</SelectItem><SelectItem value="professor">Professor</SelectItem></SelectContent></Select></div><Button onClick={sendInvite}>Enviar convite</Button></CardContent></Card>
 
         <Card>
           <CardHeader><CardTitle>Membros — {selected.nome}</CardTitle></CardHeader>
