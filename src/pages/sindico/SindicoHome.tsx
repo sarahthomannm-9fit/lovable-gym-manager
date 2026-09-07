@@ -335,19 +335,19 @@ export default function SindicoHome() {
               {activation.moradores_ativos === 0 && (
                 <div className="flex items-center justify-between gap-3 rounded-md border border-border/30 p-3">
                   <span><strong>Ative os moradores:</strong> compartilhe o QR de entrada e convites do condomínio.</span>
-                  <Button size="sm" variant="outline" onClick={() => window.location.assign('/admin/organizacoes')}>Abrir cadastro</Button>
+                  <Button size="sm" variant="outline" onClick={async () => { await supabase.rpc('record_activation_alert_action', { p_organization_id: activeOrg.id, p_alert_type: 'moradores_inativos', p_action_label: 'Abrir cadastro' }); window.location.assign('/admin/organizacoes'); }}>Abrir cadastro</Button>
                 </div>
               )}
               {activation.checkins_30_dias === 0 && activation.moradores_ativos > 0 && (
                 <div className="flex items-center justify-between gap-3 rounded-md border border-border/30 p-3">
                   <span><strong>Sem check-ins recentes:</strong> publique um comunicado ou agende um Health Day.</span>
-                  <Button size="sm" variant="outline" onClick={() => window.location.assign('/sindico/comunicados')}>Criar comunicado</Button>
+                  <Button size="sm" variant="outline" onClick={async () => { await supabase.rpc('record_activation_alert_action', { p_organization_id: activeOrg.id, p_alert_type: 'sem_checkins', p_action_label: 'Criar comunicado' }); window.location.assign('/sindico/comunicados'); }}>Criar comunicado</Button>
                 </div>
               )}
               {activation.eventos_publicados === 0 && (
                 <div className="flex items-center justify-between gap-3 rounded-md border border-border/30 p-3">
                   <span><strong>Nenhum evento publicado:</strong> um Health Day ajuda a iniciar o ciclo de engajamento.</span>
-                  <Button size="sm" variant="outline" onClick={() => window.location.assign('/sindico/health-day')}>Criar evento</Button>
+                  <Button size="sm" variant="outline" onClick={async () => { await supabase.rpc('record_activation_alert_action', { p_organization_id: activeOrg.id, p_alert_type: 'sem_eventos', p_action_label: 'Criar evento' }); window.location.assign('/sindico/health-day'); }}>Criar evento</Button>
                 </div>
               )}
             </div>
