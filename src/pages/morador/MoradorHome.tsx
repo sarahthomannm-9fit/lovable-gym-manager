@@ -46,6 +46,7 @@ export default function MoradorHome() {
   const [presencas, setPresencas] = useState(0);
   const [presencasMesAnterior, setPresencasMesAnterior] = useState<number | null>(null);
   const [notifs, setNotifs] = useState<any[]>([]);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
   const [treinoAtivo, setTreinoAtivo] = useState<any>(null);
   const [exerciciosHoje, setExerciciosHoje] = useState<any[]>([]);
   const [checkinFeito, setCheckinFeito] = useState(false);
@@ -88,7 +89,7 @@ export default function MoradorHome() {
           .select('id, nome, data_evento, horario_inicio, horario_fim, local')
           .eq('organization_id', al.organization_id).eq('ativo', true)
           .gte('data_evento', hoje).order('data_evento').limit(3);
-        if (mounted) setEventos(ev || []);
+        if (mounted) { setEventos(ev || []); const { data: announcementsData } = await (supabase as any).from('organization_announcements').select('id,titulo,mensagem,created_at').eq('organization_id', al.organization_id).eq('status', 'publicado').order('created_at', { ascending: false }).limit(5); setAnnouncements(announcementsData || []); }
       }
 
       if (al?.id) {
@@ -339,6 +340,8 @@ export default function MoradorHome() {
           </div>
 
           {/* Próximo evento do condomínio */}
+          {announcements.length > 0 && <div><h2 className="text-sm uppercase tracking-wider text-muted-foreground mb-3">Comunicados do condomínio</h2><div className="space-y-2">{announcements.map((item: any) => <Card key={item.id} className="bg-card/60 border-border/40"><CardContent className="p-4"><p className="font-medium">{item.titulo}</p><p className="text-sm text-muted-foreground mt-1">{item.mensagem}</p></CardContent></Card>)}</div></div>}
+
           {eventos.length > 0 && (
             <div>
               <h2 className="text-sm uppercase tracking-wider text-muted-foreground mb-3">
