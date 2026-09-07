@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { PersonaLayout, PersonaEmptyState } from '@/layouts/PersonaLayout';
 import { useOperationalContext } from '@/hooks/useOperationalContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,6 +20,7 @@ export default function CoachHome() {
   const [aulasSemana, setAulasSemana] = useState<any[]>([]);
   const [alunos, setAlunos] = useState<any[]>([]);
   const [treinos, setTreinos] = useState<any[]>([]);
+  const [safetyByStudent, setSafetyByStudent] = useState<Record<string, string>>({});
   const [historico, setHistorico] = useState<any[]>([]);
   const [anamnesesFila, setAnamnesesFila] = useState<any[]>([]);
   const [filaIACount, setFilaIACount] = useState(0);
@@ -44,7 +46,7 @@ export default function CoachHome() {
     const alunosQuery = supabase.from('alunos').select('id, nome, status, valor_mensalidade').eq('status', 'ativo');
     if (activeOrg) alunosQuery.eq('organization_id', activeOrg.id);
     const { data: al } = await alunosQuery.order('nome').limit(50);
-    setAlunos(al || []);
+    setAlunos(al || []);\n    const { data: safetyRows } = await (supabase as any).from('student_safety_onboarding').select('aluno_id, risco').in('aluno_id', (al || []).map((a: any) => a.id));\n    setSafetyByStudent(Object.fromEntries((safetyRows || []).map((row: any) => [row.aluno_id, row.risco])));
 
     const { data: tr } = await supabase.from('treinos')
       .select('id, descricao, data_inicio, data_fim, aluno_id')
@@ -134,7 +136,7 @@ export default function CoachHome() {
           </TabsTrigger>
           <TabsTrigger value="hoje">Hoje</TabsTrigger>
           <TabsTrigger value="agenda">Agenda 7d</TabsTrigger>
-          <TabsTrigger value="alunos">Meus alunos</TabsTrigger>
+          <TabsTrigger value="alunos">Meus alunos</TabsTrigger><Button asChild variant="outline" size="sm" className="ml-auto"><Link to="/coach/revisoes">Revisões pendentes</Link></Button>
           <TabsTrigger value="treinos">Treinos</TabsTrigger>
           <TabsTrigger value="historico">Histórico</TabsTrigger>
           <TabsTrigger value="operacao">Operação</TabsTrigger>
