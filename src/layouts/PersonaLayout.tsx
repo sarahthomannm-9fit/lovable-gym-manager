@@ -72,12 +72,12 @@ export function PersonaLayout({
       <header className="border-b border-border/40 bg-card/60 backdrop-blur-xl sticky top-0 z-10 shadow-elegant">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+            <div className="w-9 h-9 rounded-sm flex items-center justify-center shrink-0"
                  style={{ backgroundColor: `${accent}1A`, color: accent }}>
               <Icon className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-base font-semibold truncate">{title}</h1>
+              <p className="text-[10px] font-mono tracking-[0.18em] uppercase text-primary/70">NINE LIVING</p><h1 className="font-display text-xl font-normal truncate">{title}</h1>
               {(activeOrg || subtitle) && (
                 <p className="text-xs text-muted-foreground truncate">
                   {activeOrg?.nome || subtitle}
@@ -124,7 +124,7 @@ export function PersonaLayout({
                 <button
                   key={l.path}
                   onClick={() => navigate(l.path)}
-                  className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition ${
+                  className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-medium transition ${
                     active ? 'bg-foreground/10 text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-foreground/5'
                   }`}
                   style={active ? { color: l.accent } : undefined}
@@ -146,7 +146,7 @@ export function PersonaEmptyState({
 }: { message?: string }) {
   const navigate = useNavigate();
   return (
-    <div className="border border-dashed border-border/40 rounded-lg p-10 text-center">
+    <div className="border border-dashed border-border/40 rounded-sm p-10 text-center bg-card">
       <p className="text-sm text-muted-foreground mb-4">{message}</p>
       <Button onClick={() => navigate('/select-context')} variant="outline">
         <ArrowLeftRight className="w-4 h-4 mr-1" /> Selecionar contexto
