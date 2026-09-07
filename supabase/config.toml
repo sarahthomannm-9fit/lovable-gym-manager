@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.fitmanager-api-key]
 verify_jwt = false
+
+[functions.agent-workflow-worker]
+verify_jwt = false
