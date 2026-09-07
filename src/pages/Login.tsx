@@ -28,6 +28,8 @@ export function Login() {
       return;
     }
 
+    await (supabase as any).rpc('record_user_access', { p_event: 'login' });
+
     const uid = data.user.id;
     const [{ data: roleRow }, { data: mems }] = await Promise.all([
       supabase.from('user_roles').select('role').eq('user_id', uid).maybeSingle(),
