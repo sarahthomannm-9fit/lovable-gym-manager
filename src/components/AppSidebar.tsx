@@ -202,6 +202,13 @@ export function AppSidebar() {
       ],
     },
     {
+      category: "NINE LIVING",
+      items: [
+        { title: "Health Day · Gestão", icon: HeartHandshake, path: "/sindico/health-day", roles: ['sindico', 'admin'] },
+        { title: "Eventos do condomínio", icon: Calendar, path: "/morador/eventos", roles: ['user', 'admin'] },
+      ],
+    },
+    {
       category: "ADMINISTRAÇÃO",
       roles: ['admin'],
       items: [
