@@ -86,7 +86,7 @@ export function CriarTreinoDialog({ alunos, organizationId, onCriado, trigger, i
     if (!alunos.some(a => a.id === draft.aluno_id)) return setError('O aluno não está mais disponível neste contexto.');
     busy.current = true; setSaving(true); setError('');
     try {
-      const { error } = await supabase.rpc('publish_workout', { p_request_id: draft.requestId, p_payload: publicationPayload(draft) });
+      const { error } = await (supabase as any).rpc('publish_workout', { p_request_id: draft.requestId, p_payload: publicationPayload(draft) });
       if (error) throw error;
       try { localStorage.removeItem(storageKey); } catch { /* Publication already succeeded. */ }
       setOpen(false); setDraft(newDraft(initialAlunoId));
