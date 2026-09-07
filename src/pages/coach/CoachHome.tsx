@@ -27,6 +27,7 @@ export default function CoachHome() {
   const [marcando, setMarcando] = useState<string | null>(null);
   const [aprovando, setAprovando] = useState<string | null>(null);
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
+  const [suggestions, setSuggestions] = useState<Record<string, string>>({});
 
   useEffect(() => { ensureOrgForPersona('professor').finally(() => setReady(true)); }, []);
 
@@ -48,7 +49,7 @@ export default function CoachHome() {
     if (activeOrg) alunosQuery.eq('organization_id', activeOrg.id);
     const { data: al } = await alunosQuery.order('nome').limit(50);
     setAlunos(al || []);
-    if ((al || []).length) { const { data: recentFeedback } = await (supabase as any).from('workout_sessions').select('aluno_id, data, status, feedback').in('aluno_id', (al || []).map((student: any) => student.id)).not('feedback', 'is', null).order('data', { ascending: false }).limit(20); setFeedbacks(recentFeedback || []); } else setFeedbacks([]);
+    if ((al || []).length) { const { data: recentFeedback } = await (supabase as any).from('workout_sessions').select('aluno_id, data, status, feedback').in('aluno_id', (al || []).map((student: any) => student.id)).not('feedback', 'is', null).order('data', { ascending: false }).limit(20); setFeedbacks(recentFeedback || []); if (recentFeedback?.length) { const results = await Promise.all((recentFeedback as any[]).slice(0, 10).map(async (item: any) => { const { data } = await (supabase as any).rpc('workout_adjustment_suggestions', { p_aluno_id: item.aluno_id }); return [item.aluno_id, data?.sugestoes?.[0] || 'Sem sugestão adicional.']; })); setSuggestions(Object.fromEntries(results)); } } else { setFeedbacks([]); setSuggestions({}); }
     const { data: safetyRows } = await (supabase as any).from('student_safety_onboarding').select('aluno_id, risco').in('aluno_id', (al || []).map((a: any) => a.id));
     setSafetyByStudent(Object.fromEntries((safetyRows || []).map((row: any) => [row.aluno_id, row.risco])));
 
