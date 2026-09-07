@@ -42,6 +42,14 @@ Deno.serve(async (req) => {
         if (Number(m.checkins_30_dias || 0) === 0) recommendations.push('publicar comunicado de ativação');
         if (Number(m.eventos_publicados || 0) === 0) recommendations.push('agendar Health Day');
         output = { accepted: true, dispatched: true, agent_id: task.agent_id, task_key: task.task_key, organization_id: orgId, metrics: m, recommendations, processed_at: new Date().toISOString() };
+      } else if (task.agent_id === 'adaptacao') {
+        const input = (task.input || {}) as Record<string, unknown>;
+        const feedback = String(input.feedback || '').toLowerCase();
+        const pain = /dor|les[aã]o|desconforto|inc[oô]modo/.test(feedback);
+        const difficult = /dif[ií]cil|pesado|n[aã]o consegui|cansad/.test(feedback);
+        const easy = /f[aá]cil|leve|sobrou|tranquilo/.test(feedback);
+        const suggestion = pain ? 'bloquear exercício relacionado e encaminhar para professor' : difficult ? 'reduzir volume ou carga na próxima sessão' : easy ? 'progredir volume ou complexidade gradualmente' : 'manter protocolo e observar próxima execução';
+        output = { accepted: true, dispatched: true, agent_id: task.agent_id, task_key: task.task_key, feedback_summary: { pain, difficult, easy }, suggestion, requires_professor_review: pain, processed_at: new Date().toISOString() };
       } else if (task.agent_id === 'protocolo') {
         const input = (task.input || {}) as Record<string, unknown>;
         const restrictions = Array.isArray(input.restrictions) ? input.restrictions.map(String) : [];
