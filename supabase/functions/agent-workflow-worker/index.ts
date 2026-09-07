@@ -22,7 +22,14 @@ Deno.serve(async (req) => {
         continue;
       }
       await db.from('agent_workflow_tasks').update({ status: 'running' }).eq('id', task.id);
-      const output = { accepted: true, agent_id: task.agent_id, task_key: task.task_key, processed_at: new Date().toISOString() };
+      const supported = ['implantacao', 'ativacao', 'seguranca', 'protocolo', 'adaptacao', 'health_day', 'monitoramento', 'retencao'].includes(task.agent_id);
+      if (!supported) {
+        const output = { accepted: false, reason: 'handler_not_registered', agent_id: task.agent_id, task_key: task.task_key };
+        await db.from('agent_workflow_tasks').update({ status: 'waiting_human', output }).eq('id', task.id);
+        results.push({ id: task.id, status: 'waiting_human' });
+        continue;
+      }
+      const output = { accepted: true, dispatched: true, agent_id: task.agent_id, task_key: task.task_key, processed_at: new Date().toISOString() };
       await db.from('agent_workflow_tasks').update({ status: 'completed', output, completed_at: new Date().toISOString() }).eq('id', task.id);
       results.push({ id: task.id, status: 'completed' });
     }
