@@ -9,7 +9,7 @@ import { Plus, Trash2, ArrowUp, ArrowDown, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { WEEKDAYS, localDate, validateWorkout, publicationPayload, type WorkoutDraft, type ExerciseDraft } from '@/lib/workout';
 
-type LibraryExercise = { id: string; nome: string; grupo_muscular: string | null; equipamento: string | null };
+type LibraryExercise = { id: string; nome: string; grupo_muscular: string | null; equipamento: string | null; restricoes_incompativeis?: string[] | null };
 interface Props {
   alunos: { id: string; nome: string }[]; organizationId?: string | null; onCriado: () => void;
   trigger?: ReactNode; initialAlunoId?: string;
@@ -26,7 +26,7 @@ export function CriarTreinoDialog({ alunos, organizationId, onCriado, trigger, i
   const [library, setLibrary] = useState<LibraryExercise[]>([]);
   const [search, setSearch] = useState('');
   const [day, setDay] = useState(1);
-  const [libraryError, setLibraryError] = useState('');\n  const [infrastructureError, setInfrastructureError] = useState('');\n  const [safetyStatus, setSafetyStatus] = useState<'liberado' | 'pendente' | 'bloqueado' | 'desconhecido'>('desconhecido');\n  const [approvedEquipment, setApprovedEquipment] = useState<string[]>([]);\n  const [templates, setTemplates] = useState<{ id: string; nome: string; objetivo: string; nivel: string; descricao: string | null; sessoes_semana: number }[]>([]);
+  const [libraryError, setLibraryError] = useState('');\n  const [infrastructureError, setInfrastructureError] = useState('');\n  const [safetyStatus, setSafetyStatus] = useState<'liberado' | 'pendente' | 'bloqueado' | 'desconhecido'>('desconhecido');\n  const [approvedEquipment, setApprovedEquipment] = useState<string[]>([]);\n  const [studentRestrictions, setStudentRestrictions] = useState<string[]>([]);\n  const [templates, setTemplates] = useState<{ id: string; nome: string; objetivo: string; nivel: string; descricao: string | null; sessoes_semana: number }[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const busy = useRef(false);
@@ -35,11 +35,11 @@ export function CriarTreinoDialog({ alunos, organizationId, onCriado, trigger, i
   const loadLibrary = async () => {
     setLoading(true); setLibraryError('');
     try {
-      let q = supabase.from('exercicios_biblioteca').select('id,nome,grupo_muscular,equipamento').eq('ativo', true).order('nome');
+      let q = supabase.from('exercicios_biblioteca').select('id,nome,grupo_muscular,equipamento,restricoes_incompativeis').eq('ativo', true).order('nome');
       if (organizationId) q = q.or(`organization_id.is.null,organization_id.eq.${organizationId}`);
       const { data, error } = await q;
       if (error) throw error;
-      const available = (data || []).filter((exercise: LibraryExercise) => !exercise.equipamento || equipment.length === 0 || equipment.some((item: string) => item.includes(String(exercise.equipamento).toLocaleLowerCase()) || String(exercise.equipamento).toLocaleLowerCase().includes(item)));\n      setLibrary(available);
+      const available = (data || []).filter((exercise: LibraryExercise) => { const equipmentOk = !exercise.equipamento || equipment.length === 0 || equipment.some((item: string) => item.includes(String(exercise.equipamento).toLocaleLowerCase()) || String(exercise.equipamento).toLocaleLowerCase().includes(item)); const restrictions = (exercise.restricoes_incompativeis || []).map((item) => item.toLocaleLowerCase()); const safe = !restrictions.some((blocked) => studentRestrictions.some((declared) => declared.includes(blocked) || blocked.includes(declared))); return equipmentOk && safe; });\n      setLibrary(available);
     } catch { setLibraryError('Não foi possível carregar a biblioteca.'); }
     finally { setLoading(false); }
   };
