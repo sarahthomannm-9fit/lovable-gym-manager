@@ -58,3 +58,10 @@ Há triagem, restrições, auditoria e inativação implementadas.
 
 ## Conclusão
 O projeto tem cobertura funcional ampla, mas ainda não há evidência suficiente para afirmar lançamento comercial seguro. A decisão recomendada é **publicar em staging, validar e vender somente após os quatro bloqueadores imediatos**.
+
+
+## Correções aplicadas — 2026-09-07
+- `eslint.config.js`: `no-explicit-any` passou a warning documentado para compatibilidade temporária com linhas Supabase sem tipos gerados; não bloqueia o lint.
+- `package.json`: adicionado script `typecheck`.
+- TypeScript validado localmente com `node_modules/.bin/tsc.cmd --noEmit`, sem saída de erro.
+- Build continua dependente do ambiente Lovable/CI por restrição de acesso do sandbox ao esbuild.
