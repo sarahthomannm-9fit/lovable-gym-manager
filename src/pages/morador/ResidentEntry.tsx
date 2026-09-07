@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 
 export default function ResidentEntry() {
-  const navigate = useNavigate();
+  const navigate = useNavigate();\n  const [searchParams] = useSearchParams();
   const [organizations, setOrganizations] = useState<{ id: string; nome: string }[]>([]);
   const [organizationId, setOrganizationId] = useState('');
   const [form, setForm] = useState({ nome: '', email: '', unidade: '' });
