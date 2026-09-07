@@ -12,7 +12,8 @@ import { toast } from 'sonner';
 
 type Org = { id: string; nome: string; tipo: string; status: string; cnpj?: string; metadata?: Record<string, unknown> };
 type Member = { id: string; user_id: string; papel: string; organization_id: string };
-type Profile = { id: string; nome: string; email: string };\ntype Facility = { id: string; ambiente: string; nome: string; categoria: string | null; quantidade: number; status: string; foto_path: string | null };
+type Profile = { id: string; nome: string; email: string };
+type Facility = { id: string; ambiente: string; nome: string; categoria: string | null; quantidade: number; status: string; foto_path: string | null };
 type Draft = { nome: string; cnpj: string; unidades: string; equipamentos: string; sindico: string; professores: string[] };
 const initialDraft: Draft = { nome: '', cnpj: '', unidades: '', equipamentos: '', sindico: '', professores: [] };
 

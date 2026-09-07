@@ -44,7 +44,8 @@ export default function OnboardingMorador() {
     const { error } = await (supabase as any).rpc('submit_student_safety_onboarding', { p_aluno_id: alunoId, p_organization_id: organizationId, p_payload: payload });
     if (error) return toast.error(error.message);
     toast.success('Onboarding concluído.'); navigate('/morador');
-  };\n
+  };
+
   const submit = async () => {
     if (!organizationId || !alunoId) return toast.error('Selecione o condomínio e confirme seu cadastro.');
     if (!form.consentimento) return toast.error('Você precisa aceitar o consentimento para continuar.');
