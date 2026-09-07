@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 
 type Org = { id: string; nome: string; tipo: string; status: string; cnpj?: string; metadata?: Record<string, unknown> };
 type Member = { id: string; user_id: string; papel: string; organization_id: string };
-type Profile = { id: string; nome: string; email: string };
+type Profile = { id: string; nome: string; email: string };\ntype Facility = { id: string; ambiente: string; nome: string; categoria: string | null; quantidade: number; status: string };
 type Draft = { nome: string; cnpj: string; unidades: string; equipamentos: string; sindico: string; professores: string[] };
 const initialDraft: Draft = { nome: '', cnpj: '', unidades: '', equipamentos: '', sindico: '', professores: [] };
 
@@ -22,7 +22,7 @@ export default function OrganizationsAdmin() {
   const [members, setMembers] = useState<Member[]>([]);
   const [selected, setSelected] = useState<Org | null>(null);
   const [newOrg, setNewOrg] = useState({ nome: '', tipo: 'condominio', cnpj: '' });
-  const [newMember, setNewMember] = useState({ user_id: '', papel: 'sindico' });
+  const [newMember, setNewMember] = useState({ user_id: '', papel: 'sindico' });\n  const [facilities, setFacilities] = useState<Facility[]>([]);\n  const [newFacility, setNewFacility] = useState({ ambiente: '', nome: '', categoria: '', quantidade: '1' });
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState(1);
   const [draft, setDraft] = useState<Draft>(initialDraft);
@@ -41,7 +41,7 @@ export default function OrganizationsAdmin() {
   };
 
   useEffect(() => { load(); }, []);
-  useEffect(() => { if (selected) loadMembers(selected.id); }, [selected]);
+  const loadFacilities = async (orgId: string) => {\n    const { data } = await (supabase as any).from('organization_facilities').select('id, ambiente, nome, categoria, quantidade, status').eq('organization_id', orgId).order('ambiente').order('nome');\n    setFacilities(data || []);\n  };\n  useEffect(() => { if (selected) { loadMembers(selected.id); loadFacilities(selected.id); } }, [selected]);\n  const addFacility = async () => {\n    if (!selected || !newFacility.ambiente.trim() || !newFacility.nome.trim()) return toast.error('Informe ambiente e equipamento.');\n    const { error } = await (supabase as any).from('organization_facilities').insert({ organization_id: selected.id, ambiente: newFacility.ambiente.trim(), nome: newFacility.nome.trim(), categoria: newFacility.categoria.trim() || null, quantidade: Math.max(0, Number(newFacility.quantidade) || 1) });\n    if (error) return toast.error(error.message);\n    setNewFacility({ ambiente: '', nome: '', categoria: '', quantidade: '1' }); toast.success('Equipamento adicionado.'); loadFacilities(selected.id);\n  };\n  const approveFacility = async (id: string, status: 'aprovado' | 'inativo') => {\n    const { error } = await (supabase as any).rpc('approve_facility', { p_facility_id: id, p_status: status });\n    if (error) return toast.error(error.message);\n    toast.success(status === 'aprovado' ? 'Equipamento aprovado.' : 'Equipamento desativado.'); if (selected) loadFacilities(selected.id);\n  };
 
   const closeWizard = () => { setWizardOpen(false); setWizardStep(1); setDraft(initialDraft); };
   const createOrganization = async () => {
@@ -161,6 +161,12 @@ export default function OrganizationsAdmin() {
         </CardContent>
       </Card>
 
+      {selected && (<>
+        <Card><CardHeader><CardTitle>Infraestrutura da academia</CardTitle></CardHeader><CardContent className="space-y-4">
+          <div className="grid sm:grid-cols-4 gap-2 items-end"><div><Label>Ambiente</Label><Input value={newFacility.ambiente} onChange={(e) => setNewFacility({ ...newFacility, ambiente: e.target.value })} placeholder="Sala fitness" /></div><div><Label>Equipamento</Label><Input value={newFacility.nome} onChange={(e) => setNewFacility({ ...newFacility, nome: e.target.value })} placeholder="Halteres" /></div><div><Label>Categoria</Label><Input value={newFacility.categoria} onChange={(e) => setNewFacility({ ...newFacility, categoria: e.target.value })} placeholder="Força" /></div><div><Label>Qtd.</Label><Input type="number" min="0" value={newFacility.quantidade} onChange={(e) => setNewFacility({ ...newFacility, quantidade: e.target.value })} /></div></div>
+          <Button onClick={addFacility}><Plus className="w-4 h-4 mr-1" /> Adicionar equipamento</Button>
+          <Table><TableHeader><TableRow><TableHead>Ambiente</TableHead><TableHead>Equipamento</TableHead><TableHead>Qtd.</TableHead><TableHead>Status</TableHead><TableHead /></TableRow></TableHeader><TableBody>{facilities.map((f) => <TableRow key={f.id}><TableCell>{f.ambiente}</TableCell><TableCell>{f.nome}</TableCell><TableCell>{f.quantidade}</TableCell><TableCell className="text-xs uppercase">{f.status}</TableCell><TableCell className="text-right">{f.status === 'pendente' && <Button size="sm" onClick={() => approveFacility(f.id, 'aprovado')}>Aprovar</Button>}{f.status === 'aprovado' && <Button size="sm" variant="ghost" onClick={() => approveFacility(f.id, 'inativo')}>Desativar</Button>}</TableCell></TableRow>)}{!facilities.length && <TableRow><TableCell colSpan={5} className="text-center py-4 text-muted-foreground">Nenhum equipamento cadastrado.</TableCell></TableRow>}</TableBody></Table>
+        </CardContent></Card>
       {selected && (
         <Card>
           <CardHeader><CardTitle>Membros — {selected.nome}</CardTitle></CardHeader>
