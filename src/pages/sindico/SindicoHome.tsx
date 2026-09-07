@@ -260,6 +260,7 @@ export default function SindicoHome() {
   const resolvedActivationActions = filteredActivationActions.filter(a => a.resolved_at).length;
   const openActivationActions = filteredActivationActions.length - resolvedActivationActions;
   const activationResolutionRate = filteredActivationActions.length ? Math.round((resolvedActivationActions / filteredActivationActions.length) * 100) : 0;
+  const activationHealth = activation.moradores_ativos > 0 && activation.checkins_30_dias > 0 && activation.eventos_publicados > 0 ? { label: 'Saudável', color: 'text-emerald-400', score: 100 } : activation.moradores_ativos > 0 && (activation.checkins_30_dias > 0 || activation.eventos_publicados > 0) ? { label: 'Em evolução', color: 'text-amber-400', score: 60 } : { label: 'Precisa de ativação', color: 'text-red-400', score: 25 };
 
   return (
     <PersonaLayout title="Painel do Síndico" accent={ACCENT}>
@@ -330,6 +331,19 @@ export default function SindicoHome() {
               <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Check-ins recentes</div>
               <div className="text-xl font-semibold mt-1">{activation.checkins_30_dias}</div>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="mb-4 bg-card/60 border-border/40">
+        <CardContent className="p-4 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Saúde da ativação</p>
+            <p className={`text-lg font-semibold ${activationHealth.color}`}>{activationHealth.label}</p>
+            <p className="text-xs text-muted-foreground mt-1">Baseado em moradores, check-ins e eventos publicados.</p>
+          </div>
+          <div className="relative w-16 h-16 rounded-full border-4 border-border/40 flex items-center justify-center">
+            <span className={`text-sm font-semibold ${activationHealth.color}`}>{activationHealth.score}%</span>
           </div>
         </CardContent>
       </Card>
