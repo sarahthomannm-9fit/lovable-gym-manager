@@ -33,6 +33,7 @@ export function UsersAdmin() {
   const { isAdmin, loading: roleLoading } = useCurrentUserRole();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [activeMap, setActiveMap] = useState<Record<string, boolean>>({});
 
   // form criação de usuário "solto" (sem vínculo com aluno)
   const [email, setEmail] = useState('');
@@ -109,6 +110,8 @@ export function UsersAdmin() {
     }
     setSubmitting(false);
   };
+
+  const handleToggleActive = async (userId: string) => { const next = !(activeMap[userId] ?? true); const { error } = await (supabase as any).rpc('set_user_active', { p_user_id: userId, p_active: next }); if (error) toast.error(error.message); else { setActiveMap((current) => ({ ...current, [userId]: next })); toast.success(next ? 'Usuário reativado.' : 'Usuário desativado.'); } };
 
   const handleDelete = async (userId: string, userEmail: string) => {
     if (!confirm(`Excluir ${userEmail}? Essa ação é irreversível.`)) return;
@@ -310,6 +313,7 @@ export function UsersAdmin() {
                         <SelectItem value="admin">Admin</SelectItem>
                       </SelectContent>
                     </Select>
+                    <Button size="sm" variant="ghost" onClick={() => handleToggleActive(u.user_id)} title={(activeMap[u.user_id] ?? true) ? "Desativar" : "Reativar"}><UserX className={`w-3.5 h-3.5 ${(activeMap[u.user_id] ?? true) ? "text-amber-500" : "text-emerald-500"}`} /></Button>
                     <Button size="sm" variant="ghost" onClick={() => handleResetPassword(u.email)} title="Redefinir senha">
                       <KeyRound className="w-3.5 h-3.5" />
                     </Button>
