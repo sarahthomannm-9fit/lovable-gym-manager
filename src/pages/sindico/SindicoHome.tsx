@@ -256,6 +256,10 @@ export default function SindicoHome() {
   // Isso é diferente de "condomínio novo, ainda sem alunos" — nesse caso não há
   // unidades esperadas cadastradas, então não mostramos o aviso.
   const possivelProblemaDeVinculo = !dashLoading && !dashError && metrics.alunos === 0 && orgTemUnidadesEsperadas;
+  const filteredActivationActions = activationActions.filter(a => actionPeriod === '0' || new Date(a.created_at).getTime() >= Date.now() - Number(actionPeriod) * 86400000);
+  const resolvedActivationActions = filteredActivationActions.filter(a => a.resolved_at).length;
+  const openActivationActions = filteredActivationActions.length - resolvedActivationActions;
+  const activationResolutionRate = filteredActivationActions.length ? Math.round((resolvedActivationActions / filteredActivationActions.length) * 100) : 0;
 
   return (
     <PersonaLayout title="Painel do Síndico" accent={ACCENT}>
@@ -365,7 +369,14 @@ export default function SindicoHome() {
         <Card className="mb-4 bg-card/60 border-border/40">
           <CardContent className="p-4">
             <div className="flex items-center justify-between gap-3 mb-3">
-              <h2 className="font-semibold text-sm">Histórico de ações de ativação</h2>
+              <div>
+                <h2 className="font-semibold text-sm">Histórico de ações de ativação</h2>
+                <div className="flex gap-2 mt-1 text-[11px]">
+                  <span className="text-amber-400">{openActivationActions} abertas</span>
+                  <span className="text-emerald-400">{resolvedActivationActions} concluídas</span>
+                  <span className="text-muted-foreground">{activationResolutionRate}% resolvidas</span>
+                </div>
+              </div>
               <div className="flex items-center gap-2">
                 <select value={actionPeriod} onChange={e => setActionPeriod(e.target.value)} className="h-8 rounded-md border border-border/40 bg-background px-2 text-xs">
                   <option value="7">7 dias</option><option value="30">30 dias</option><option value="90">90 dias</option><option value="0">Tudo</option>
@@ -382,7 +393,7 @@ export default function SindicoHome() {
               </div>
             </div>
             <div className="space-y-2">
-              {activationActions.filter(a => actionPeriod === '0' || new Date(a.created_at).getTime() >= Date.now() - Number(actionPeriod) * 86400000).map((action) => (
+              {filteredActivationActions.map((action) => (
                 <div key={action.id} className="flex items-center justify-between gap-3 rounded-md border border-border/30 px-3 py-2 text-xs">
                   <div>
                     <span className="font-medium">{action.action_label}</span>
