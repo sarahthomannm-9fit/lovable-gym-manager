@@ -1,10 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=DM Serif Display:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair Display:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  :root { --font-display: 'Playfair Display', Georgia, serif; --font-body: 'Inter', system-ui, sans-serif; }
   :root {
     /* Nine Living — paper and ink default */
     --background: 60 10% 96%;
@@ -189,4 +190,10 @@
     backdrop-filter: blur(12px);
     border: 1px solid hsl(180 12% 82% / 0.8);
   }
+}
+
+@layer base {
+  body { font-family: var(--font-body); background: hsl(var(--background)); color: hsl(var(--foreground)); }
+  h1, h2, h3, h4, .font-serif { font-family: var(--font-display); font-weight: 500; }
+  input, textarea, select, button { font-family: var(--font-body); }
 }
