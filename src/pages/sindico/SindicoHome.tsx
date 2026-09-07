@@ -47,6 +47,7 @@ export default function SindicoHome() {
   const [activation, setActivation] = useState({ moradores_ativos: 0, treinos_ativos: 0, eventos_publicados: 0, checkins_30_dias: 0 });
   const [activationActions, setActivationActions] = useState<any[]>([]);
   const [actionPeriod, setActionPeriod] = useState('30');
+  const [activationGoals, setActivationGoals] = useState({ moradores: 1, checkins: 1, eventos: 1 });
 
   // Indicadores principais sempre pela RPC oficial
   const { data: dash, loading: dashLoading, error: dashError, refresh: refreshDash } =
@@ -85,6 +86,8 @@ export default function SindicoHome() {
     // isso ajuda a distinguir "condomínio novo, sem alunos mesmo" de "vínculo quebrado".
     const unidadesEsperadas = Number((orgRow?.metadata as any)?.total_unidades || (orgRow?.metadata as any)?.unidades || 0);
     setOrgTemUnidadesEsperadas(unidadesEsperadas > 0);
+    const savedGoals = (orgRow?.metadata as any)?.activation_goals;
+    if (savedGoals) setActivationGoals({ moradores: Number(savedGoals.moradores || 1), checkins: Number(savedGoals.checkins || 1), eventos: Number(savedGoals.eventos || 1) });
 
     const { data: alunosOrg } = await supabase.from('alunos')
       .select('id, nome, status, valor_mensalidade, data_matricula')
@@ -353,6 +356,25 @@ export default function SindicoHome() {
           </div>
           <div className="relative w-16 h-16 rounded-full border-4 border-border/40 flex items-center justify-center">
             <span className={`text-sm font-semibold ${activationHealth.color}`}>{activationHealth.score}%</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="mb-4 bg-card/60 border-border/40">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div><h2 className="font-semibold text-sm">Metas do condomínio</h2><p className="text-xs text-muted-foreground">Defina o mínimo esperado para acompanhar a ativação.</p></div>
+            <Button size="sm" variant="outline" onClick={async () => {
+              const { data: current } = await supabase.from('organizations').select('metadata').eq('id', activeOrg.id).maybeSingle();
+              const metadata = { ...((current?.metadata as any) || {}), activation_goals: activationGoals };
+              const { error } = await supabase.from('organizations').update({ metadata }).eq('id', activeOrg.id);
+              if (error) toast.error('Não foi possível salvar as metas'); else toast.success('Metas salvas');
+            }}>Salvar metas</Button>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <label className="text-xs text-muted-foreground">Moradores ativos<input type="number" min="1" value={activationGoals.moradores} onChange={e => setActivationGoals(g => ({ ...g, moradores: Number(e.target.value) }))} className="mt-1 w-full rounded-md border border-border/40 bg-background px-2 py-1.5 text-sm text-foreground" /></label>
+            <label className="text-xs text-muted-foreground">Check-ins / 30 dias<input type="number" min="1" value={activationGoals.checkins} onChange={e => setActivationGoals(g => ({ ...g, checkins: Number(e.target.value) }))} className="mt-1 w-full rounded-md border border-border/40 bg-background px-2 py-1.5 text-sm text-foreground" /></label>
+            <label className="text-xs text-muted-foreground">Eventos publicados<input type="number" min="1" value={activationGoals.eventos} onChange={e => setActivationGoals(g => ({ ...g, eventos: Number(e.target.value) }))} className="mt-1 w-full rounded-md border border-border/40 bg-background px-2 py-1.5 text-sm text-foreground" /></label>
           </div>
         </CardContent>
       </Card>
