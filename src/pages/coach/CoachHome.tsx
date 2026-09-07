@@ -129,6 +129,7 @@ export default function CoachHome() {
 
   return (
     <PersonaLayout title="Meu dia" accent={ACCENT}>
+      {feedbacks.length > 0 && <Card className="mb-4 rounded-sm border-primary/30 bg-primary/5"><CardContent className="p-4 space-y-2"><h2 className="font-semibold text-sm">Feedbacks recentes</h2>{feedbacks.slice(0, 5).map((item: any) => <div key={item.aluno_id + item.data} className="flex items-start justify-between gap-3 border-t border-border/40 pt-2 text-sm"><div><span className="font-medium">{nomeAluno(item.aluno_id)}</span><span className="block text-xs text-muted-foreground">{item.data} · {item.status}</span><span className="block text-muted-foreground mt-1">{item.feedback}</span><span className="block text-xs text-primary mt-1">{suggestions[item.aluno_id] || 'Analisando ajuste…'}</span></div><CriarTreinoDialog alunos={alunos.filter((student: any) => student.id === item.aluno_id).map((student: any) => ({ id: student.id, nome: student.nome }))} organizationId={activeOrg?.id} initialAlunoId={item.aluno_id} onCriado={carregar} trigger={<Button size="sm" variant="outline">Revisar treino</Button>} /></div>)}</CardContent></Card>}
       <Tabs defaultValue={anamnesesFila.length > 0 || filaIACount > 0 ? 'fila' : 'hoje'}>
         <TabsList className="mb-4 flex-wrap h-auto">
           <TabsTrigger value="fila" className="relative">
