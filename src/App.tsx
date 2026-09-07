@@ -28,6 +28,7 @@ import OnboardingMorador from "./pages/morador/OnboardingMorador";
 import Events from "./pages/morador/Events";
 import ResidentEntry from "./pages/morador/ResidentEntry";
 import MoradorProfile from "./pages/morador/Profile";
+import MoradorAgenda from "./pages/morador/Agenda";
 import FitProIntegration from "./pages/admin/FitProIntegration";
 import Operacao9FIT from "./pages/admin/Operacao9FIT";
 import LeadsExtractionPlan from "./pages/cfo/LeadsExtractionPlan";
@@ -192,6 +193,7 @@ const App = () => (
                     <Route path="/morador/onboarding" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MainLayout><OnboardingMorador /></MainLayout></RoleRoute></ProtectedRoute>} />
                     <Route path="/morador/eventos" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MainLayout><Events /></MainLayout></RoleRoute></ProtectedRoute>} />
                     <Route path="/morador/perfil" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MainLayout><MoradorProfile /></MainLayout></RoleRoute></ProtectedRoute>} />
+                    <Route path="/morador/agenda" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MainLayout><MoradorAgenda /></MainLayout></RoleRoute></ProtectedRoute>} />
                     <Route path="/admin/organizacoes" element={<AdminOnly><OrganizationsAdmin /></AdminOnly>} />
                     <Route path="/admin/auditoria-prescricoes" element={<AdminOnly><PrescriptionAudit /></AdminOnly>} />
                     <Route path="/admin/auditoria-acessos" element={<AdminOnly><AccessAudit /></AdminOnly>} />
