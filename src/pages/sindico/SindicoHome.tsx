@@ -46,6 +46,7 @@ export default function SindicoHome() {
   const [engajamentoMensal, setEngajamentoMensal] = useState<{ mes: string; checkins: number }[]>([]);
   const [activation, setActivation] = useState({ moradores_ativos: 0, treinos_ativos: 0, eventos_publicados: 0, checkins_30_dias: 0 });
   const [activationActions, setActivationActions] = useState<any[]>([]);
+  const [actionPeriod, setActionPeriod] = useState('30');
 
   // Indicadores principais sempre pela RPC oficial
   const { data: dash, loading: dashLoading, error: dashError, refresh: refreshDash } =
@@ -363,9 +364,25 @@ export default function SindicoHome() {
       {activationActions.length > 0 && (
         <Card className="mb-4 bg-card/60 border-border/40">
           <CardContent className="p-4">
-            <h2 className="font-semibold text-sm mb-3">Histórico de ações de ativação</h2>
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <h2 className="font-semibold text-sm">Histórico de ações de ativação</h2>
+              <div className="flex items-center gap-2">
+                <select value={actionPeriod} onChange={e => setActionPeriod(e.target.value)} className="h-8 rounded-md border border-border/40 bg-background px-2 text-xs">
+                  <option value="7">7 dias</option><option value="30">30 dias</option><option value="90">90 dias</option><option value="0">Tudo</option>
+                </select>
+                <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => {
+                  const cutoff = actionPeriod === '0' ? 0 : Date.now() - Number(actionPeriod) * 86400000;
+                  const rows = activationActions.filter(a => !cutoff || new Date(a.created_at).getTime() >= cutoff);
+                  const csv = [['Ação','Tipo de alerta','Data'], ...rows.map(a => [a.action_label, a.alert_type, new Date(a.created_at).toLocaleString('pt-BR')])]
+                    .map(row => row.map(cell => '"' + String(cell).replace(/"/g, '""') + '"').join(',')).join('\n');
+                  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+                  const link = document.createElement('a'); link.href = url; link.download = 'historico-ativacao.csv'; link.click(); URL.revokeObjectURL(url);
+                  toast.success('Histórico exportado');
+                }}>Exportar</Button>
+              </div>
+            </div>
             <div className="space-y-2">
-              {activationActions.map((action) => (
+              {activationActions.filter(a => actionPeriod === '0' || new Date(a.created_at).getTime() >= Date.now() - Number(actionPeriod) * 86400000).map((action) => (
                 <div key={action.id} className="flex items-center justify-between gap-3 rounded-md border border-border/30 px-3 py-2 text-xs">
                   <div>
                     <span className="font-medium">{action.action_label}</span>
