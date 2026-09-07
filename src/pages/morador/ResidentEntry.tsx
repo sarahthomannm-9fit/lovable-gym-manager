@@ -12,11 +12,12 @@ export default function ResidentEntry() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const contexto = searchParams.get('contexto') || 'academia';
+  const organizationParam = searchParams.get('organization');
   const [organizations, setOrganizations] = useState<{ id: string; nome: string }[]>([]);
   const [organizationId, setOrganizationId] = useState('');
   const [form, setForm] = useState({ nome: '', email: '', unidade: '' });
   const [saving, setSaving] = useState(false);
-  useEffect(() => { (async () => { const { data } = await (supabase as any).from('organizations').select('id, nome').eq('tipo', 'condominio').eq('status', 'ativo').order('nome'); setOrganizations(data || []); })(); }, []);
+  useEffect(() => { if (organizationParam) setOrganizationId(organizationParam); (async () => { const { data } = await (supabase as any).from('organizations').select('id, nome').eq('tipo', 'condominio').eq('status', 'ativo').order('nome'); setOrganizations(data || []); })(); }, []);
   const start = async () => {
     if (!organizationId || !form.nome || !form.email) return toast.error('Preencha condomínio, nome e e-mail.');
     setSaving(true);
