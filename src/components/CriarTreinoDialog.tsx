@@ -1,262 +1,139 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
-import { Card, CardContent } from '@/components/ui/card';
-import { Plus, Trash2, Dumbbell } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Plus, Trash2, ArrowUp, ArrowDown, Copy } from 'lucide-react';
 import { toast } from 'sonner';
+import { WEEKDAYS, localDate, validateWorkout, publicationPayload, type WorkoutDraft, type ExerciseDraft } from '@/lib/workout';
 
-interface CriarTreinoDialogProps {
-  alunos: { id: string; nome: string }[];
-  organizationId?: string | null;
-  onCriado: () => void;
+type LibraryExercise = { id: string; nome: string; grupo_muscular: string | null; equipamento: string | null };
+interface Props {
+  alunos: { id: string; nome: string }[]; organizationId?: string | null; onCriado: () => void;
+  trigger?: ReactNode; initialAlunoId?: string;
 }
+const newDraft = (aluno = ''): WorkoutDraft => ({ requestId: crypto.randomUUID(), aluno_id: aluno, nome: '', objetivo: '', nivel: 'iniciante', data_inicio: localDate(), semanas: 4, exercicios: [] });
+const selectClass = 'w-full rounded-md border border-input bg-background px-3 py-2 text-sm';
 
-interface ExercicioLinha {
-  exercicio_id: string;
-  nome: string;
-  series: string;
-  repeticoes: string;
-  carga_kg: string;
-  descanso_seg: string;
-}
-
-const linhaVazia = (): ExercicioLinha => ({
-  exercicio_id: '', nome: '', series: '3', repeticoes: '12', carga_kg: '', descanso_seg: '60',
-});
-
-// Coach cria um treino do zero: escolhe o aluno, monta a lista de exercícios a partir
-// da biblioteca, e ao salvar isso cria em sequência: planos_treino (o "molde" do plano),
-// plano_exercicios (cada exercício da lista) e treinos (a instância atribuída ao aluno,
-// apontando para o plano criado). Esse é o caminho que faltava — hoje só existe o
-// caminho automático (IA gera → coach aprova em CoachHome > aba Fila).
-export function CriarTreinoDialog({ alunos, organizationId, onCriado }: CriarTreinoDialogProps) {
+export function CriarTreinoDialog({ alunos, organizationId, onCriado, trigger, initialAlunoId }: Props) {
+  const { user } = useAuth();
+  const storageKey = `9fit:workout-draft:${user?.id}:${organizationId || 'global'}:${initialAlunoId || 'new'}`;
   const [open, setOpen] = useState(false);
-  const [salvando, setSalvando] = useState(false);
-  const [biblioteca, setBiblioteca] = useState<{ id: string; nome: string; grupo_muscular: string | null }[]>([]);
+  const [review, setReview] = useState(false);
+  const [draft, setDraft] = useState<WorkoutDraft>(() => newDraft(initialAlunoId));
+  const [library, setLibrary] = useState<LibraryExercise[]>([]);
+  const [search, setSearch] = useState('');
+  const [day, setDay] = useState(1);
+  const [libraryError, setLibraryError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const busy = useRef(false);
+  const [error, setError] = useState('');
 
-  const [alunoId, setAlunoId] = useState('');
-  const [nomePlano, setNomePlano] = useState('');
-  const [objetivo, setObjetivo] = useState('');
-  const [nivel, setNivel] = useState('iniciante');
-  const [dataInicio, setDataInicio] = useState(new Date().toISOString().slice(0, 10));
-  const [semanas, setSemanas] = useState('4');
-  const [exercicios, setExercicios] = useState<ExercicioLinha[]>([linhaVazia()]);
-
+  const loadLibrary = async () => {
+    setLoading(true); setLibraryError('');
+    try {
+      let q = supabase.from('exercicios_biblioteca').select('id,nome,grupo_muscular,equipamento').eq('ativo', true).order('nome');
+      if (organizationId) q = q.or(`organization_id.is.null,organization_id.eq.${organizationId}`);
+      const { data, error } = await q;
+      if (error) throw error;
+      setLibrary(data || []);
+    } catch { setLibraryError('Não foi possível carregar a biblioteca.'); }
+    finally { setLoading(false); }
+  };
+  const changeOpen = (value: boolean) => {
+    if (busy.current) return;
+    if (value) {
+      let restored = newDraft(initialAlunoId);
+      try {
+        const saved = JSON.parse(localStorage.getItem(storageKey) || 'null');
+        if (saved?.requestId && Array.isArray(saved.exercicios)) restored = saved;
+      } catch { /* A malformed local draft must not prevent opening the editor. */ }
+      setDraft(restored); setReview(false); setError(''); void loadLibrary();
+    }
+    setOpen(value);
+  };
   useEffect(() => {
     if (!open) return;
-    supabase.from('exercicios_biblioteca')
-      .select('id, nome, grupo_muscular')
-      .eq('ativo', true)
-      .order('grupo_muscular')
-      .order('nome')
-      .then(({ data }) => setBiblioteca(data || []));
-  }, [open]);
-
-  const resetForm = () => {
-    setAlunoId(''); setNomePlano(''); setObjetivo(''); setNivel('iniciante');
-    setDataInicio(new Date().toISOString().slice(0, 10)); setSemanas('4');
-    setExercicios([linhaVazia()]);
+    try { localStorage.setItem(storageKey, JSON.stringify(draft)); } catch { setError('Não foi possível salvar o rascunho neste dispositivo.'); }
+  }, [draft, open, storageKey]);
+  const patch = (value: Partial<WorkoutDraft>) => { setDraft(d => ({ ...d, ...value })); setError(''); };
+  const editExercise = (key: string, value: Partial<ExerciseDraft>) => patch({ exercicios: draft.exercicios.map(e => e.key === key ? { ...e, ...value } : e) });
+  const add = (ex: LibraryExercise) => patch({ exercicios: [...draft.exercicios, { key: crypto.randomUUID(), exercicio_id: ex.id, nome: ex.nome, dia_semana: day, series: 3, repeticoes: '12', carga_kg: '', descanso_seg: 60, observacoes: '' }] });
+  const move = (index: number, offset: number) => {
+    const next = [...draft.exercicios]; const target = index + offset;
+    if (target < 0 || target >= next.length) return;
+    [next[index], next[target]] = [next[target], next[index]]; patch({ exercicios: next });
   };
-
-  const addLinha = () => setExercicios(prev => [...prev, linhaVazia()]);
-  const removeLinha = (idx: number) => setExercicios(prev => prev.filter((_, i) => i !== idx));
-  const updateLinha = (idx: number, patch: Partial<ExercicioLinha>) =>
-    setExercicios(prev => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
-
-  const selecionarExercicio = (idx: number, exercicioId: string) => {
-    const ex = biblioteca.find(b => b.id === exercicioId);
-    updateLinha(idx, { exercicio_id: exercicioId, nome: ex?.nome || '' });
-  };
-
-  const salvar = async () => {
-    if (!alunoId) return toast.error('Escolha o aluno');
-    if (!nomePlano.trim()) return toast.error('Dê um nome ao plano de treino');
-    const validos = exercicios.filter(e => e.exercicio_id);
-    if (validos.length === 0) return toast.error('Adicione pelo menos um exercício');
-
-    setSalvando(true);
+  const publish = async () => {
+    if (busy.current) return;
+    const validation = validateWorkout(draft);
+    if (validation) return setError(validation);
+    if (!alunos.some(a => a.id === draft.aluno_id)) return setError('O aluno não está mais disponível neste contexto.');
+    busy.current = true; setSaving(true); setError('');
     try {
-      const { data: plano, error: erroPlano } = await supabase.from('planos_treino')
-        .insert({
-          nome: nomePlano,
-          objetivo: objetivo || null,
-          nivel,
-          semanas: Number(semanas) || 4,
-          organization_id: organizationId || null,
-          ativo: true,
-          publico: false,
-        })
-        .select('id')
-        .single();
-      if (erroPlano || !plano) throw erroPlano || new Error('Falha ao criar plano');
-
-      const linhasParaSalvar = validos.map((e, i) => ({
-        plano_treino_id: plano.id,
-        exercicio_id: e.exercicio_id,
-        ordem: i + 1,
-        series: Number(e.series) || null,
-        repeticoes: e.repeticoes || null,
-        carga_kg: e.carga_kg ? Number(e.carga_kg) : null,
-        descanso_seg: Number(e.descanso_seg) || null,
-      }));
-      const { error: erroExercicios } = await supabase.from('plano_exercicios').insert(linhasParaSalvar);
-      if (erroExercicios) throw erroExercicios;
-
-      const dataFim = new Date(dataInicio);
-      dataFim.setDate(dataFim.getDate() + (Number(semanas) || 4) * 7);
-
-      const nomeAluno = alunos.find(a => a.id === alunoId)?.nome || 'aluno';
-      const { error: erroTreino } = await supabase.from('treinos').insert({
-        aluno_id: alunoId,
-        plano_treino_id: plano.id,
-        organization_id: organizationId || null,
-        nome: nomePlano,
-        descricao: `${nomePlano} — ${objetivo || 'plano personalizado'} (${validos.length} exercícios)`,
-        data_inicio: dataInicio,
-        data_fim: dataFim.toISOString().slice(0, 10),
-        status: 'ativo',
-      });
-      if (erroTreino) throw erroTreino;
-
-      toast.success(`Treino criado e enviado para ${nomeAluno}`);
-      setOpen(false);
-      resetForm();
-      onCriado();
+      const { error } = await supabase.rpc('publish_workout', { p_request_id: draft.requestId, p_payload: publicationPayload(draft) });
+      if (error) throw error;
+      try { localStorage.removeItem(storageKey); } catch { /* Publication already succeeded. */ }
+      setOpen(false); setDraft(newDraft(initialAlunoId));
+      toast.success('Treino publicado no aplicativo do aluno.'); onCriado();
     } catch (err) {
-      console.error(err);
-      toast.error('Falha ao criar treino. Tente novamente.');
-    } finally {
-      setSalvando(false);
-    }
+      setError((err as { message?: string }).message || 'Não foi possível publicar. Seu rascunho foi preservado.');
+    } finally { busy.current = false; setSaving(false); }
   };
+  const matches = library.filter(e => `${e.nome} ${e.grupo_muscular || ''} ${e.equipamento || ''}`.toLocaleLowerCase().includes(search.toLocaleLowerCase()));
 
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button style={{ backgroundColor: '#C8FF00', color: '#000' }} className="hover:opacity-90">
-          <Plus className="w-4 h-4 mr-1.5" /> Novo treino
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Dumbbell className="w-5 h-5" /> Criar treino
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          <div>
-            <Label>Aluno</Label>
-            <Select value={alunoId} onValueChange={setAlunoId}>
-              <SelectTrigger><SelectValue placeholder="Selecione o aluno" /></SelectTrigger>
-              <SelectContent>
-                {alunos.map(a => <SelectItem key={a.id} value={a.id}>{a.nome}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid sm:grid-cols-2 gap-3">
-            <div>
-              <Label>Nome do plano</Label>
-              <Input value={nomePlano} onChange={e => setNomePlano(e.target.value)}
-                     placeholder="Ex.: Hipertrofia — fase 1" />
-            </div>
-            <div>
-              <Label>Objetivo</Label>
-              <Input value={objetivo} onChange={e => setObjetivo(e.target.value)}
-                     placeholder="Ex.: Ganho de força e massa" />
-            </div>
-          </div>
-
-          <div className="grid sm:grid-cols-3 gap-3">
-            <div>
-              <Label>Nível</Label>
-              <Select value={nivel} onValueChange={setNivel}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="iniciante">Iniciante</SelectItem>
-                  <SelectItem value="intermediario">Intermediário</SelectItem>
-                  <SelectItem value="avancado">Avançado</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Início</Label>
-              <Input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} />
-            </div>
-            <div>
-              <Label>Duração (semanas)</Label>
-              <Input type="number" min="1" value={semanas} onChange={e => setSemanas(e.target.value)} />
-            </div>
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <Label>Exercícios</Label>
-              <Button type="button" size="sm" variant="outline" onClick={addLinha}>
-                <Plus className="w-3.5 h-3.5 mr-1" /> Adicionar exercício
-              </Button>
-            </div>
-            <div className="space-y-2">
-              {exercicios.map((linha, idx) => (
-                <Card key={idx} className="bg-card/60 border-border/40">
-                  <CardContent className="p-3 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Select value={linha.exercicio_id} onValueChange={v => selecionarExercicio(idx, v)}>
-                        <SelectTrigger className="flex-1"><SelectValue placeholder="Escolha o exercício" /></SelectTrigger>
-                        <SelectContent>
-                          {biblioteca.map(b => (
-                            <SelectItem key={b.id} value={b.id}>
-                              {b.nome} {b.grupo_muscular ? `· ${b.grupo_muscular}` : ''}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {exercicios.length > 1 && (
-                        <Button type="button" size="icon" variant="ghost" onClick={() => removeLinha(idx)}>
-                          <Trash2 className="w-4 h-4 text-muted-foreground" />
-                        </Button>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div>
-                        <Label className="text-[10px] text-muted-foreground">Séries</Label>
-                        <Input value={linha.series} onChange={e => updateLinha(idx, { series: e.target.value })} />
-                      </div>
-                      <div>
-                        <Label className="text-[10px] text-muted-foreground">Repetições</Label>
-                        <Input value={linha.repeticoes} onChange={e => updateLinha(idx, { repeticoes: e.target.value })}
-                               placeholder="Ex.: 12 ou 10-12" />
-                      </div>
-                      <div>
-                        <Label className="text-[10px] text-muted-foreground">Carga (kg)</Label>
-                        <Input value={linha.carga_kg} onChange={e => updateLinha(idx, { carga_kg: e.target.value })}
-                               placeholder="opcional" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
+  return <Dialog open={open} onOpenChange={changeOpen}>
+    <DialogTrigger asChild>{trigger || <Button><Plus className="w-4 h-4 mr-1" />Novo treino</Button>}</DialogTrigger>
+    <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogHeader><DialogTitle>{review ? 'Revisar e publicar treino' : 'Criar treino para o aluno'}</DialogTitle></DialogHeader>
+      <p className="text-xs text-muted-foreground">Rascunho salvo neste dispositivo. A programação se repete a cada semana durante a validade.</p>
+      {error && <div role="alert" className="rounded border border-destructive p-3 text-sm">{error}</div>}
+      <fieldset disabled={saving} className="space-y-4 min-w-0">
+      {!review ? <>
+        <label className="block text-sm">Aluno<select className={selectClass} value={draft.aluno_id} onChange={e => patch({ aluno_id: e.target.value })}><option value="">Escolha o aluno</option>{alunos.map(a => <option key={a.id} value={a.id}>{a.nome}</option>)}</select></label>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <label>Nome do treino<Input value={draft.nome} onChange={e => patch({ nome: e.target.value })} /></label>
+          <label>Objetivo<Input value={draft.objetivo} onChange={e => patch({ objetivo: e.target.value })} /></label>
+          <label>Início<Input type="date" value={draft.data_inicio} onChange={e => patch({ data_inicio: e.target.value })} /></label>
+          <label>Semanas<Input type="number" min={1} max={52} value={draft.semanas} onChange={e => patch({ semanas: Number(e.target.value) })} /></label>
+          <label>Nível<select className={selectClass} value={draft.nivel} onChange={e => patch({ nivel: e.target.value })}>{['iniciante','intermediario','avancado'].map(n => <option key={n}>{n}</option>)}</select></label>
         </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)} disabled={salvando}>Cancelar</Button>
-          <Button onClick={salvar} disabled={salvando}
-                  style={{ backgroundColor: '#C8FF00', color: '#000' }} className="hover:opacity-90">
-            {salvando ? 'Salvando…' : 'Criar e enviar ao aluno'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
+        <section className="rounded border p-3 space-y-2" aria-label="Biblioteca de exercícios">
+          <label>Buscar exercício, grupo muscular ou equipamento<Input value={search} onChange={e => setSearch(e.target.value)} /></label>
+          <label>Adicionar ao dia<select className={selectClass} value={day} onChange={e => setDay(Number(e.target.value))}>{WEEKDAYS.map((d, i) => <option key={d} value={i + 1}>{d}</option>)}</select></label>
+          {loading ? <p role="status">Carregando biblioteca…</p> : libraryError ? <div role="alert">{libraryError}<Button variant="outline" onClick={loadLibrary}>Tentar novamente</Button></div> : <div className="max-h-40 overflow-y-auto">
+            {matches.map(ex => <div key={ex.id} className="flex items-center justify-between gap-2 py-2 border-b"><span className="text-sm">{ex.nome}<small className="block text-muted-foreground">{ex.grupo_muscular} · {ex.equipamento}</small></span><Button size="sm" variant="outline" onClick={() => add(ex)} aria-label={`Adicionar ${ex.nome}`}>Adicionar</Button></div>)}
+            {!matches.length && <p className="text-sm">{library.length ? 'Nenhum resultado. Tente outra busca.' : 'Nenhum exercício disponível. Cadastre exercícios na biblioteca antes de publicar.'}</p>}
+          </div>}
+        </section>
+      </> : <div><h3 className="font-semibold">{draft.nome}</h3><p>{alunos.find(a => a.id === draft.aluno_id)?.nome} · {draft.semanas} semanas · Início {draft.data_inicio}</p><p>{draft.objetivo}</p></div>}
+      {draft.exercicios.map((ex, index) => <section key={ex.key} className="rounded border p-3 space-y-2">
+        <div className="flex items-center justify-between gap-2"><strong>{index + 1}. {ex.nome}</strong>{!review && <div className="flex">
+          <Button size="icon" variant="ghost" disabled={index === 0} aria-label={`Mover ${ex.nome} para cima`} onClick={() => move(index, -1)}><ArrowUp className="w-4 h-4" /></Button>
+          <Button size="icon" variant="ghost" disabled={index === draft.exercicios.length - 1} aria-label={`Mover ${ex.nome} para baixo`} onClick={() => move(index, 1)}><ArrowDown className="w-4 h-4" /></Button>
+          <Button size="icon" variant="ghost" aria-label={`Duplicar ${ex.nome}`} onClick={() => patch({ exercicios: [...draft.exercicios, { ...ex, key: crypto.randomUUID() }] })}><Copy className="w-4 h-4" /></Button>
+          <Button size="icon" variant="ghost" aria-label={`Remover ${ex.nome}`} onClick={() => patch({ exercicios: draft.exercicios.filter(e => e.key !== ex.key) })}><Trash2 className="w-4 h-4" /></Button>
+        </div>}</div>
+        {review ? <p className="text-sm">{WEEKDAYS[ex.dia_semana - 1]} · {ex.series} × {ex.repeticoes} · {ex.carga_kg || '0'} kg · Descanso {ex.descanso_seg}s<br />{ex.observacoes}</p> : <>
+          <label>Dia<select className={selectClass} value={ex.dia_semana} onChange={e => editExercise(ex.key, { dia_semana: Number(e.target.value) })}>{WEEKDAYS.map((d, i) => <option key={d} value={i + 1}>{d}</option>)}</select></label>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <label>Séries<Input type="number" min={1} max={30} value={ex.series} onChange={e => editExercise(ex.key, { series: Number(e.target.value) })} /></label>
+            <label>Repetições<Input value={ex.repeticoes} onChange={e => editExercise(ex.key, { repeticoes: e.target.value })} /></label>
+            <label>Carga (kg)<Input type="number" min={0} step="0.5" value={ex.carga_kg} onChange={e => editExercise(ex.key, { carga_kg: e.target.value })} /></label>
+            <label>Descanso (s)<Input type="number" min={0} max={1800} value={ex.descanso_seg} onChange={e => editExercise(ex.key, { descanso_seg: Number(e.target.value) })} /></label>
+          </div>
+          <label>Orientação / alternativa<Textarea value={ex.observacoes} onChange={e => editExercise(ex.key, { observacoes: e.target.value })} /></label>
+        </>}
+      </section>)}
+      </fieldset>
+      <DialogFooter className="gap-2">
+        <Button variant="ghost" disabled={saving} onClick={() => { try { localStorage.removeItem(storageKey); } catch { /* local storage unavailable */ } setDraft(newDraft(initialAlunoId)); setOpen(false); }}>Descartar rascunho</Button>
+        <Button variant="outline" disabled={saving} onClick={() => review ? setReview(false) : changeOpen(false)}>{review ? 'Voltar e editar' : 'Salvar e fechar'}</Button>
+        <Button disabled={saving} onClick={() => { if (review) void publish(); else { const err = validateWorkout(draft); if (err) setError(err); else setReview(true); } }}>{saving ? 'Publicando…' : review ? 'Publicar no app do aluno' : 'Revisar treino'}</Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>;
 }

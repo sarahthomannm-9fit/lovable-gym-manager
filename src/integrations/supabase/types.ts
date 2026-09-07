@@ -2492,6 +2492,9 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      publish_workout: { Args: { p_request_id: string; p_payload: Json }; Returns: string }
+      student_workout: { Args: Record<PropertyKey, never>; Returns: Json }
+      save_workout_session: { Args: { p_treino_id: string; p_action: string; p_progress?: Json; p_feedback?: string }; Returns: Json }
       analise_faturamento_avancada: {
         Args: never
         Returns: {

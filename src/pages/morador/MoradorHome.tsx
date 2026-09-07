@@ -49,6 +49,8 @@ export default function MoradorHome() {
   const [exerciciosHoje, setExerciciosHoje] = useState<any[]>([]);
   const [checkinFeito, setCheckinFeito] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  const [sessao, setSessao] = useState<any>(null);
+  const [treinoErro, setTreinoErro] = useState('');
 
   useEffect(() => {
     if (!user || vinculoLoading) return;
@@ -117,21 +119,17 @@ export default function MoradorHome() {
           .select('id').eq('aluno_id', al.id).eq('data_checkin', hoje).maybeSingle();
         setCheckinFeito(!!ck);
 
-        // Treino ativo
-        const { data: tr } = await supabase.from('treinos')
-          .select('id, descricao, data_inicio, data_fim')
-          .eq('aluno_id', al.id).gte('data_fim', hoje)
-          .order('data_inicio', { ascending: false }).limit(1).maybeSingle();
+        // A mesma função do servidor resolve vigência, plano, semana, dia e sessão.
+        const { data: workout, error: workoutError } = await supabase.rpc('student_workout');
         if (!mounted) return;
-        setTreinoAtivo(tr);
-
-        // Exercícios de hoje (do plano vinculado — best effort)
-        if (tr) {
-          const diaSemana = new Date().getDay() || 7;
-          const { data: pes } = await supabase.from('plano_exercicios')
-            .select('*, exercicios_biblioteca(nome, grupo_muscular, video_url)')
-            .eq('dia_semana', diaSemana).order('ordem').limit(8);
-          setExerciciosHoje(pes || []);
+        if (workoutError) {
+          setTreinoErro('Não foi possível carregar o treino de hoje.');
+          setTreinoAtivo(null); setExerciciosHoje([]); setSessao(null);
+        } else {
+          setTreinoErro('');
+          setTreinoAtivo(workout?.treino || null);
+          setExerciciosHoje(workout?.exercicios || []);
+          setSessao(workout?.session || null);
         }
       }
 
@@ -172,17 +170,21 @@ export default function MoradorHome() {
     else { setCheckinFeito(true); toast.success('Check-in registrado! Bom treino 💪'); setPresencas(p => p + 1); }
   };
 
-  const concluirTreino = async () => {
-    if (!aluno?.id || !treinoAtivo) return;
+  const atualizarSessao = async (action: 'start' | 'pause' | 'resume' | 'finish', progress = sessao?.progress || {}, feedback = sessao?.feedback || '') => {
+    if (!treinoAtivo) return;
     setSalvando(true);
-    const { error } = await supabase.from('treino_execucoes').insert({
-      treino_id: treinoAtivo.id, aluno_id: aluno.id,
-      data_execucao: new Date().toISOString().slice(0, 10),
-      concluido: true,
+    const { data, error } = await supabase.rpc('save_workout_session', {
+      p_treino_id: treinoAtivo.id, p_action: action, p_progress, p_feedback: feedback,
     });
     setSalvando(false);
-    if (error) toast.error('Falha ao registrar');
-    else toast.success('Treino concluído! Parabéns 🎉');
+    if (error) toast.error(error.message || 'Falha ao registrar sessão');
+    else { setSessao(data); if (action === 'finish') toast.success('Treino concluído! Parabéns 🎉'); }
+  };
+
+  const iniciarTreino = () => atualizarSessao(sessao?.status === 'pausado' ? 'resume' : 'start');
+  const concluirTreino = () => {
+    const progress = Object.fromEntries(exerciciosHoje.map((ex: any) => [ex.id, { completed: true, carga: ex.carga_kg == null ? '' : String(ex.carga_kg) }]));
+    return atualizarSessao('finish', progress);
   };
 
   const s = saudacao();
@@ -250,10 +252,10 @@ export default function MoradorHome() {
                       <p className="text-lg font-semibold">Fazer seu treino</p>
                       <p className="text-sm text-muted-foreground truncate">{treinoAtivo.descricao || 'Plano personalizado'}</p>
                     </div>
-                    <Button size="lg" onClick={concluirTreino} disabled={salvando}
+                    <Button size="lg" onClick={iniciarTreino} disabled={salvando || sessao?.status === 'concluido'}
                             style={{ backgroundColor: ACCENT, color: '#000' }}
                             className="hover:opacity-90 shrink-0 text-base px-6 h-12">
-                      <PlayCircle className="w-5 h-5 mr-1.5" /> Começar
+                      <PlayCircle className="w-5 h-5 mr-1.5" /> {sessao?.status === 'pausado' ? 'Retomar' : sessao?.status === 'em_andamento' ? 'Em andamento' : 'Começar'}
                     </Button>
                   </CardContent>
                 </Card>
@@ -387,7 +389,9 @@ export default function MoradorHome() {
 
         {/* MEU TREINO */}
         <TabsContent value="treino" className="space-y-4">
-          {!treinoAtivo ? (
+          {treinoErro ? (
+            <Card className="border-destructive/40"><CardContent className="p-6 text-sm text-destructive">{treinoErro}<Button className="ml-3" size="sm" variant="outline" onClick={() => window.location.reload()}>Tentar novamente</Button></CardContent></Card>
+          ) : !treinoAtivo ? (
             <Card className="bg-card/60 border-border/40">
               <CardContent className="p-8 text-center space-y-3">
                 <Dumbbell className="w-10 h-10 mx-auto text-muted-foreground/50" />
@@ -441,10 +445,11 @@ export default function MoradorHome() {
                 </div>
               )}
 
-              <Button size="lg" onClick={concluirTreino} disabled={salvando}
+              {sessao?.status === 'em_andamento' && <Button size="lg" variant="outline" onClick={() => atualizarSessao('pause')} disabled={salvando} className="w-full h-12">Pausar treino</Button>}
+              <Button size="lg" onClick={sessao?.status === 'concluido' ? undefined : concluirTreino} disabled={salvando || sessao?.status === 'concluido'}
                       className="w-full h-14 text-base"
                       style={{ backgroundColor: ACCENT, color: '#000' }}>
-                <CheckCircle2 className="w-5 h-5 mr-2" /> Concluir treino de hoje
+                <CheckCircle2 className="w-5 h-5 mr-2" /> {sessao?.status === 'concluido' ? 'Treino concluído hoje' : 'Concluir treino de hoje'}
               </Button>
             </>
           )}
