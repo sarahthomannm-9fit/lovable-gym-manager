@@ -26,7 +26,7 @@ export function CriarTreinoDialog({ alunos, organizationId, onCriado, trigger, i
   const [library, setLibrary] = useState<LibraryExercise[]>([]);
   const [search, setSearch] = useState('');
   const [day, setDay] = useState(1);
-  const [libraryError, setLibraryError] = useState('');\n  const [infrastructureError, setInfrastructureError] = useState('');
+  const [libraryError, setLibraryError] = useState('');\n  const [infrastructureError, setInfrastructureError] = useState('');\n  const [safetyStatus, setSafetyStatus] = useState<'liberado' | 'pendente' | 'bloqueado' | 'desconhecido'>('desconhecido');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const busy = useRef(false);
@@ -90,7 +90,7 @@ export function CriarTreinoDialog({ alunos, organizationId, onCriado, trigger, i
     <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
       <DialogHeader><DialogTitle>{review ? 'Revisar e publicar treino' : 'Criar treino para o aluno'}</DialogTitle></DialogHeader>
       <p className="text-xs text-muted-foreground">Rascunho salvo neste dispositivo. A programação se repete a cada semana durante a validade.</p>
-      {error && <div role="alert" className="rounded border border-destructive p-3 text-sm">{error}</div>}\n      {infrastructureError && <div role="alert" className="rounded border border-amber-500 p-3 text-sm text-amber-700">{infrastructureError} Aprove o inventário antes de publicar um protocolo.</div>}
+      {error && <div role="alert" className="rounded border border-destructive p-3 text-sm">{error}</div>}\n      {infrastructureError && <div role="alert" className="rounded border border-amber-500 p-3 text-sm text-amber-700">{infrastructureError} Aprove o inventário antes de publicar um protocolo.</div>}\n      {draft.aluno_id && <div className={`rounded border p-3 text-sm ${safetyStatus === 'liberado' ? 'border-emerald-500 text-emerald-700' : 'border-amber-500 text-amber-700'}`}>Segurança do aluno: <strong>{safetyStatus === 'liberado' ? 'liberada' : safetyStatus === 'bloqueado' ? 'bloqueada' : 'aguardando avaliação'}</strong></div>}
       <fieldset disabled={saving} className="space-y-4 min-w-0">
       {!review ? <>
         <label className="block text-sm">Aluno<select className={selectClass} value={draft.aluno_id} onChange={e => patch({ aluno_id: e.target.value })}><option value="">Escolha o aluno</option>{alunos.map(a => <option key={a.id} value={a.id}>{a.nome}</option>)}</select></label>
