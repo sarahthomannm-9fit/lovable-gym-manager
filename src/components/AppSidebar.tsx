@@ -214,6 +214,7 @@ export function AppSidebar() {
       items: [
         { title: "Usuários", icon: Shield, path: "/admin/usuarios", roles: ['admin'] },
         { title: "Organizações", icon: Network, path: "/admin/organizacoes", roles: ['admin'] },
+        { title: "Auditoria de prescrições", icon: ClipboardCheck, path: "/admin/auditoria-prescricoes", roles: ['admin'] },
         { title: "Produtos & equipamentos", icon: Package, path: "/produtos", roles: ['admin'] },
         { title: "Equipamentos", icon: Dumbbell, path: "/equipamentos", roles: ['admin'] },
       ],
