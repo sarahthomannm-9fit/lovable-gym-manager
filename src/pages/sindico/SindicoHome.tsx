@@ -263,7 +263,9 @@ export default function SindicoHome() {
   const resolvedActivationActions = filteredActivationActions.filter(a => a.resolved_at).length;
   const openActivationActions = filteredActivationActions.length - resolvedActivationActions;
   const activationResolutionRate = filteredActivationActions.length ? Math.round((resolvedActivationActions / filteredActivationActions.length) * 100) : 0;
-  const activationHealth = activation.moradores_ativos > 0 && activation.checkins_30_dias > 0 && activation.eventos_publicados > 0 ? { label: 'Saudável', color: 'text-emerald-400', score: 100 } : activation.moradores_ativos > 0 && (activation.checkins_30_dias > 0 || activation.eventos_publicados > 0) ? { label: 'Em evolução', color: 'text-amber-400', score: 60 } : { label: 'Precisa de ativação', color: 'text-red-400', score: 25 };
+  const goalProgress = [activation.moradores_ativos >= activationGoals.moradores, activation.checkins_30_dias >= activationGoals.checkins, activation.eventos_publicados >= activationGoals.eventos];
+  const goalScore = Math.round((goalProgress.filter(Boolean).length / goalProgress.length) * 100);
+  const activationHealth = goalScore === 100 ? { label: 'Saudável', color: 'text-emerald-400', score: 100 } : goalScore > 0 ? { label: 'Em evolução', color: 'text-amber-400', score: goalScore } : { label: 'Precisa de ativação', color: 'text-red-400', score: 0 };
 
   return (
     <PersonaLayout title="Painel do Síndico" accent={ACCENT}>
@@ -345,10 +347,10 @@ export default function SindicoHome() {
             <p className={`text-lg font-semibold ${activationHealth.color}`}>{activationHealth.label}</p>
             <p className="text-xs text-muted-foreground mt-1">Baseado em moradores, check-ins e eventos publicados.</p>
             <div className="flex flex-wrap gap-2 mt-3 text-[11px]">
-              <span className={`rounded-full px-2 py-1 ${activation.moradores_ativos > 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>Moradores {activation.moradores_ativos > 0 ? '✓' : '!'}</span>
-              <span className={`rounded-full px-2 py-1 ${activation.checkins_30_dias > 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>Check-ins {activation.checkins_30_dias > 0 ? '✓' : '!'}</span>
-              <span className={`rounded-full px-2 py-1 ${activation.treinos_ativos > 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>Treinos {activation.treinos_ativos > 0 ? '✓' : '!'}</span>
-              <span className={`rounded-full px-2 py-1 ${activation.eventos_publicados > 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>Eventos {activation.eventos_publicados > 0 ? '✓' : '!'}</span>
+              <span className={`rounded-full px-2 py-1 ${activation.moradores_ativos >= activationGoals.moradores ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>Moradores {activation.moradores_ativos > 0 ? '✓' : '!'}</span>
+              <span className={`rounded-full px-2 py-1 ${activation.checkins_30_dias >= activationGoals.checkins ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>Check-ins {activation.checkins_30_dias > 0 ? '✓' : '!'}</span>
+              <span className={`rounded-full px-2 py-1 ${activation.treinos_ativos >= 1 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>Treinos {activation.treinos_ativos > 0 ? '✓' : '!'}</span>
+              <span className={`rounded-full px-2 py-1 ${activation.eventos_publicados >= activationGoals.eventos ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>Eventos {activation.eventos_publicados > 0 ? '✓' : '!'}</span>
             </div>
             {activation.moradores_ativos === 0 && <p className="text-xs text-muted-foreground mt-2">Meta: ativar o primeiro morador pelo QR ou convite.</p>}
             {activation.moradores_ativos > 0 && activation.checkins_30_dias === 0 && <p className="text-xs text-muted-foreground mt-2">Meta: obter o primeiro check-in nos próximos 30 dias.</p>}
