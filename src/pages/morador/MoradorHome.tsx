@@ -120,7 +120,7 @@ export default function MoradorHome() {
         setCheckinFeito(!!ck);
 
         // A mesma função do servidor resolve vigência, plano, semana, dia e sessão.
-        const { data: workout, error: workoutError } = await supabase.rpc('student_workout');
+        const { data: workout, error: workoutError } = await (supabase as any).rpc('student_workout') as { data: any; error: any };
         if (!mounted) return;
         if (workoutError) {
           setTreinoErro('Não foi possível carregar o treino de hoje.');
@@ -173,8 +173,8 @@ export default function MoradorHome() {
   const atualizarSessao = async (action: 'start' | 'pause' | 'resume' | 'finish', progress = sessao?.progress || {}, feedback = sessao?.feedback || '') => {
     if (!treinoAtivo) return;
     setSalvando(true);
-    const { data, error } = await supabase.rpc('save_workout_session', {
-      p_treino_id: treinoAtivo.id, p_action: action, p_progress, p_feedback: feedback,
+    const { data, error } = await (supabase as any).rpc('save_workout_session', {
+      p_treino_id: treinoAtivo.id, p_action: action, p_progress: progress, p_feedback: feedback,
     });
     setSalvando(false);
     if (error) toast.error(error.message || 'Falha ao registrar sessão');
