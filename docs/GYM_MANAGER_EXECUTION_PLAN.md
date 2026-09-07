@@ -85,3 +85,23 @@ Critério de saída: o treino diário é compatível com segurança, objetivo, i
 - Próximo treino considera execução e feedback anterior.
 - Síndico acompanha adesão sem acessar dados clínicos indevidos.
 
+
+
+## Status atualizado — 2026-09-07
+
+### Concluídos
+3, 4, 5, 6, 14, 15, 16, 17, 18, 19, 25.
+
+### Parcialmente concluídos
+1, 2, 8, 9, 10, 12, 20, 21, 22, 24, 27, 28, 33.
+
+### Pendentes
+7, 11, 13, 23, 26, 29, 30, 31, 32, 34.
+
+### Ordem final de execução
+1. Fechar cadastro operacional do condomínio, responsáveis e infraestrutura.
+2. Finalizar regras de capacidade, horários e restrições da academia.
+3. Completar motor de protocolos, substituições e versionamento.
+4. Entregar comunicados segmentados, relatórios e auditoria.
+5. Entregar importação, convites automáticos, transferência e monitoramento.
+6. Validar o piloto ponta a ponta e fechar os critérios de aceite.
