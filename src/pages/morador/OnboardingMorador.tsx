@@ -37,7 +37,7 @@ export default function OnboardingMorador() {
     })();
   }, []);
 
-  const submit = async () => {
+  const submitObjective = async () => {\n    if (!form.objetivo) return;\n    const payload = { consentimento: true, restricoes: form.restricoes.split(',').map((x) => x.trim()).filter(Boolean), lesoes_atuais: form.lesoes.split(',').map((x) => x.trim()).filter(Boolean), historico_lesoes: form.historico, cirurgias: form.cirurgias, dor_atual: form.dor, sinais_alerta: form.sinais.split(',').map((x) => x.trim()).filter(Boolean), observacoes: form.observacoes, objetivo: form.objetivo };\n    const { error } = await (supabase as any).rpc('submit_student_safety_onboarding', { p_aluno_id: alunoId, p_organization_id: organizationId, p_payload: payload });\n    if (error) return toast.error(error.message);\n    toast.success('Onboarding concluído.'); navigate('/morador');\n  };\n\n  const submit = async () => {
     if (!organizationId || !alunoId) return toast.error('Selecione o condomínio e confirme seu cadastro.');
     if (!form.consentimento) return toast.error('Você precisa aceitar o consentimento para continuar.');
     setSaving(true);
@@ -72,7 +72,7 @@ export default function OnboardingMorador() {
       <Button className="w-full" disabled={saving} onClick={submit}>{saving ? 'Enviando…' : 'Continuar'}</Button>
     </CardContent></Card> : <Card><CardHeader><CardTitle>Qual é seu objetivo?</CardTitle></CardHeader><CardContent className="space-y-4">
       <div className="grid sm:grid-cols-2 gap-3">{goals.map((goal) => <button key={goal} type="button" onClick={() => setForm({ ...form, objetivo: goal })} className={form.objetivo === goal ? 'rounded-lg border-2 border-primary bg-primary/10 p-4 text-left font-medium' : 'rounded-lg border p-4 text-left hover:border-primary'}>{goal}</button>)}</div>
-      <Button className="w-full" disabled={!form.objetivo} onClick={() => { toast.success('Objetivo salvo.'); navigate('/morador'); }}>Concluir onboarding</Button>
+      <Button className="w-full" disabled={!form.objetivo} onClick={submitObjective}>Concluir onboarding</Button>
     </CardContent></Card>}
   </div></div>;
 }
