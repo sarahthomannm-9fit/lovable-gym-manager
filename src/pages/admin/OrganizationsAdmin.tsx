@@ -167,7 +167,7 @@ export default function OrganizationsAdmin() {
           <Button onClick={addFacility}><Plus className="w-4 h-4 mr-1" /> Adicionar equipamento</Button>
           <Table><TableHeader><TableRow><TableHead>Ambiente</TableHead><TableHead>Equipamento</TableHead><TableHead>Qtd.</TableHead><TableHead>Status</TableHead><TableHead /></TableRow></TableHeader><TableBody>{facilities.map((f) => <TableRow key={f.id}><TableCell>{f.ambiente}</TableCell><TableCell>{f.nome}</TableCell><TableCell>{f.quantidade}</TableCell><TableCell className="text-xs uppercase">{f.status}</TableCell><TableCell className="text-right">{f.status === 'pendente' && <Button size="sm" onClick={() => approveFacility(f.id, 'aprovado')}>Aprovar</Button>}{f.status === 'aprovado' && <Button size="sm" variant="ghost" onClick={() => approveFacility(f.id, 'inativo')}>Desativar</Button>}</TableCell></TableRow>)}{!facilities.length && <TableRow><TableCell colSpan={5} className="text-center py-4 text-muted-foreground">Nenhum equipamento cadastrado.</TableCell></TableRow>}</TableBody></Table>
         </CardContent></Card>
-      {selected && (
+
         <Card>
           <CardHeader><CardTitle>Membros — {selected.nome}</CardTitle></CardHeader>
           <CardContent className="space-y-4">
