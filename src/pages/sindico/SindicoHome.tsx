@@ -171,7 +171,11 @@ export default function SindicoHome() {
     setTickets(tk || []);
   };
 
-  useEffect(() => { carregar(); }, [activeOrg]);
+  useEffect(() => {
+    carregar();
+    const timer = window.setInterval(carregar, 5 * 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, [activeOrg]);
 
   if (!ready) {
     return (
@@ -294,7 +298,10 @@ export default function SindicoHome() {
               <h2 className="font-semibold text-sm">Ativação do condomínio</h2>
               <p className="text-xs text-muted-foreground">Sinais operacionais atualizados automaticamente</p>
             </div>
-            <Badge variant="outline" className="text-primary border-primary/30">30 dias</Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-primary border-primary/30">30 dias</Badge>
+              <Button size="sm" variant="ghost" onClick={carregar} className="h-7 px-2 text-xs">Atualizar</Button>
+            </div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="rounded-lg border border-border/30 p-3">
