@@ -317,6 +317,37 @@ export default function SindicoHome() {
         </CardContent>
       </Card>
 
+      {(activation.moradores_ativos === 0 || activation.checkins_30_dias === 0 || activation.eventos_publicados === 0) && (
+        <Card className="mb-4 border-amber-500/30 bg-amber-500/5">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <ShieldAlert className="w-4 h-4 text-amber-400" />
+              <h2 className="font-semibold text-sm">Próximas ações recomendadas</h2>
+            </div>
+            <div className="grid gap-2 text-xs">
+              {activation.moradores_ativos === 0 && (
+                <div className="flex items-center justify-between gap-3 rounded-md border border-border/30 p-3">
+                  <span><strong>Ative os moradores:</strong> compartilhe o QR de entrada e convites do condomínio.</span>
+                  <Button size="sm" variant="outline" onClick={() => window.location.assign('/admin/organizacoes')}>Abrir cadastro</Button>
+                </div>
+              )}
+              {activation.checkins_30_dias === 0 && activation.moradores_ativos > 0 && (
+                <div className="flex items-center justify-between gap-3 rounded-md border border-border/30 p-3">
+                  <span><strong>Sem check-ins recentes:</strong> publique um comunicado ou agende um Health Day.</span>
+                  <Button size="sm" variant="outline" onClick={() => window.location.assign('/sindico/comunicados')}>Criar comunicado</Button>
+                </div>
+              )}
+              {activation.eventos_publicados === 0 && (
+                <div className="flex items-center justify-between gap-3 rounded-md border border-border/30 p-3">
+                  <span><strong>Nenhum evento publicado:</strong> um Health Day ajuda a iniciar o ciclo de engajamento.</span>
+                  <Button size="sm" variant="outline" onClick={() => window.location.assign('/sindico/health-day')}>Criar evento</Button>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         <KpiCard label="Alunos ativos" value={dashLoading ? '…' : (dash?.alunos_ativos ?? metrics.alunos)} hint="via dashboard_sindico" />
         <KpiCard label="Taxa de adesão" value={operacao.adesao ? `${operacao.adesao}%` : '--'} hint={`${operacao.unidades} unidades`} />
