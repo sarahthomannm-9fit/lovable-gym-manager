@@ -347,10 +347,10 @@ export default function SindicoHome() {
             <p className={`text-lg font-semibold ${activationHealth.color}`}>{activationHealth.label}</p>
             <p className="text-xs text-muted-foreground mt-1">Baseado em moradores, check-ins e eventos publicados.</p>
             <div className="flex flex-wrap gap-2 mt-3 text-[11px]">
-              <span className={`rounded-full px-2 py-1 ${activation.moradores_ativos >= activationGoals.moradores ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>Moradores {activation.moradores_ativos > 0 ? '✓' : '!'}</span>
-              <span className={`rounded-full px-2 py-1 ${activation.checkins_30_dias >= activationGoals.checkins ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>Check-ins {activation.checkins_30_dias > 0 ? '✓' : '!'}</span>
+              <span className={`rounded-full px-2 py-1 ${activation.moradores_ativos >= activationGoals.moradores ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>Moradores {activation.moradores_ativos}/{activationGoals.moradores} {activation.moradores_ativos >= activationGoals.moradores ? '✓' : '!'}</span>
+              <span className={`rounded-full px-2 py-1 ${activation.checkins_30_dias >= activationGoals.checkins ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>Check-ins {activation.checkins_30_dias}/{activationGoals.checkins} {activation.checkins_30_dias >= activationGoals.checkins ? '✓' : '!'}</span>
               <span className={`rounded-full px-2 py-1 ${activation.treinos_ativos >= 1 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>Treinos {activation.treinos_ativos > 0 ? '✓' : '!'}</span>
-              <span className={`rounded-full px-2 py-1 ${activation.eventos_publicados >= activationGoals.eventos ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>Eventos {activation.eventos_publicados > 0 ? '✓' : '!'}</span>
+              <span className={`rounded-full px-2 py-1 ${activation.eventos_publicados >= activationGoals.eventos ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>Eventos {activation.eventos_publicados}/{activationGoals.eventos} {activation.eventos_publicados >= activationGoals.eventos ? '✓' : '!'}</span>
             </div>
             {activation.moradores_ativos === 0 && <p className="text-xs text-muted-foreground mt-2">Meta: ativar o primeiro morador pelo QR ou convite.</p>}
             {activation.moradores_ativos > 0 && activation.checkins_30_dias === 0 && <p className="text-xs text-muted-foreground mt-2">Meta: obter o primeiro check-in nos próximos 30 dias.</p>}
