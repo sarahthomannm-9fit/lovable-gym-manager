@@ -132,7 +132,7 @@ export function AppSidebar() {
       category: "CENTRAL DE OPERAÇÕES",
       items: [
         { title: "Visão geral", icon: LayoutDashboard, path: "/painel" },
-        { title: "Operação 9FIT", icon: ClipboardCheck, path: "/operacao-9fit", roles: ['admin','manager'] },
+        { title: "Operação NLIT", icon: ClipboardCheck, path: "/operacao-9fit", roles: ['admin','manager'] },
         { title: "Pipeline comercial", icon: Target, path: "/pipeline", roles: ['admin','manager'] },
         { title: "Clientes ativos", icon: Building2, path: "/clientes", roles: ['admin','manager'] },
         { title: "Alunos", icon: Users, path: "/alunos", roles: ['admin', 'manager'], badge: badges.alunosSemFreq || undefined, badgeColor: 'bg-amber-500' },
@@ -247,8 +247,8 @@ export function AppSidebar() {
               9F
             </div>
             <div>
-              <div className="text-[12px] font-bold font-display text-sidebar-foreground tracking-wide">FITMANAGER</div>
-              <div className="text-[8px] text-primary/70 font-mono tracking-[0.2em] uppercase mt-0.5">9FIT · Ecosystem</div>
+              <div className="text-[12px] font-bold font-display text-sidebar-foreground tracking-wide">NINE LIVING</div>
+              <div className="text-[8px] text-primary/70 font-mono tracking-[0.2em] uppercase mt-0.5">SAÚDE · COMUNIDADE</div>
             </div>
           </div>
         </div>
@@ -304,7 +304,7 @@ export function AppSidebar() {
             </div>
             <div className="min-w-0">
               <div className="text-[11px] font-semibold text-sidebar-foreground truncate">{nomeUsuario}</div>
-              <div className="text-[8px] text-primary/60 font-mono tracking-wider uppercase">{roleLabel} · 9FIT</div>
+              <div className="text-[8px] text-primary/60 font-mono tracking-wider uppercase">{roleLabel} · NINE LIVING</div>
             </div>
           </div>
           <button onClick={() => signOut()} className="p-1.5 rounded-md hover:bg-sidebar-accent text-sidebar-foreground/50 hover:text-primary transition-colors shrink-0" title="Sair">
