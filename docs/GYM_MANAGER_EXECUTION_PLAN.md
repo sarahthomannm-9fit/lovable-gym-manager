@@ -113,3 +113,11 @@ Os 13 itens que estavam parciais foram consolidados como implementação entregu
 
 ### Fechamento dos 10 itens pendentes — 2026-09-07
 Foram consolidados auditoria administrativa, sugestão de equipamentos com confirmação humana, regras operacionais, versionamento de protocolos, comunicados segmentados, importação CSV/XLSX, convites automáticos, gestão de usuários inativos, transferência entre condomínios e monitoramento operacional.
+
+
+## Validação final — 2026-09-07
+
+- Lint: executado com `pnpm run lint`, sem falhas reportadas.
+- Build: bloqueado no ambiente Codex por erro de permissão do esbuild ao resolver `vite.config.ts` (`Access is denied`); requer execução no ambiente do Lovable/CI.
+- Fluxos funcionais: implementados no código, mas ainda requerem execução autenticada no Supabase para validar RLS, migrations e dados reais.
+- Status do checklist: 34/34 implementados; aceite operacional do piloto pendente.
