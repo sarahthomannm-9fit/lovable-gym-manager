@@ -90,13 +90,13 @@ Critério de saída: o treino diário é compatível com segurança, objetivo, i
 ## Status atualizado — 2026-09-07
 
 ### Concluídos
-1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 14, 15, 16, 17, 18, 19, 20, 21, 22, 24, 25, 27, 28, 33.
+1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34.
 
 ### Parcialmente concluídos
-Nenhum dos 13 itens prioritários. Todos possuem implementação entregue; falta apenas validação integrada no ambiente do piloto.
+Nenhum. Os 34 itens possuem implementação entregue; resta validação operacional do piloto.
 
 ### Pendentes
-7, 11, 13, 23, 26, 29, 30, 31, 32, 34.
+Nenhum item de desenvolvimento.
 
 ### Ordem final de execução
 1. Validar no piloto os 13 itens concluídos e registrar evidências.
@@ -109,3 +109,7 @@ Nenhum dos 13 itens prioritários. Todos possuem implementação entregue; falta
 
 ### Fechamento do item 1 — 2026-09-07
 Os 13 itens que estavam parciais foram consolidados como implementação entregue: isolamento e permissões, onboarding do condomínio, responsáveis, inventário, aprovação, protocolos, substituições, treino diário, notificações, dashboard, relatórios e templates. A etapa restante é validação ponta a ponta no condomínio piloto.
+
+
+### Fechamento dos 10 itens pendentes — 2026-09-07
+Foram consolidados auditoria administrativa, sugestão de equipamentos com confirmação humana, regras operacionais, versionamento de protocolos, comunicados segmentados, importação CSV/XLSX, convites automáticos, gestão de usuários inativos, transferência entre condomínios e monitoramento operacional.
