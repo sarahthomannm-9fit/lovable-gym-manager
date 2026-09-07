@@ -44,6 +44,7 @@ export default function SindicoHome() {
   const [enviando, setEnviando] = useState(false);
   const [orgTemUnidadesEsperadas, setOrgTemUnidadesEsperadas] = useState(false);
   const [engajamentoMensal, setEngajamentoMensal] = useState<{ mes: string; checkins: number }[]>([]);
+  const [activation, setActivation] = useState({ moradores_ativos: 0, treinos_ativos: 0, eventos_publicados: 0, checkins_30_dias: 0 });
 
   // Indicadores principais sempre pela RPC oficial
   const { data: dash, loading: dashLoading, error: dashError, refresh: refreshDash } =
@@ -64,6 +65,8 @@ export default function SindicoHome() {
   const carregar = async () => {
     if (!activeOrg) { setReady(true); return; }
     const hoje = new Date().toISOString().slice(0, 10);
+    const { data: activationData } = await supabase.rpc('organization_activation_metrics', { p_organization_id: activeOrg.id });
+    if (activationData) setActivation(activationData);
     const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
     const seteDias = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
 
@@ -283,6 +286,36 @@ export default function SindicoHome() {
           </CardContent>
         </Card>
       )}
+
+      <Card className="mb-4 bg-card/60 border-border/40">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h2 className="font-semibold text-sm">Ativação do condomínio</h2>
+              <p className="text-xs text-muted-foreground">Sinais operacionais atualizados automaticamente</p>
+            </div>
+            <Badge variant="outline" className="text-primary border-primary/30">30 dias</Badge>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="rounded-lg border border-border/30 p-3">
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Moradores ativos</div>
+              <div className="text-xl font-semibold mt-1">{activation.moradores_ativos}</div>
+            </div>
+            <div className="rounded-lg border border-border/30 p-3">
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Treinos ativos</div>
+              <div className="text-xl font-semibold mt-1">{activation.treinos_ativos}</div>
+            </div>
+            <div className="rounded-lg border border-border/30 p-3">
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Eventos publicados</div>
+              <div className="text-xl font-semibold mt-1">{activation.eventos_publicados}</div>
+            </div>
+            <div className="rounded-lg border border-border/30 p-3">
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Check-ins recentes</div>
+              <div className="text-xl font-semibold mt-1">{activation.checkins_30_dias}</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         <KpiCard label="Alunos ativos" value={dashLoading ? '…' : (dash?.alunos_ativos ?? metrics.alunos)} hint="via dashboard_sindico" />
