@@ -24,14 +24,14 @@ CREATE TABLE IF NOT EXISTS public.health_day_registrations (
 ALTER TABLE public.health_day_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.health_day_registrations ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "health_event_read" ON public.health_day_events FOR SELECT TO authenticated
+CREATE POLICY "health_event_read" ON public.health_day_events FOR SELECT TO authenticated
 USING (public.user_has_org(auth.uid(), organization_id) OR public.is_admin(auth.uid()));
-CREATE POLICY IF NOT EXISTS "health_event_write" ON public.health_day_events FOR ALL TO authenticated
+CREATE POLICY "health_event_write" ON public.health_day_events FOR ALL TO authenticated
 USING (public.user_has_org(auth.uid(), organization_id) OR public.is_admin(auth.uid()))
 WITH CHECK (public.user_has_org(auth.uid(), organization_id) OR public.is_admin(auth.uid()));
 
-CREATE POLICY IF NOT EXISTS "health_registration_read" ON public.health_day_registrations FOR SELECT TO authenticated
+CREATE POLICY "health_registration_read" ON public.health_day_registrations FOR SELECT TO authenticated
 USING (EXISTS (SELECT 1 FROM public.health_day_events e WHERE e.id = event_id AND (public.user_has_org(auth.uid(), e.organization_id) OR public.is_admin(auth.uid()))));
-CREATE POLICY IF NOT EXISTS "health_registration_write" ON public.health_day_registrations FOR ALL TO authenticated
+CREATE POLICY "health_registration_write" ON public.health_day_registrations FOR ALL TO authenticated
 USING (EXISTS (SELECT 1 FROM public.health_day_events e WHERE e.id = event_id AND (public.user_has_org(auth.uid(), e.organization_id) OR public.is_admin(auth.uid()))))
 WITH CHECK (EXISTS (SELECT 1 FROM public.health_day_events e WHERE e.id = event_id AND (public.user_has_org(auth.uid(), e.organization_id) OR public.is_admin(auth.uid()))));
