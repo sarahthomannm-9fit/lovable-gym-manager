@@ -31,13 +31,21 @@ export default function OnboardingMorador() {
       ]);
       setOrganizations(orgs || []);
       if (userData.user) {
-        const pendingId = sessionStorage.getItem('9fit:onboarding:aluno');\n        const { data: aluno } = await (supabase as any).from('alunos').select('id, organization_id').eq(pendingId ? 'id' : 'user_id', pendingId || userData.user.id).maybeSingle();
+        const pendingId = sessionStorage.getItem('9fit:onboarding:aluno');
+        const { data: aluno } = await (supabase as any).from('alunos').select('id, organization_id').eq(pendingId ? 'id' : 'user_id', pendingId || userData.user.id).maybeSingle();
         if (aluno) { setAlunoId(aluno.id); setOrganizationId(aluno.organization_id || ''); sessionStorage.removeItem('9fit:onboarding:aluno'); }
       }
     })();
   }, []);
 
-  const submitObjective = async () => {\n    if (!form.objetivo) return;\n    const payload = { consentimento: true, restricoes: form.restricoes.split(',').map((x) => x.trim()).filter(Boolean), lesoes_atuais: form.lesoes.split(',').map((x) => x.trim()).filter(Boolean), historico_lesoes: form.historico, cirurgias: form.cirurgias, dor_atual: form.dor, sinais_alerta: form.sinais.split(',').map((x) => x.trim()).filter(Boolean), observacoes: form.observacoes, objetivo: form.objetivo };\n    const { error } = await (supabase as any).rpc('submit_student_safety_onboarding', { p_aluno_id: alunoId, p_organization_id: organizationId, p_payload: payload });\n    if (error) return toast.error(error.message);\n    toast.success('Onboarding concluído.'); navigate('/morador');\n  };\n\n  const submit = async () => {
+  const submitObjective = async () => {
+    if (!form.objetivo) return;
+    const payload = { consentimento: true, restricoes: form.restricoes.split(',').map((x) => x.trim()).filter(Boolean), lesoes_atuais: form.lesoes.split(',').map((x) => x.trim()).filter(Boolean), historico_lesoes: form.historico, cirurgias: form.cirurgias, dor_atual: form.dor, sinais_alerta: form.sinais.split(',').map((x) => x.trim()).filter(Boolean), observacoes: form.observacoes, objetivo: form.objetivo };
+    const { error } = await (supabase as any).rpc('submit_student_safety_onboarding', { p_aluno_id: alunoId, p_organization_id: organizationId, p_payload: payload });
+    if (error) return toast.error(error.message);
+    toast.success('Onboarding concluído.'); navigate('/morador');
+  };\n
+  const submit = async () => {
     if (!organizationId || !alunoId) return toast.error('Selecione o condomínio e confirme seu cadastro.');
     if (!form.consentimento) return toast.error('Você precisa aceitar o consentimento para continuar.');
     setSaving(true);

@@ -46,7 +46,9 @@ export default function CoachHome() {
     const alunosQuery = supabase.from('alunos').select('id, nome, status, valor_mensalidade').eq('status', 'ativo');
     if (activeOrg) alunosQuery.eq('organization_id', activeOrg.id);
     const { data: al } = await alunosQuery.order('nome').limit(50);
-    setAlunos(al || []);\n    const { data: safetyRows } = await (supabase as any).from('student_safety_onboarding').select('aluno_id, risco').in('aluno_id', (al || []).map((a: any) => a.id));\n    setSafetyByStudent(Object.fromEntries((safetyRows || []).map((row: any) => [row.aluno_id, row.risco])));
+    setAlunos(al || []);
+    const { data: safetyRows } = await (supabase as any).from('student_safety_onboarding').select('aluno_id, risco').in('aluno_id', (al || []).map((a: any) => a.id));
+    setSafetyByStudent(Object.fromEntries((safetyRows || []).map((row: any) => [row.aluno_id, row.risco])));
 
     const { data: tr } = await supabase.from('treinos')
       .select('id, descricao, data_inicio, data_fim, aluno_id')

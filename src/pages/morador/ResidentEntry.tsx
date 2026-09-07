@@ -9,7 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 
 export default function ResidentEntry() {
-  const navigate = useNavigate();\n  const [searchParams] = useSearchParams();\n  const contexto = searchParams.get('contexto') || 'academia';
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const contexto = searchParams.get('contexto') || 'academia';
   const [organizations, setOrganizations] = useState<{ id: string; nome: string }[]>([]);
   const [organizationId, setOrganizationId] = useState('');
   const [form, setForm] = useState({ nome: '', email: '', unidade: '' });
