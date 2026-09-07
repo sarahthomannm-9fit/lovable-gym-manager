@@ -26,7 +26,7 @@ export function CriarTreinoDialog({ alunos, organizationId, onCriado, trigger, i
   const [library, setLibrary] = useState<LibraryExercise[]>([]);
   const [search, setSearch] = useState('');
   const [day, setDay] = useState(1);
-  const [libraryError, setLibraryError] = useState('');\n  const [infrastructureError, setInfrastructureError] = useState('');\n  const [safetyStatus, setSafetyStatus] = useState<'liberado' | 'pendente' | 'bloqueado' | 'desconhecido'>('desconhecido');\n  const [approvedEquipment, setApprovedEquipment] = useState<string[]>([]);
+  const [libraryError, setLibraryError] = useState('');\n  const [infrastructureError, setInfrastructureError] = useState('');\n  const [safetyStatus, setSafetyStatus] = useState<'liberado' | 'pendente' | 'bloqueado' | 'desconhecido'>('desconhecido');\n  const [approvedEquipment, setApprovedEquipment] = useState<string[]>([]);\n  const [templates, setTemplates] = useState<{ id: string; nome: string; objetivo: string; nivel: string; descricao: string | null; sessoes_semana: number }[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const busy = useRef(false);
@@ -94,7 +94,7 @@ export function CriarTreinoDialog({ alunos, organizationId, onCriado, trigger, i
       <fieldset disabled={saving} className="space-y-4 min-w-0">
       {!review ? <>
         <label className="block text-sm">Aluno<select className={selectClass} value={draft.aluno_id} onChange={e => patch({ aluno_id: e.target.value })}><option value="">Escolha o aluno</option>{alunos.map(a => <option key={a.id} value={a.id}>{a.nome}</option>)}</select></label>
-        <div className="grid sm:grid-cols-2 gap-3">
+        <div className="grid sm:grid-cols-2 gap-3"><label>Começar por protocolo<select className="w-full rounded-md border bg-background px-3 py-2 text-sm" onChange={(e) => { const template = templates.find((item) => item.id === e.target.value); if (template) setDraft((current) => ({ ...current, nome: template.nome, objetivo: template.objetivo, nivel: template.nivel, semanas: Math.max(1, template.sessoes_semana) })); }}><option value="">Montar do zero</option>{templates.map((template) => <option key={template.id} value={template.id}>{template.nome} · {template.objetivo}</option>)}</select></label></div><div className="grid sm:grid-cols-2 gap-3">
           <label>Nome do treino<Input value={draft.nome} onChange={e => patch({ nome: e.target.value })} /></label>
           <label>Objetivo<Input value={draft.objetivo} onChange={e => patch({ objetivo: e.target.value })} /></label>
           <label>Início<Input type="date" value={draft.data_inicio} onChange={e => patch({ data_inicio: e.target.value })} /></label>
