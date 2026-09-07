@@ -42,6 +42,14 @@ Deno.serve(async (req) => {
         if (Number(m.checkins_30_dias || 0) === 0) recommendations.push('publicar comunicado de ativação');
         if (Number(m.eventos_publicados || 0) === 0) recommendations.push('agendar Health Day');
         output = { accepted: true, dispatched: true, agent_id: task.agent_id, task_key: task.task_key, organization_id: orgId, metrics: m, recommendations, processed_at: new Date().toISOString() };
+      } else if (task.agent_id === 'protocolo') {
+        const input = (task.input || {}) as Record<string, unknown>;
+        const restrictions = Array.isArray(input.restrictions) ? input.restrictions.map(String) : [];
+        const objective = String(input.objective || 'geral');
+        const { data: exercises, error: exerciseError } = await db.rpc('eligible_exercises', { p_restrictions: restrictions });
+        if (exerciseError) throw exerciseError;
+        const pool = (exercises || []).filter((exercise: Record<string, unknown>) => !input.equipment || String(input.equipment).toLowerCase().includes(String(exercise.equipamento || '').toLowerCase()));
+        output = { accepted: true, dispatched: true, agent_id: task.agent_id, task_key: task.task_key, objective, restrictions, eligible_exercises: pool.slice(0, 12), eligible_count: pool.length, requires_professor_review: restrictions.length > 0, processed_at: new Date().toISOString() };
       } else if (task.agent_id === 'seguranca') {
         const input = (task.input || {}) as Record<string, unknown>;
         const restrictions = Array.isArray(input.restrictions) ? input.restrictions.map(String) : [];
