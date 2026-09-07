@@ -22,6 +22,7 @@ import CorpHome from "./pages/corp/CorpHome";
 import OrganizationsAdmin from "./pages/admin/OrganizationsAdmin";
 import PrescriptionAudit from "./pages/admin/PrescriptionAudit";
 import AccessAudit from "./pages/admin/AccessAudit";
+import WorkflowApprovals from "./pages/admin/WorkflowApprovals";
 import AcceptInvite from "./pages/AcceptInvite";
 import MoradorHome from "./pages/morador/MoradorHome";
 import OnboardingMorador from "./pages/morador/OnboardingMorador";
@@ -197,6 +198,7 @@ const App = () => (
                     <Route path="/admin/organizacoes" element={<AdminOnly><OrganizationsAdmin /></AdminOnly>} />
                     <Route path="/admin/auditoria-prescricoes" element={<AdminOnly><PrescriptionAudit /></AdminOnly>} />
                     <Route path="/admin/auditoria-acessos" element={<AdminOnly><AccessAudit /></AdminOnly>} />
+                    <Route path="/admin/aprovacoes-workflows" element={<StaffOnly><WorkflowApprovals /></StaffOnly>} />
                     <Route path="/admin/fitpro" element={<AdminOnly><FitProIntegration /></AdminOnly>} />
                     <Route path="/operacao-9fit" element={<StaffOnly><Operacao9FIT /></StaffOnly>} />
                     <Route path="/cfo/leads" element={<AdminOnly><LeadsExtractionPlan /></AdminOnly>} />
