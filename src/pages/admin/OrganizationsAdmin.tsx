@@ -244,7 +244,7 @@ export default function OrganizationsAdmin() {
             </Table>
           </CardContent>
         </Card>
-      )}
+      </>)}
     </div>
   );
 }
