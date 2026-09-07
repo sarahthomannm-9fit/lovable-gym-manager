@@ -266,6 +266,8 @@ export default function SindicoHome() {
   const goalProgress = [activation.moradores_ativos >= activationGoals.moradores, activation.checkins_30_dias >= activationGoals.checkins, activation.eventos_publicados >= activationGoals.eventos];
   const goalScore = Math.round((goalProgress.filter(Boolean).length / goalProgress.length) * 100);
   const activationHealth = goalScore === 100 ? { label: 'Saudável', color: 'text-emerald-400', score: 100 } : goalScore > 0 ? { label: 'Em evolução', color: 'text-amber-400', score: goalScore } : { label: 'Precisa de ativação', color: 'text-red-400', score: 0 };
+  const activationGaps = [{ label: 'Moradores', current: activation.moradores_ativos, goal: activationGoals.moradores }, { label: 'Check-ins', current: activation.checkins_30_dias, goal: activationGoals.checkins }, { label: 'Eventos', current: activation.eventos_publicados, goal: activationGoals.eventos }].map(item => ({ ...item, progress: Math.min(100, Math.round((item.current / Math.max(1, item.goal)) * 100)) })).sort((a, b) => a.progress - b.progress);
+  const criticalActivationGap = activationGaps[0];
 
   return (
     <PersonaLayout title="Painel do Síndico" accent={ACCENT}>
@@ -346,6 +348,7 @@ export default function SindicoHome() {
             <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Saúde da ativação</p>
             <p className={`text-lg font-semibold ${activationHealth.color}`}>{activationHealth.label}</p>
             <p className="text-xs text-muted-foreground mt-1">Baseado em moradores, check-ins e eventos publicados.</p>
+            {criticalActivationGap && criticalActivationGap.progress < 100 && <p className="text-xs text-amber-400 mt-1">Maior lacuna: {criticalActivationGap.label} ({criticalActivationGap.progress}% da meta).</p>}
             <div className="flex flex-wrap gap-2 mt-3 text-[11px]">
               <span className={`rounded-full px-2 py-1 ${activation.moradores_ativos >= activationGoals.moradores ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>Moradores {activation.moradores_ativos}/{activationGoals.moradores} {activation.moradores_ativos >= activationGoals.moradores ? '✓' : '!'}</span>
               <span className={`rounded-full px-2 py-1 ${activation.checkins_30_dias >= activationGoals.checkins ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>Check-ins {activation.checkins_30_dias}/{activationGoals.checkins} {activation.checkins_30_dias >= activationGoals.checkins ? '✓' : '!'}</span>
