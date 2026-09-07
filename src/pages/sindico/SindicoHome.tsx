@@ -347,6 +347,9 @@ export default function SindicoHome() {
               <span className={`rounded-full px-2 py-1 ${activation.treinos_ativos > 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>Treinos {activation.treinos_ativos > 0 ? '✓' : '!'}</span>
               <span className={`rounded-full px-2 py-1 ${activation.eventos_publicados > 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>Eventos {activation.eventos_publicados > 0 ? '✓' : '!'}</span>
             </div>
+            {activation.moradores_ativos === 0 && <p className="text-xs text-muted-foreground mt-2">Meta: ativar o primeiro morador pelo QR ou convite.</p>}
+            {activation.moradores_ativos > 0 && activation.checkins_30_dias === 0 && <p className="text-xs text-muted-foreground mt-2">Meta: obter o primeiro check-in nos próximos 30 dias.</p>}
+            {activation.moradores_ativos > 0 && activation.checkins_30_dias > 0 && activation.eventos_publicados === 0 && <p className="text-xs text-muted-foreground mt-2">Meta: publicar o primeiro evento de saúde.</p>}
           </div>
           <div className="relative w-16 h-16 rounded-full border-4 border-border/40 flex items-center justify-center">
             <span className={`text-sm font-semibold ${activationHealth.color}`}>{activationHealth.score}%</span>
