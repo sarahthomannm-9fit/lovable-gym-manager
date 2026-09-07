@@ -29,11 +29,11 @@ export function ForgotPassword() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#07070A] px-4">
-      <Card className="w-full max-w-md border-border/30 bg-card/80 backdrop-blur">
+    <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--background))] px-4">
+      <Card className="w-full max-w-md border-border/30 bg-card shadow-elegant">
         <CardHeader className="text-center space-y-2">
-          <div className="mx-auto w-12 h-12 rounded-lg bg-[#C8FF00]/10 flex items-center justify-center mb-2">
-            <Mail className="w-6 h-6 text-[#C8FF00]" />
+          <div className="mx-auto w-12 h-12 rounded-sm bg-[hsl(var(--primary))]/10 flex items-center justify-center mb-2">
+            <Mail className="w-6 h-6 text-[hsl(var(--primary))]" />
           </div>
           <CardTitle className="text-2xl font-bold text-foreground">Recuperar senha</CardTitle>
           <p className="text-sm text-muted-foreground">
@@ -71,7 +71,7 @@ export function ForgotPassword() {
               </div>
               <Button
                 type="submit"
-                className="w-full bg-[#C8FF00] text-black hover:bg-[#C8FF00]/90 font-semibold"
+                className="w-full bg-[hsl(var(--primary))] text-black hover:bg-[hsl(var(--primary))]/90 font-semibold"
                 disabled={loading}
               >
                 {loading ? 'Enviando...' : 'Enviar link de recuperação'}
