@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash2, ArrowUp, ArrowDown, Copy } from 'lucide-react';
+import { Plus, Trash2, ArrowUp, ArrowDown, Copy, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { WEEKDAYS, localDate, validateWorkout, publicationPayload, type WorkoutDraft, type ExerciseDraft } from '@/lib/workout';
 
@@ -36,6 +36,7 @@ export function CriarTreinoDialog({ alunos, organizationId, onCriado, trigger, i
   const [saving, setSaving] = useState(false);
   const busy = useRef(false);
   const [error, setError] = useState('');
+  const [substitutions, setSubstitutions] = useState<Record<string, { id: string; substitute_exercise_id: string; motivo: string }[]>>({});
 
   const loadLibrary = async () => {
     setLoading(true); setLibraryError('');
@@ -74,6 +75,7 @@ export function CriarTreinoDialog({ alunos, organizationId, onCriado, trigger, i
   const patch = (value: Partial<WorkoutDraft>) => { setDraft(d => ({ ...d, ...value })); setError(''); };
   const editExercise = (key: string, value: Partial<ExerciseDraft>) => patch({ exercicios: draft.exercicios.map(e => e.key === key ? { ...e, ...value } : e) });
   const add = (ex: LibraryExercise) => patch({ exercicios: [...draft.exercicios, { key: crypto.randomUUID(), exercicio_id: ex.id, nome: ex.nome, dia_semana: day, series: 3, repeticoes: '12', carga_kg: '', descanso_seg: 60, observacoes: '' }] });
+  const loadSubstitutions = async (exerciseId: string) => { const { data, error } = await (supabase as any).rpc('exercise_substitutions', { p_exercise_id: exerciseId }); if (error) return toast.error('Não foi possível carregar substituições.'); setSubstitutions((current) => ({ ...current, [exerciseId]: data || [] })); };
   const move = (index: number, offset: number) => {
     const next = [...draft.exercicios]; const target = index + offset;
     if (target < 0 || target >= next.length) return;
@@ -139,7 +141,7 @@ export function CriarTreinoDialog({ alunos, organizationId, onCriado, trigger, i
             <label>Carga (kg)<Input type="number" min={0} step="0.5" value={ex.carga_kg} onChange={e => editExercise(ex.key, { carga_kg: e.target.value })} /></label>
             <label>Descanso (s)<Input type="number" min={0} max={1800} value={ex.descanso_seg} onChange={e => editExercise(ex.key, { descanso_seg: Number(e.target.value) })} /></label>
           </div>
-          <label>Orientação / alternativa<Textarea value={ex.observacoes} onChange={e => editExercise(ex.key, { observacoes: e.target.value })} /></label>
+          <label>Orientação / alternativa<Textarea value={ex.observacoes} onChange={e => editExercise(ex.key, { observacoes: e.target.value })} /></label><div className="space-y-2"><Button type="button" size="sm" variant="outline" onClick={() => loadSubstitutions(ex.exercicio_id)}><RefreshCw className="w-3.5 h-3.5 mr-1" />Substituir exercício</Button>{(substitutions[ex.exercicio_id] || []).map((rule) => <button key={rule.id} type="button" className="block w-full rounded-sm border border-primary/30 p-2 text-left text-xs hover:bg-primary/5" onClick={() => { const alt = library.find((item) => item.id === rule.substitute_exercise_id); if (alt) editExercise(ex.key, { exercicio_id: alt.id, nome: alt.nome, observacoes: `Substituído: ${rule.motivo}` }); }}>{library.find((item) => item.id === rule.substitute_exercise_id)?.nome || "Alternativa segura"} · {rule.motivo}</button>)}</div>
         </>}
       </section>)}
       </fieldset>
