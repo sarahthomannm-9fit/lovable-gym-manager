@@ -45,6 +45,7 @@ export default function SindicoHome() {
   const [orgTemUnidadesEsperadas, setOrgTemUnidadesEsperadas] = useState(false);
   const [engajamentoMensal, setEngajamentoMensal] = useState<{ mes: string; checkins: number }[]>([]);
   const [activation, setActivation] = useState({ moradores_ativos: 0, treinos_ativos: 0, eventos_publicados: 0, checkins_30_dias: 0 });
+  const [activationActions, setActivationActions] = useState<any[]>([]);
 
   // Indicadores principais sempre pela RPC oficial
   const { data: dash, loading: dashLoading, error: dashError, refresh: refreshDash } =
@@ -67,6 +68,10 @@ export default function SindicoHome() {
     const hoje = new Date().toISOString().slice(0, 10);
     const { data: activationData } = await supabase.rpc('organization_activation_metrics', { p_organization_id: activeOrg.id });
     if (activationData) setActivation(activationData);
+    const { data: actionRows } = await supabase.from('organization_activation_alert_actions')
+      .select('id, alert_type, action_label, created_at, acted_by').eq('organization_id', activeOrg.id)
+      .order('created_at', { ascending: false }).limit(8);
+    setActivationActions(actionRows || []);
     const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
     const seteDias = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
 
@@ -350,6 +355,25 @@ export default function SindicoHome() {
                   <Button size="sm" variant="outline" onClick={async () => { await supabase.rpc('record_activation_alert_action', { p_organization_id: activeOrg.id, p_alert_type: 'sem_eventos', p_action_label: 'Criar evento' }); window.location.assign('/sindico/health-day'); }}>Criar evento</Button>
                 </div>
               )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {activationActions.length > 0 && (
+        <Card className="mb-4 bg-card/60 border-border/40">
+          <CardContent className="p-4">
+            <h2 className="font-semibold text-sm mb-3">Histórico de ações de ativação</h2>
+            <div className="space-y-2">
+              {activationActions.map((action) => (
+                <div key={action.id} className="flex items-center justify-between gap-3 rounded-md border border-border/30 px-3 py-2 text-xs">
+                  <div>
+                    <span className="font-medium">{action.action_label}</span>
+                    <span className="text-muted-foreground ml-2">({action.alert_type.replaceAll('_', ' ')})</span>
+                  </div>
+                  <span className="text-muted-foreground shrink-0">{new Date(action.created_at).toLocaleString('pt-BR')}</span>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
