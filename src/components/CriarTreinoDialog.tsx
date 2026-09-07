@@ -40,11 +40,17 @@ export function CriarTreinoDialog({ alunos, organizationId, onCriado, trigger, i
   const loadLibrary = async () => {
     setLoading(true); setLibraryError('');
     try {
-      let q = supabase.from('exercicios_biblioteca').select('id,nome,grupo_muscular,equipamento,restricoes_incompativeis').eq('ativo', true).order('nome');
+      let q = (supabase as any).from('exercicios_biblioteca').select('id,nome,grupo_muscular,equipamento,restricoes_incompativeis').eq('ativo', true).order('nome');
       if (organizationId) q = q.or(`organization_id.is.null,organization_id.eq.${organizationId}`);
       const { data, error } = await q;
       if (error) throw error;
-      const available = (data || []).filter((exercise: LibraryExercise) => { const equipmentOk = !exercise.equipamento || equipment.length === 0 || equipment.some((item: string) => item.includes(String(exercise.equipamento).toLocaleLowerCase()) || String(exercise.equipamento).toLocaleLowerCase().includes(item)); const restrictions = (exercise.restricoes_incompativeis || []).map((item) => item.toLocaleLowerCase()); const safe = !restrictions.some((blocked) => studentRestrictions.some((declared) => declared.includes(blocked) || blocked.includes(declared))); return equipmentOk && safe; });
+      const equipment = approvedEquipment.map((item) => item.toLocaleLowerCase());
+      const available = ((data || []) as LibraryExercise[]).filter((exercise) => {
+        const equipmentOk = !exercise.equipamento || equipment.length === 0 || equipment.some((item) => item.includes(String(exercise.equipamento).toLocaleLowerCase()) || String(exercise.equipamento).toLocaleLowerCase().includes(item));
+        const restrictions = (exercise.restricoes_incompativeis || []).map((item) => item.toLocaleLowerCase());
+        const safe = !restrictions.some((blocked) => studentRestrictions.some((declared) => declared.includes(blocked) || blocked.includes(declared)));
+        return equipmentOk && safe;
+      });
       setLibrary(available);
     } catch { setLibraryError('Não foi possível carregar a biblioteca.'); }
     finally { setLoading(false); }
