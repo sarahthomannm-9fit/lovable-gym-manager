@@ -14,12 +14,14 @@ import { OperationalContextProvider } from "@/hooks/useOperationalContext";
 import { RoleRoute } from "@/components/RoleRoute";
 import SelectContext from "./pages/SelectContext";
 import SindicoHome from "./pages/sindico/SindicoHome";
+import HealthDay from "./pages/sindico/HealthDay";
 import CoachHome from "./pages/coach/CoachHome";
 import ReviewQueue from "./pages/coach/ReviewQueue";
 import CorpHome from "./pages/corp/CorpHome";
 import OrganizationsAdmin from "./pages/admin/OrganizationsAdmin";
 import MoradorHome from "./pages/morador/MoradorHome";
 import OnboardingMorador from "./pages/morador/OnboardingMorador";
+import Events from "./pages/morador/Events";
 import ResidentEntry from "./pages/morador/ResidentEntry";
 import FitProIntegration from "./pages/admin/FitProIntegration";
 import Operacao9FIT from "./pages/admin/Operacao9FIT";
@@ -175,11 +177,13 @@ const App = () => (
                     <Route path="/entrada" element={<ResidentEntry />} />
                     <Route path="/select-context" element={<ProtectedRoute><SelectContext /></ProtectedRoute>} />
                     <Route path="/sindico" element={<ProtectedRoute><RoleRoute allow={['sindico','admin']}><SindicoHome /></RoleRoute></ProtectedRoute>} />
+                    <Route path="/sindico/health-day" element={<ProtectedRoute><RoleRoute allow={['sindico','admin']}><HealthDay /></RoleRoute></ProtectedRoute>} />
                     <Route path="/coach" element={<ProtectedRoute><RoleRoute allow={['professor','admin']}><CoachHome /></RoleRoute></ProtectedRoute>} />
                     <Route path="/coach/revisoes" element={<ProtectedRoute><RoleRoute allow={['professor','admin']}><ReviewQueue /></RoleRoute></ProtectedRoute>} />
                     <Route path="/corp" element={<ProtectedRoute><RoleRoute allow={['corporate','admin']}><CorpHome /></RoleRoute></ProtectedRoute>} />
                     <Route path="/morador" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MoradorHome /></RoleRoute></ProtectedRoute>} />
                     <Route path="/morador/onboarding" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><OnboardingMorador /></RoleRoute></ProtectedRoute>} />
+                    <Route path="/morador/eventos" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><Events /></RoleRoute></ProtectedRoute>} />
                     <Route path="/admin/organizacoes" element={<AdminOnly><OrganizationsAdmin /></AdminOnly>} />
                     <Route path="/admin/fitpro" element={<AdminOnly><FitProIntegration /></AdminOnly>} />
                     <Route path="/operacao-9fit" element={<StaffOnly><Operacao9FIT /></StaffOnly>} />
