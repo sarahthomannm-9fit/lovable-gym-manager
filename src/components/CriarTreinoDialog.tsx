@@ -39,7 +39,7 @@ export function CriarTreinoDialog({ alunos, organizationId, onCriado, trigger, i
       if (organizationId) q = q.or(`organization_id.is.null,organization_id.eq.${organizationId}`);
       const { data, error } = await q;
       if (error) throw error;
-      const available = approvedEquipment.length ? (data || []).filter((exercise: LibraryExercise) => !exercise.equipamento || approvedEquipment.some((equipment) => equipment.includes(String(exercise.equipamento).toLocaleLowerCase()) || String(exercise.equipamento).toLocaleLowerCase().includes(equipment))) : (data || []);\n      setLibrary(available);
+      const available = (data || []).filter((exercise: LibraryExercise) => !exercise.equipamento || equipment.length === 0 || equipment.some((item: string) => item.includes(String(exercise.equipamento).toLocaleLowerCase()) || String(exercise.equipamento).toLocaleLowerCase().includes(item)));\n      setLibrary(available);
     } catch { setLibraryError('Não foi possível carregar a biblioteca.'); }
     finally { setLoading(false); }
   };
