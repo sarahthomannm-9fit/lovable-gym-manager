@@ -31,8 +31,8 @@ export default function OnboardingMorador() {
       ]);
       setOrganizations(orgs || []);
       if (userData.user) {
-        const { data: aluno } = await (supabase as any).from('alunos').select('id, organization_id').eq('user_id', userData.user.id).maybeSingle();
-        if (aluno) { setAlunoId(aluno.id); setOrganizationId(aluno.organization_id || ''); }
+        const pendingId = sessionStorage.getItem('9fit:onboarding:aluno');\n        const { data: aluno } = await (supabase as any).from('alunos').select('id, organization_id').eq(pendingId ? 'id' : 'user_id', pendingId || userData.user.id).maybeSingle();
+        if (aluno) { setAlunoId(aluno.id); setOrganizationId(aluno.organization_id || ''); sessionStorage.removeItem('9fit:onboarding:aluno'); }
       }
     })();
   }, []);
