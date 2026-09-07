@@ -26,7 +26,7 @@ export function CriarTreinoDialog({ alunos, organizationId, onCriado, trigger, i
   const [library, setLibrary] = useState<LibraryExercise[]>([]);
   const [search, setSearch] = useState('');
   const [day, setDay] = useState(1);
-  const [libraryError, setLibraryError] = useState('');\n  const [infrastructureError, setInfrastructureError] = useState('');\n  const [safetyStatus, setSafetyStatus] = useState<'liberado' | 'pendente' | 'bloqueado' | 'desconhecido'>('desconhecido');
+  const [libraryError, setLibraryError] = useState('');\n  const [infrastructureError, setInfrastructureError] = useState('');\n  const [safetyStatus, setSafetyStatus] = useState<'liberado' | 'pendente' | 'bloqueado' | 'desconhecido'>('desconhecido');\n  const [approvedEquipment, setApprovedEquipment] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const busy = useRef(false);
@@ -39,7 +39,7 @@ export function CriarTreinoDialog({ alunos, organizationId, onCriado, trigger, i
       if (organizationId) q = q.or(`organization_id.is.null,organization_id.eq.${organizationId}`);
       const { data, error } = await q;
       if (error) throw error;
-      setLibrary(data || []);
+      const available = approvedEquipment.length ? (data || []).filter((exercise: LibraryExercise) => !exercise.equipamento || approvedEquipment.some((equipment) => equipment.includes(String(exercise.equipamento).toLocaleLowerCase()) || String(exercise.equipamento).toLocaleLowerCase().includes(equipment))) : (data || []);\n      setLibrary(available);
     } catch { setLibraryError('Não foi possível carregar a biblioteca.'); }
     finally { setLoading(false); }
   };
@@ -90,7 +90,7 @@ export function CriarTreinoDialog({ alunos, organizationId, onCriado, trigger, i
     <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
       <DialogHeader><DialogTitle>{review ? 'Revisar e publicar treino' : 'Criar treino para o aluno'}</DialogTitle></DialogHeader>
       <p className="text-xs text-muted-foreground">Rascunho salvo neste dispositivo. A programação se repete a cada semana durante a validade.</p>
-      {error && <div role="alert" className="rounded border border-destructive p-3 text-sm">{error}</div>}\n      {infrastructureError && <div role="alert" className="rounded border border-amber-500 p-3 text-sm text-amber-700">{infrastructureError} Aprove o inventário antes de publicar um protocolo.</div>}\n      {draft.aluno_id && <div className={`rounded border p-3 text-sm ${safetyStatus === 'liberado' ? 'border-emerald-500 text-emerald-700' : 'border-amber-500 text-amber-700'}`}>Segurança do aluno: <strong>{safetyStatus === 'liberado' ? 'liberada' : safetyStatus === 'bloqueado' ? 'bloqueada' : 'aguardando avaliação'}</strong></div>}
+      {error && <div role="alert" className="rounded border border-destructive p-3 text-sm">{error}</div>}\n      {infrastructureError && <div role="alert" className="rounded border border-amber-500 p-3 text-sm text-amber-700">{infrastructureError} Aprove o inventário antes de publicar um protocolo. Exercícios sem equipamento ou compatíveis com o inventário aprovado permanecem disponíveis.</div>}\n      {draft.aluno_id && <div className={`rounded border p-3 text-sm ${safetyStatus === 'liberado' ? 'border-emerald-500 text-emerald-700' : 'border-amber-500 text-amber-700'}`}>Segurança do aluno: <strong>{safetyStatus === 'liberado' ? 'liberada' : safetyStatus === 'bloqueado' ? 'bloqueada' : 'aguardando avaliação'}</strong></div>}
       <fieldset disabled={saving} className="space-y-4 min-w-0">
       {!review ? <>
         <label className="block text-sm">Aluno<select className={selectClass} value={draft.aluno_id} onChange={e => patch({ aluno_id: e.target.value })}><option value="">Escolha o aluno</option>{alunos.map(a => <option key={a.id} value={a.id}>{a.nome}</option>)}</select></label>
