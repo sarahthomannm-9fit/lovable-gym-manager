@@ -176,14 +176,14 @@ const App = () => (
                     <Route path="/anamnese/:token" element={<Anamnese />} />
                     <Route path="/entrada" element={<ResidentEntry />} />
                     <Route path="/select-context" element={<ProtectedRoute><SelectContext /></ProtectedRoute>} />
-                    <Route path="/sindico" element={<ProtectedRoute><RoleRoute allow={['sindico','admin']}><SindicoHome /></RoleRoute></ProtectedRoute>} />
-                    <Route path="/sindico/health-day" element={<ProtectedRoute><RoleRoute allow={['sindico','admin']}><HealthDay /></RoleRoute></ProtectedRoute>} />
-                    <Route path="/coach" element={<ProtectedRoute><RoleRoute allow={['professor','admin']}><CoachHome /></RoleRoute></ProtectedRoute>} />
-                    <Route path="/coach/revisoes" element={<ProtectedRoute><RoleRoute allow={['professor','admin']}><ReviewQueue /></RoleRoute></ProtectedRoute>} />
+                    <Route path="/sindico" element={<ProtectedRoute><RoleRoute allow={['sindico','admin']}><MainLayout><SindicoHome /></MainLayout></RoleRoute></ProtectedRoute>} />
+                    <Route path="/sindico/health-day" element={<ProtectedRoute><RoleRoute allow={['sindico','admin']}><MainLayout><HealthDay /></MainLayout></RoleRoute></ProtectedRoute>} />
+                    <Route path="/coach" element={<ProtectedRoute><RoleRoute allow={['professor','admin']}><MainLayout><CoachHome /></MainLayout></RoleRoute></ProtectedRoute>} />
+                    <Route path="/coach/revisoes" element={<ProtectedRoute><RoleRoute allow={['professor','admin']}><MainLayout><ReviewQueue /></MainLayout></RoleRoute></ProtectedRoute>} />
                     <Route path="/corp" element={<ProtectedRoute><RoleRoute allow={['corporate','admin']}><CorpHome /></RoleRoute></ProtectedRoute>} />
-                    <Route path="/morador" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MoradorHome /></RoleRoute></ProtectedRoute>} />
-                    <Route path="/morador/onboarding" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><OnboardingMorador /></RoleRoute></ProtectedRoute>} />
-                    <Route path="/morador/eventos" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><Events /></RoleRoute></ProtectedRoute>} />
+                    <Route path="/morador" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MainLayout><MoradorHome /></MainLayout></RoleRoute></ProtectedRoute>} />
+                    <Route path="/morador/onboarding" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MainLayout><OnboardingMorador /></MainLayout></RoleRoute></ProtectedRoute>} />
+                    <Route path="/morador/eventos" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MainLayout><Events /></MainLayout></RoleRoute></ProtectedRoute>} />
                     <Route path="/admin/organizacoes" element={<AdminOnly><OrganizationsAdmin /></AdminOnly>} />
                     <Route path="/admin/fitpro" element={<AdminOnly><FitProIntegration /></AdminOnly>} />
                     <Route path="/operacao-9fit" element={<StaffOnly><Operacao9FIT /></StaffOnly>} />
