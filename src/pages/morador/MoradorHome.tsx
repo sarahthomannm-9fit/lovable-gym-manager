@@ -3,6 +3,7 @@ import { PersonaLayout } from '@/layouts/PersonaLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -17,7 +18,7 @@ import { useAlunoVinculo } from '@/hooks/useAlunoVinculo';
 import { ProximoEventoCard, type EventoCondominio } from '@/components/ProximoEventoCard';
 
 
-const ACCENT = '#F472B6';
+const ACCENT = '#1B6E6E';
 
 function saudacao() {
   const h = new Date().getHours();
@@ -51,6 +52,7 @@ export default function MoradorHome() {
   const [salvando, setSalvando] = useState(false);
   const [sessao, setSessao] = useState<any>(null);
   const [treinoErro, setTreinoErro] = useState('');
+  const [feedbackTreino, setFeedbackTreino] = useState('');
 
   useEffect(() => {
     if (!user || vinculoLoading) return;
@@ -184,7 +186,7 @@ export default function MoradorHome() {
   const iniciarTreino = () => atualizarSessao(sessao?.status === 'pausado' ? 'resume' : 'start');
   const concluirTreino = () => {
     const progress = Object.fromEntries(exerciciosHoje.map((ex: any) => [ex.id, { completed: true, carga: ex.carga_kg == null ? '' : String(ex.carga_kg) }]));
-    return atualizarSessao('finish', progress);
+    return atualizarSessao('finish', progress, feedbackTreino);
   };
 
   const s = saudacao();
@@ -253,7 +255,7 @@ export default function MoradorHome() {
                       <p className="text-sm text-muted-foreground truncate">{treinoAtivo.descricao || 'Plano personalizado'}</p>
                     </div>
                     <Button size="lg" onClick={iniciarTreino} disabled={salvando || sessao?.status === 'concluido'}
-                            style={{ backgroundColor: ACCENT, color: '#000' }}
+                            style={{ backgroundColor: ACCENT, color: '#FFFFFF' }}
                             className="hover:opacity-90 shrink-0 text-base px-6 h-12">
                       <PlayCircle className="w-5 h-5 mr-1.5" /> {sessao?.status === 'pausado' ? 'Retomar' : sessao?.status === 'em_andamento' ? 'Em andamento' : 'Começar'}
                     </Button>
@@ -446,6 +448,7 @@ export default function MoradorHome() {
               )}
 
               {sessao?.status === 'em_andamento' && <Button size="lg" variant="outline" onClick={() => atualizarSessao('pause')} disabled={salvando} className="w-full h-12">Pausar treino</Button>}
+              <Textarea value={feedbackTreino} onChange={(e) => setFeedbackTreino(e.target.value)} placeholder="Como foi o treino? Dor, dificuldade ou observação (opcional)" className="min-h-20" />
               <Button size="lg" onClick={sessao?.status === 'concluido' ? undefined : concluirTreino} disabled={salvando || sessao?.status === 'concluido'}
                       className="w-full h-14 text-base"
                       style={{ backgroundColor: ACCENT, color: '#000' }}>
