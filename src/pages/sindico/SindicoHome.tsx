@@ -341,6 +341,12 @@ export default function SindicoHome() {
             <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Saúde da ativação</p>
             <p className={`text-lg font-semibold ${activationHealth.color}`}>{activationHealth.label}</p>
             <p className="text-xs text-muted-foreground mt-1">Baseado em moradores, check-ins e eventos publicados.</p>
+            <div className="flex flex-wrap gap-2 mt-3 text-[11px]">
+              <span className={`rounded-full px-2 py-1 ${activation.moradores_ativos > 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>Moradores {activation.moradores_ativos > 0 ? '✓' : '!'}</span>
+              <span className={`rounded-full px-2 py-1 ${activation.checkins_30_dias > 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>Check-ins {activation.checkins_30_dias > 0 ? '✓' : '!'}</span>
+              <span className={`rounded-full px-2 py-1 ${activation.treinos_ativos > 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>Treinos {activation.treinos_ativos > 0 ? '✓' : '!'}</span>
+              <span className={`rounded-full px-2 py-1 ${activation.eventos_publicados > 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>Eventos {activation.eventos_publicados > 0 ? '✓' : '!'}</span>
+            </div>
           </div>
           <div className="relative w-16 h-16 rounded-full border-4 border-border/40 flex items-center justify-center">
             <span className={`text-sm font-semibold ${activationHealth.color}`}>{activationHealth.score}%</span>
