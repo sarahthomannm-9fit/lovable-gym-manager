@@ -118,6 +118,55 @@ Deno.serve(async (req) => {
         return json({ success: true });
       }
 
+      case 'set_user_active': {
+        const { userId, active } = body as { userId: string; active: boolean };
+        if (!userId || typeof active !== 'boolean') return json({ error: 'userId e active obrigatórios' }, 400);
+        const { error } = await admin.auth.admin.updateUserById(userId, { ban_duration: active ? 'none' : '876000h' });
+        if (error) throw error;
+        return json({ success: true });
+      }
+
+      case 'create_and_link_aluno': {
+        const { alunoId, email, password } = body as { alunoId: string; email: string; password?: string };
+        if (!alunoId || !email) return json({ error: 'alunoId e email obrigatórios' }, 400);
+
+        const { data: aluno, error: alunoErr } = await admin.from('alunos').select('id, nome, user_id').eq('id', alunoId).single();
+        if (alunoErr || !aluno) return json({ error: 'Aluno não encontrado' }, 404);
+        if (aluno.user_id) return json({ error: 'Este aluno já possui acesso vinculado' }, 400);
+
+        let userId: string;
+        const { data: existingList } = await admin.auth.admin.listUsers();
+        const existing = existingList?.users?.find((u) => u.email === email);
+
+        if (existing) {
+          userId = existing.id;
+        } else if (password) {
+          const { data: created, error: createErr } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
+          if (createErr) throw createErr;
+          userId = created.user!.id;
+        } else {
+          const { data: created, error: createErr } = await admin.auth.admin.createUser({ email, email_confirm: true });
+          if (createErr) throw createErr;
+          userId = created.user!.id;
+        }
+
+        await admin.from('user_roles').delete().eq('user_id', userId);
+        const { error: roleErr } = await admin.from('user_roles').insert({ user_id: userId, role: 'user' });
+        if (roleErr) throw roleErr;
+
+        const { error: linkErr } = await admin.from('alunos').update({ user_id: userId }).eq('id', alunoId);
+        if (linkErr) throw linkErr;
+
+        let magic_link: string | undefined;
+        if (!password) {
+          const { data: linkData, error: linkGenErr } = await admin.auth.admin.generateLink({ type: 'magiclink', email });
+          if (linkGenErr) throw linkGenErr;
+          magic_link = linkData.properties?.action_link;
+        }
+
+        return json({ success: true, user_id: userId, magic_link });
+      }
+
       default:
         return json({ error: 'action inválida' }, 400);
     }
@@ -133,4 +182,3 @@ function json(payload: unknown, status = 200) {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 }
-
