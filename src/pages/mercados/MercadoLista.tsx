@@ -117,6 +117,8 @@ export default function MercadoLista() {
   const abrir = async (l: Linha) => {
     const { data } = await supabase.from('organizations').select('id, nome, tipo, status').eq('id', l.id).maybeSingle();
     if (data) setActiveOrg(data as any);
+    // A lista de mercados é o ponto de entrada para administrar o condomínio.
+    // O painel da persona não oferece o cadastro de síndico, coach e moradores.
     navigate(`/admin/organizacoes?organization=${encodeURIComponent(l.id)}`);
   };
 
@@ -200,3 +202,4 @@ export default function MercadoLista() {
     </div>
   );
 }
+
