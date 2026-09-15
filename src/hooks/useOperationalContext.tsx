@@ -79,6 +79,16 @@ export function OperationalContextProvider({ children }: { children: ReactNode }
       } catch (e) {
         console.warn('[OperationalContext] memberships load failed', e);
       }
+      if (role === 'admin') {
+        const { data: allOrganizations, error: organizationsError } = await (supabase as any)
+          .from('organizations').select('id, nome, tipo, status').order('nome');
+        if (!organizationsError) {
+          const byId = new Map(list.map((m) => [m.organization_id, m]));
+          (allOrganizations || []).forEach((organization: Organization) => {
+            if (!byId.has(organization.id)) list.push({ organization_id: organization.id, papel: 'admin', organization });
+          });
+        }
+      }
       setMemberships(list);
 
       const savedId = localStorage.getItem(STORAGE_KEY);
