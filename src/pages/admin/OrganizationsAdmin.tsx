@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,11 +17,12 @@ type Member = { id: string; user_id: string; papel: string; organization_id: str
 type Profile = { id: string; nome: string; email: string };
 type EligibleUser = Profile & { papel: string };
 type Facility = { id: string; ambiente: string; nome: string; categoria: string | null; quantidade: number; status: string; foto_path: string | null };
-type Draft = { nome: string; cnpj: string; unidades: string; equipamentos: string; capacidade: string; horarios: string; restricoes: string; sindico: string; sindicoNome: string; sindicoEmail: string; sindicoTelefone: string; professores: string[] };
-const initialDraft: Draft = { nome: '', cnpj: '', unidades: '', equipamentos: '', capacidade: '', horarios: 'Seg-Sex 06:00-22:00', restricoes: '', sindico: '', sindicoNome: '', sindicoEmail: '', sindicoTelefone: '', professores: [] };
+type Draft = { nome: string; cnpj: string; unidades: string; equipamentos: string; capacidade: string; horarios: string; restricoes: string; sindico: string; sindicoNome: string; sindicoEmail: string; sindicoTelefone: string; coachNome: string; coachEmail: string; coachTelefone: string; professores: string[] };
+const initialDraft: Draft = { nome: '', cnpj: '', unidades: '', equipamentos: '', capacidade: '', horarios: 'Seg-Sex 06:00-22:00', restricoes: '', sindico: '', sindicoNome: '', sindicoEmail: '', sindicoTelefone: '', coachNome: '', coachEmail: '', coachTelefone: '', professores: [] };
 const ELIGIBLE_ROLES = ['sindico', 'professor'] as const;
 
 export default function OrganizationsAdmin() {
+  const [searchParams] = useSearchParams();
   const [orgs, setOrgs] = useState<Org[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   // Achado #5 da auditoria: a seleção de síndico/professor não pode listar qualquer perfil.
@@ -48,7 +50,7 @@ export default function OrganizationsAdmin() {
   const [importRows, setImportRows] = useState<any[]>([]);
   const [importErrors, setImportErrors] = useState<any[]>([]);
 
-  const load = async () => {
+  const load = async (): Promise<Org[]> => {
     const [{ data: o }, { data: p }, { data: roles }] = await Promise.all([
       (supabase as any).from('organizations').select('*').order('nome'),
       supabase.from('profiles').select('id, nome, email').order('nome'),
@@ -64,6 +66,7 @@ export default function OrganizationsAdmin() {
       })
       .filter(Boolean) as EligibleUser[];
     setEligibleUsers(eligible);
+    return o || [];
   };
   const loadMembers = async (orgId: string) => {
     const { data } = await (supabase as any).from('organization_members')
@@ -72,6 +75,12 @@ export default function OrganizationsAdmin() {
   };
 
   useEffect(() => { load(); }, []);
+  useEffect(() => {
+    const organizationId = searchParams.get('organization');
+    if (!organizationId || selected || !orgs.length) return;
+    const organization = orgs.find((org) => org.id === organizationId);
+    if (organization) setSelected(organization);
+  }, [orgs, searchParams, selected]);
   const loadFacilities = async (orgId: string) => {
     const { data } = await (supabase as any).from('organization_facilities').select('id, ambiente, nome, categoria, quantidade, status, foto_path').eq('organization_id', orgId).order('ambiente').order('nome');
     const rows = data || [];
@@ -107,10 +116,12 @@ export default function OrganizationsAdmin() {
   const createOrganization = async () => {
     if (isSubmitting) return;
     if (!draft.nome.trim()) return toast.error('Informe o nome do condomínio.');
-    if (!draft.sindicoNome.trim() || !draft.sindicoEmail.includes('@')) return toast.error('Informe nome e e-mail válidos do síndico.');
+    if (!draft.sindicoNome.trim() || !draft.sindicoEmail.trim() || !draft.sindicoEmail.includes('@')) return toast.error('Informe nome e e-mail válidos do síndico responsável.');
+    if (draft.coachEmail && (!draft.coachNome.trim() || !draft.coachEmail.includes('@'))) return toast.error('Informe nome e e-mail válidos do coach.');
     setIsSubmitting(true);
     try {
-      const { error } = await (supabase as any).rpc('onboard_condominio', {
+      const createdName = draft.nome.trim();
+      const { data: createdOrganization, error } = await (supabase as any).rpc('onboard_condominio', {
         p_request_id: requestId,
         p_nome: draft.nome.trim(),
         p_cnpj: draft.cnpj.trim() || null,
@@ -125,7 +136,28 @@ export default function OrganizationsAdmin() {
       if (error) return toast.error(error.message || 'Não foi possível criar o condomínio.');
       toast.success('Condomínio criado e onboarding iniciado.');
       closeWizard();
-      await load();
+      const refreshedOrgs = await load();
+      const createdId = typeof createdOrganization === 'string' ? createdOrganization : createdOrganization?.id;
+      const created = refreshedOrgs.find((org) => org.id === createdId || org.nome === createdName);
+      if (created) setSelected(created);
+      if (created?.id && draft.sindicoEmail.trim()) {
+        const { error: inviteError } = await (supabase as any).rpc('create_organization_invite', {
+          p_organization_id: created.id,
+          p_email: draft.sindicoEmail.trim(),
+          p_papel: 'sindico',
+        });
+        if (inviteError) toast.error(`Condomínio criado, mas não foi possível gerar o acesso do síndico: ${inviteError.message}`);
+        else toast.success(`Acesso do síndico preparado para ${draft.sindicoEmail.trim()}.`);
+      }
+      if (created?.id && draft.coachEmail.trim()) {
+        const { error: coachInviteError } = await (supabase as any).rpc('create_organization_invite', {
+          p_organization_id: created.id,
+          p_email: draft.coachEmail.trim(),
+          p_papel: 'professor',
+        });
+        if (coachInviteError) toast.error(`Condomínio criado, mas não foi possível gerar o acesso do coach: ${coachInviteError.message}`);
+        else toast.success(`Acesso do coach preparado para ${draft.coachEmail.trim()}.`);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -152,7 +184,7 @@ export default function OrganizationsAdmin() {
   const importCsv = async (file: File) => { const text = await file.text(); const lines = text.split(/\r?\n/).filter(Boolean); const headers = lines.shift()?.split(',').map((h) => h.trim().toLowerCase()) || []; const rows = lines.map((line) => { const values = line.split(','); return Object.fromEntries(headers.map((header, index) => [header, (values[index] || '').trim()])); }); setImportRows(rows); };
   const confirmImport = async () => { if (!selected || !importRows.length) return; const { data, error } = await (supabase as any).rpc('bulk_import_residents', { p_organization_id: selected.id, p_rows: importRows }); if (error) return toast.error(error.message); const accepted = importRows.filter((row) => row.nome && row.email && String(row.email).includes('@')); await Promise.all(accepted.map((row) => (supabase as any).rpc('create_organization_invite', { p_organization_id: selected.id, p_email: row.email, p_papel: 'user' }))); toast.success(`${data?.importados || 0} moradores importados e convites preparados.`); setImportErrors(data?.erros || []); setImportRows((data?.erros || []).map((item: any) => item.row)); };
 
-  const sendInvite = async () => { if (!selected || !inviteEmail.trim()) return toast.error('Informe o e-mail.'); const { data, error } = await (supabase as any).rpc('create_organization_invite', { p_organization_id: selected.id, p_email: inviteEmail.trim(), p_papel: inviteRole }); if (error) return toast.error(error.message); const link = `${window.location.origin}/convite/${data?.token}`; setInviteLink(link); toast.success('Convite criado.'); setInviteEmail(''); };
+  const sendInvite = async () => { if (!selected || !inviteEmail.trim()) return toast.error('Informe o e-mail.'); const { data, error } = await (supabase as any).rpc('create_organization_invite', { p_organization_id: selected.id, p_email: inviteEmail.trim(), p_papel: inviteRole }); if (error) return toast.error(error.message); const link = `${window.location.origin}/convite/${data?.token}`; setInviteLink(link); toast.success('Acesso preparado. Envie o convite para liberar o acesso.'); setInviteEmail(''); };
 
   const addMember = async () => {
     if (!selected || !newMember.user_id) return toast.error('Selecione usuário');
@@ -196,8 +228,8 @@ export default function OrganizationsAdmin() {
             <div className="flex gap-3 text-xs text-muted-foreground">{['Condomínio', 'Infraestrutura', 'Equipe', 'Revisão'].map((label, i) => <span key={label} className={i + 1 <= wizardStep ? 'text-primary font-medium' : ''}>{i + 1}. {label}</span>)}</div>
             {wizardStep === 1 && <div className="space-y-3"><div><Label>Nome do condomínio</Label><Input autoFocus value={draft.nome} onChange={(e) => setDraft({ ...draft, nome: e.target.value })} placeholder="Ex.: Residencial Alto das Palmeiras" /></div><div><Label>CNPJ (opcional)</Label><Input value={draft.cnpj} onChange={(e) => setDraft({ ...draft, cnpj: e.target.value })} /></div></div>}
             {wizardStep === 2 && <div className="space-y-3"><div><Label>Total de unidades</Label><Input type="number" min="0" value={draft.unidades} onChange={(e) => setDraft({ ...draft, unidades: e.target.value })} /></div><div><Label>Capacidade simultânea da academia</Label><Input type="number" min="1" value={draft.capacidade} onChange={(e) => setDraft({ ...draft, capacidade: e.target.value })} placeholder="Ex.: 15" /></div><div><Label>Horário de funcionamento</Label><Input value={draft.horarios} onChange={(e) => setDraft({ ...draft, horarios: e.target.value })} placeholder="Seg-Sex 06:00-22:00" /></div><div><Label>Restrições do espaço (separe por vírgula)</Label><Input value={draft.restricoes} onChange={(e) => setDraft({ ...draft, restricoes: e.target.value })} placeholder="Sem impacto, sem corrida, limite de lotação" /></div><div><Label>Equipamentos (separe por vírgula)</Label><Input value={draft.equipamentos} onChange={(e) => setDraft({ ...draft, equipamentos: e.target.value })} placeholder="Halteres, esteira, bicicleta, colchonetes" /><p className="text-xs text-muted-foreground">As fotos e a validação visual entram no inventário da próxima etapa.</p></div></div>}
-            {wizardStep === 3 && <div className="space-y-3"><div><Label>Síndico responsável</Label><div className="grid gap-2 sm:grid-cols-3"><Input value={draft.sindicoNome} onChange={(e) => setDraft({ ...draft, sindicoNome: e.target.value })} placeholder="Nome completo" /><Input type="email" value={draft.sindicoEmail} onChange={(e) => setDraft({ ...draft, sindicoEmail: e.target.value })} placeholder="E-mail para acesso" /><Input type="tel" value={draft.sindicoTelefone} onChange={(e) => setDraft({ ...draft, sindicoTelefone: e.target.value })} placeholder="Telefone / WhatsApp" /></div></div><div><Label>Professores</Label><div className="max-h-40 overflow-y-auto rounded-md border p-2 space-y-1">{eligibleUsers.filter((p) => p.papel === 'professor').map((p) => <label key={p.id} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={draft.professores.includes(p.id)} onChange={() => toggleProfessor(p.id)} />{p.nome} — {p.email}</label>)}{eligibleUsers.filter((p) => p.papel === 'professor').length === 0 && <p className="text-xs text-muted-foreground">Nenhum usuário com papel de professor cadastrado ainda.</p>}</div></div></div>}
-            {wizardStep === 4 && <div className="rounded-sm border p-4 space-y-2 text-sm"><p><strong>Condomínio:</strong> {draft.nome || '—'}</p><p><strong>Unidades:</strong> {draft.unidades || 'Não informado'}</p><p><strong>Infraestrutura:</strong> {draft.equipamentos || 'A validar'}</p><p><strong>Capacidade:</strong> {draft.capacidade || 'A definir'}</p><p><strong>Horários:</strong> {draft.horarios || 'A definir'}</p><p><strong>Restrições:</strong> {draft.restricoes || 'Nenhuma informada'}</p><p><strong>Síndico:</strong> {sindicoLabel()}</p><p><strong>Professores selecionados:</strong> {draft.professores.length}</p><p className="text-primary">O cadastro ficará pendente de validação da infraestrutura.</p></div>}
+            {wizardStep === 3 && <div className="space-y-4"><div><Label>Síndico responsável *</Label><div className="grid gap-2 sm:grid-cols-3"><Input value={draft.sindicoNome} onChange={(e) => setDraft({ ...draft, sindicoNome: e.target.value })} placeholder="Nome completo" /><Input type="email" value={draft.sindicoEmail} onChange={(e) => setDraft({ ...draft, sindicoEmail: e.target.value })} placeholder="E-mail para acesso" /><Input type="tel" value={draft.sindicoTelefone} onChange={(e) => setDraft({ ...draft, sindicoTelefone: e.target.value })} placeholder="Telefone / WhatsApp" /></div></div><div><Label>Coach responsável (opcional)</Label><div className="grid gap-2 sm:grid-cols-3"><Input value={draft.coachNome} onChange={(e) => setDraft({ ...draft, coachNome: e.target.value })} placeholder="Nome completo" /><Input type="email" value={draft.coachEmail} onChange={(e) => setDraft({ ...draft, coachEmail: e.target.value })} placeholder="E-mail para acesso" /><Input type="tel" value={draft.coachTelefone} onChange={(e) => setDraft({ ...draft, coachTelefone: e.target.value })} placeholder="Telefone / WhatsApp" /></div></div><p className="text-xs text-muted-foreground">Ao concluir, os acessos do síndico e do coach serão preparados automaticamente. Moradores podem ser importados em lote depois.</p></div>}
+            {wizardStep === 4 && <div className="rounded-sm border p-4 space-y-2 text-sm"><p><strong>Condomínio:</strong> {draft.nome || '—'}</p><p><strong>Unidades:</strong> {draft.unidades || 'Não informado'}</p><p><strong>Infraestrutura:</strong> {draft.equipamentos || 'A validar'}</p><p><strong>Capacidade:</strong> {draft.capacidade || 'A definir'}</p><p><strong>Horários:</strong> {draft.horarios || 'A definir'}</p><p><strong>Restrições:</strong> {draft.restricoes || 'Nenhuma informada'}</p><p><strong>Síndico:</strong> {draft.sindicoNome || '—'} · {draft.sindicoEmail || 'E-mail não informado'} · {draft.sindicoTelefone || 'Telefone não informado'}</p><p><strong>Coach:</strong> {draft.coachNome || 'Não informado'} · {draft.coachEmail || 'Não informado'} · {draft.coachTelefone || 'Não informado'}</p><p className="text-primary">Os convites do síndico e do coach serão preparados automaticamente.</p></div>}
             <div className="flex justify-between pt-3"><Button variant="ghost" disabled={wizardStep === 1 || isSubmitting} onClick={() => setWizardStep((s) => s - 1)}>Voltar</Button>{wizardStep < 4 ? <Button disabled={isSubmitting} onClick={() => setWizardStep((s) => s + 1)}>Continuar</Button> : <Button onClick={createOrganization} disabled={isSubmitting}>{isSubmitting ? 'Criando...' : 'Criar condomínio'}</Button>}</div>
           </DialogContent>
         </Dialog>
@@ -269,7 +301,7 @@ export default function OrganizationsAdmin() {
 
         <Card className="rounded-sm shadow-elegant"><CardHeader><CardTitle>Convites do condomínio</CardTitle></CardHeader><CardContent>{!invites.length ? <p className="text-sm text-muted-foreground">Nenhum convite enviado.</p> : <div className="space-y-2">{invites.map((invite) => <div key={invite.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 pb-2 text-sm"><span>{invite.email}<span className="block text-xs text-muted-foreground">{invite.papel} · expira {new Date(invite.expires_at).toLocaleDateString('pt-BR')}</span></span><div className="flex items-center gap-2">{invite.status === "pendente" && <Button size="sm" variant="ghost" onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/convite/${invite.token}`); toast.success("Link copiado."); }}>Copiar link</Button>}<Badge variant="outline">{invite.status}</Badge>{invite.status !== "pendente" && <Button size="sm" variant="ghost" onClick={async () => { const { error } = await (supabase as any).rpc("resend_organization_invite", { p_invite_id: invite.id }); if (error) toast.error(error.message); else toast.success("Novo convite criado."); }}>Reenviar</Button>}{invite.status === "pendente" && <Button size="sm" variant="ghost" onClick={async () => { const { error } = await (supabase as any).rpc("cancel_organization_invite", { p_invite_id: invite.id }); if (error) toast.error(error.message); else { toast.success("Convite cancelado."); if (selected) { const { data } = await (supabase as any).from("organization_invites").select("id,email,papel,status,expires_at,created_at").eq("organization_id", selected.id).order("created_at", { ascending: false }); setInvites(data || []); } } }}>Cancelar</Button>}</div></div>)}</div>}</CardContent></Card>
 
-        <Card className="rounded-sm shadow-elegant"><CardHeader><CardTitle>Personas e acessos</CardTitle><p className="text-sm text-muted-foreground">Informe o e-mail e prepare o acesso de síndico, coach ou morador.</p></CardHeader><CardContent className="flex flex-wrap gap-2 items-end"><div className="flex-1 min-w-[220px]"><Label>E-mail</Label><Input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="responsavel@email.com" /></div><div><Label>Papel</Label><Select value={inviteRole} onValueChange={setInviteRole}><SelectTrigger className="w-40"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="sindico">Síndico</SelectItem><SelectItem value="professor">Coach</SelectItem><SelectItem value="user">Morador</SelectItem></SelectContent></Select></div><Button onClick={sendInvite}>Preparar convite</Button>{inviteLink && <div className="w-full rounded-sm border border-primary/30 bg-primary/5 p-3 text-sm"><p className="font-medium">Link gerado</p><div className="flex gap-2 mt-2"><Input readOnly value={inviteLink} /><Button type="button" variant="outline" onClick={() => { navigator.clipboard.writeText(inviteLink); toast.success("Link copiado."); }}>Copiar</Button></div></div>}</CardContent></Card>
+        <Card className="rounded-sm shadow-elegant"><CardHeader><CardTitle>Personas e acessos</CardTitle><p className="text-sm text-muted-foreground">Cadastre síndico, coach ou morador e envie o convite para liberar o acesso ao condomínio.</p></CardHeader><CardContent className="flex flex-wrap gap-2 items-end"><div className="flex-1 min-w-[220px]"><Label>E-mail</Label><Input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="pessoa@email.com" /></div><div><Label>Persona</Label><Select value={inviteRole} onValueChange={setInviteRole}><SelectTrigger className="w-40"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="sindico">Síndico</SelectItem><SelectItem value="professor">Coach</SelectItem><SelectItem value="user">Morador</SelectItem></SelectContent></Select></div><Button onClick={sendInvite}>Preparar convite</Button>{inviteLink && <div className="w-full rounded-sm border border-primary/30 bg-primary/5 p-3 text-sm"><p className="font-medium">Acesso preparado</p><div className="flex gap-2 mt-2"><Input readOnly value={inviteLink} /><Button type="button" variant="outline" onClick={() => { navigator.clipboard.writeText(inviteLink); toast.success("Link copiado."); }}>Copiar</Button></div></div>}</CardContent></Card>
 
         <Card>
           <CardHeader><CardTitle>Membros — {selected.nome}</CardTitle></CardHeader>
@@ -321,3 +353,4 @@ export default function OrganizationsAdmin() {
     </div>
   );
 }
+
