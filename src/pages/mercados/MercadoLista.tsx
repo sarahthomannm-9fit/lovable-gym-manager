@@ -117,7 +117,7 @@ export default function MercadoLista() {
   const abrir = async (l: Linha) => {
     const { data } = await supabase.from('organizations').select('id, nome, tipo, status').eq('id', l.id).maybeSingle();
     if (data) setActiveOrg(data as any);
-    navigate(cfg.persona);
+    navigate(`/admin/organizacoes?organization=${encodeURIComponent(l.id)}`);
   };
 
   return (
