@@ -186,16 +186,9 @@ export default function OrganizationsAdmin() {
 
   const sendInvite = async () => { if (!selected || !inviteEmail.trim()) return toast.error('Informe o e-mail.'); const { data, error } = await (supabase as any).rpc('create_organization_invite', { p_organization_id: selected.id, p_email: inviteEmail.trim(), p_papel: inviteRole }); if (error) return toast.error(error.message); const link = `${window.location.origin}/convite/${data?.token}`; setInviteLink(link); toast.success('Acesso preparado. Envie o convite para liberar o acesso.'); setInviteEmail(''); };
 
-  const addMember = async () => {
-    if (!selected || !newMember.user_id) return toast.error('Selecione usuário');
-    const { error } = await (supabase as any).from('organization_members').insert({
-      organization_id: selected.id, user_id: newMember.user_id, papel: newMember.papel,
-    });
-    if (error) return toast.error(error.message);
-    toast.success('Membro adicionado');
-    setNewMember({ user_id: '', papel: 'sindico' });
-    loadMembers(selected.id);
-  };
+  // Pendência resolvida: o cadastro de personas agora acontece somente por convite
+  // (create_organization_invite), sem exigir usuário previamente existente.
+
 
   const removerMember = async (id: string) => {
     const { error } = await (supabase as any).from('organization_members').delete().eq('id', id);
