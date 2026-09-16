@@ -68,9 +68,9 @@ export default function SindicoHome() {
   const carregar = async () => {
     if (!activeOrg) { setReady(true); return; }
     const hoje = new Date().toISOString().slice(0, 10);
-    const { data: activationData } = await supabase.rpc('organization_activation_metrics', { p_organization_id: activeOrg.id });
-    if (activationData) setActivation(activationData);
-    const { data: actionRows } = await supabase.from('organization_activation_alert_actions')
+    const { data: activationData } = await (supabase as any).rpc('organization_activation_metrics', { p_organization_id: activeOrg.id });
+    if (activationData) setActivation(activationData as any);
+    const { data: actionRows } = await (supabase as any).from('organization_activation_alert_actions')
       .select('id, alert_type, action_label, created_at, acted_by, resolved_at').eq('organization_id', activeOrg.id)
       .order('created_at', { ascending: false }).limit(8);
     setActivationActions(actionRows || []);
@@ -395,19 +395,19 @@ export default function SindicoHome() {
               {activation.moradores_ativos === 0 && (
                 <div className="flex items-center justify-between gap-3 rounded-md border border-border/30 p-3">
                   <span><strong>Ative os moradores:</strong> compartilhe o QR de entrada e convites do condomínio.</span>
-                  <Button size="sm" variant="outline" onClick={async () => { await supabase.rpc('record_activation_alert_action', { p_organization_id: activeOrg.id, p_alert_type: 'moradores_inativos', p_action_label: 'Abrir cadastro' }); window.location.assign('/admin/organizacoes'); }}>Abrir cadastro</Button>
+                  <Button size="sm" variant="outline" onClick={async () => { await (supabase as any).rpc('record_activation_alert_action', { p_organization_id: activeOrg.id, p_alert_type: 'moradores_inativos', p_action_label: 'Abrir cadastro' }); window.location.assign('/admin/organizacoes'); }}>Abrir cadastro</Button>
                 </div>
               )}
               {activation.checkins_30_dias === 0 && activation.moradores_ativos > 0 && (
                 <div className="flex items-center justify-between gap-3 rounded-md border border-border/30 p-3">
                   <span><strong>Sem check-ins recentes:</strong> publique um comunicado ou agende um Health Day.</span>
-                  <Button size="sm" variant="outline" onClick={async () => { await supabase.rpc('record_activation_alert_action', { p_organization_id: activeOrg.id, p_alert_type: 'sem_checkins', p_action_label: 'Criar comunicado' }); window.location.assign('/sindico/comunicados'); }}>Criar comunicado</Button>
+                  <Button size="sm" variant="outline" onClick={async () => { await (supabase as any).rpc('record_activation_alert_action', { p_organization_id: activeOrg.id, p_alert_type: 'sem_checkins', p_action_label: 'Criar comunicado' }); window.location.assign('/sindico/comunicados'); }}>Criar comunicado</Button>
                 </div>
               )}
               {activation.eventos_publicados === 0 && (
                 <div className="flex items-center justify-between gap-3 rounded-md border border-border/30 p-3">
                   <span><strong>Nenhum evento publicado:</strong> um Health Day ajuda a iniciar o ciclo de engajamento.</span>
-                  <Button size="sm" variant="outline" onClick={async () => { await supabase.rpc('record_activation_alert_action', { p_organization_id: activeOrg.id, p_alert_type: 'sem_eventos', p_action_label: 'Criar evento' }); window.location.assign('/sindico/health-day'); }}>Criar evento</Button>
+                  <Button size="sm" variant="outline" onClick={async () => { await (supabase as any).rpc('record_activation_alert_action', { p_organization_id: activeOrg.id, p_alert_type: 'sem_eventos', p_action_label: 'Criar evento' }); window.location.assign('/sindico/health-day'); }}>Criar evento</Button>
                 </div>
               )}
             </div>
@@ -447,12 +447,12 @@ export default function SindicoHome() {
                 <div key={action.id} className="flex items-center justify-between gap-3 rounded-md border border-border/30 px-3 py-2 text-xs">
                   <div>
                     <span className="font-medium">{action.action_label}</span>
-                    <span className="text-muted-foreground ml-2">({action.alert_type.replaceAll('_', ' ')})</span>
+                    <span className="text-muted-foreground ml-2">({action.alert_type.replace(/_/g, ' ')})</span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span className={action.resolved_at ? "text-emerald-400" : "text-amber-400"}>{action.resolved_at ? "Concluída" : "Aberta"}</span>
                     {!action.resolved_at && <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={async () => {
-                      await supabase.rpc('resolve_activation_alert_action', { p_action_id: action.id });
+                      await (supabase as any).rpc('resolve_activation_alert_action', { p_action_id: action.id });
                       carregar();
                     }}>Concluir</Button>}
                     <span className="text-muted-foreground">{new Date(action.created_at).toLocaleString('pt-BR')}</span>
