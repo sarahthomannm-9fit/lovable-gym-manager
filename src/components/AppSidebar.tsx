@@ -276,20 +276,23 @@ export function AppSidebar() {
                 </SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>
-                    {visibleItems.map((item) => {
+                    {visibleItems.map((item, itemIndex) => {
                       const isActive = location.pathname === item.path;
+                      const isPrimaryAction = itemIndex === 0;
                       return (
                         <SidebarMenuItem key={item.path}>
                           <SidebarMenuButton
                             onClick={() => navigate(item.path)}
                             isActive={isActive}
-                            className={`w-full justify-start text-xs rounded-md transition-all duration-150 ${
+                            className={`w-full justify-start text-xs rounded-md transition-all duration-150 ${isPrimaryAction ? 'mt-0.5' : 'ml-3 w-[calc(100%-0.75rem)]'} ${
                               isActive
                                 ? 'bg-primary/10 text-primary border-l-2 border-primary font-semibold'
-                                : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent border-l-2 border-transparent'
+                                : isPrimaryAction
+                                  ? 'text-sidebar-foreground font-semibold hover:text-sidebar-foreground hover:bg-sidebar-accent border-l-2 border-transparent'
+                                  : 'text-sidebar-foreground/65 hover:text-sidebar-foreground hover:bg-sidebar-accent border-l-2 border-sidebar-border/40'
                             }`}
                           >
-                            <item.icon className={`mr-2 h-3.5 w-3.5 ${isActive ? 'text-primary' : ''}`} />
+                            <item.icon className={`mr-2 h-3.5 w-3.5 ${isActive || isPrimaryAction ? 'text-primary' : ''}`} />
                             <span className="flex-1">{item.title}</span>
                             {item.badge && item.badge > 0 && (
                               <span className={`ml-auto min-w-[18px] h-[18px] rounded-full ${item.badgeColor || 'bg-destructive'} text-white text-[9px] font-mono font-bold flex items-center justify-center px-1.5 shadow-sm`}>
@@ -325,3 +328,4 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
+
