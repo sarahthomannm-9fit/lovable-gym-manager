@@ -1698,30 +1698,39 @@ export type Database = {
       }
       organization_invites: {
         Row: {
+          accepted_at: string | null
+          accepted_by: string | null
           created_at: string
           email: string
           expires_at: string
           id: string
+          invited_by: string | null
           organization_id: string
           papel: string
           status: string
           token: string
         }
         Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
           created_at?: string
           email: string
           expires_at?: string
           id?: string
+          invited_by?: string | null
           organization_id: string
           papel: string
           status?: string
           token?: string
         }
         Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
           created_at?: string
           email?: string
           expires_at?: string
           id?: string
+          invited_by?: string | null
           organization_id?: string
           papel?: string
           status?: string
@@ -2713,6 +2722,28 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_organization_invite: {
+        Args: { p_token: string }
+        Returns: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string | null
+          organization_id: string
+          papel: string
+          status: string
+          token: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "organization_invites"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       analise_faturamento_avancada: {
         Args: never
         Returns: {
@@ -2752,10 +2783,13 @@ export type Database = {
       create_organization_invite: {
         Args: { p_email: string; p_organization_id: string; p_papel: string }
         Returns: {
+          accepted_at: string | null
+          accepted_by: string | null
           created_at: string
           email: string
           expires_at: string
           id: string
+          invited_by: string | null
           organization_id: string
           papel: string
           status: string
@@ -2884,10 +2918,13 @@ export type Database = {
       resend_organization_invite: {
         Args: { p_invite_id: string }
         Returns: {
+          accepted_at: string | null
+          accepted_by: string | null
           created_at: string
           email: string
           expires_at: string
           id: string
+          invited_by: string | null
           organization_id: string
           papel: string
           status: string
