@@ -182,7 +182,7 @@ const App = () => (
                     <Route path="/reset-password" element={<ResetPassword />} />
                     <Route path="/anamnese/:token" element={<Anamnese />} />
                     <Route path="/entrada" element={<ResidentEntry />} />
-                    <Route path="/convite/:token" element={<ProtectedRoute><AcceptInvite /></ProtectedRoute>} />
+                    <Route path="/convite/:token" element={<AcceptInvite />} />
                     <Route path="/select-context" element={<ProtectedRoute><SelectContext /></ProtectedRoute>} />
                     <Route path="/sindico" element={<ProtectedRoute><RoleRoute allow={['sindico','admin']}><MainLayout><SindicoHome /></MainLayout></RoleRoute></ProtectedRoute>} />
                     <Route path="/sindico/health-day" element={<ProtectedRoute><RoleRoute allow={['sindico','admin']}><MainLayout><HealthDay /></MainLayout></RoleRoute></ProtectedRoute>} />
@@ -270,5 +270,6 @@ const App = () => (
 );
 
 export default App;
+
 
 
