@@ -1623,6 +1623,120 @@ export type Database = {
         }
         Relationships: []
       }
+      onboarding_requests: {
+        Row: {
+          created_at: string
+          organization_id: string
+          request_id: string
+        }
+        Insert: {
+          created_at?: string
+          organization_id: string
+          request_id: string
+        }
+        Update: {
+          created_at?: string
+          organization_id?: string
+          request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_facilities: {
+        Row: {
+          ambiente: string
+          categoria: string | null
+          created_at: string
+          foto_path: string | null
+          id: string
+          nome: string
+          organization_id: string
+          quantidade: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          ambiente: string
+          categoria?: string | null
+          created_at?: string
+          foto_path?: string | null
+          id?: string
+          nome: string
+          organization_id: string
+          quantidade?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          ambiente?: string
+          categoria?: string | null
+          created_at?: string
+          foto_path?: string | null
+          id?: string
+          nome?: string
+          organization_id?: string
+          quantidade?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_facilities_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_invites: {
+        Row: {
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          organization_id: string
+          papel: string
+          status: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          organization_id: string
+          papel: string
+          status?: string
+          token?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          organization_id?: string
+          papel?: string
+          status?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_invites_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_members: {
         Row: {
           created_at: string
@@ -1657,40 +1771,52 @@ export type Database = {
       }
       organizations: {
         Row: {
+          capacidade_academia: number | null
           cnpj: string | null
           contato_email: string | null
           contato_nome: string | null
           contato_telefone: string | null
           created_at: string
+          horarios_academia: Json | null
           id: string
           metadata: Json
           nome: string
+          onboarding_status: string
+          restricoes_academia: string[] | null
           status: string
           tipo: string
           updated_at: string
         }
         Insert: {
+          capacidade_academia?: number | null
           cnpj?: string | null
           contato_email?: string | null
           contato_nome?: string | null
           contato_telefone?: string | null
           created_at?: string
+          horarios_academia?: Json | null
           id?: string
           metadata?: Json
           nome: string
+          onboarding_status?: string
+          restricoes_academia?: string[] | null
           status?: string
           tipo: string
           updated_at?: string
         }
         Update: {
+          capacidade_academia?: number | null
           cnpj?: string | null
           contato_email?: string | null
           contato_nome?: string | null
           contato_telefone?: string | null
           created_at?: string
+          horarios_academia?: Json | null
           id?: string
           metadata?: Json
           nome?: string
+          onboarding_status?: string
+          restricoes_academia?: string[] | null
           status?: string
           tipo?: string
           updated_at?: string
@@ -2600,6 +2726,14 @@ export type Database = {
           variabilidade: number
         }[]
       }
+      approve_facility: {
+        Args: { p_facility_id: string; p_status: string }
+        Returns: undefined
+      }
+      bulk_import_residents: {
+        Args: { p_organization_id: string; p_rows: Json }
+        Returns: Json
+      }
       calcular_mrr: {
         Args: { p_org_id: string }
         Returns: {
@@ -2610,6 +2744,29 @@ export type Database = {
           receita_mes_atual: number
           ticket_medio: number
         }[]
+      }
+      cancel_organization_invite: {
+        Args: { p_invite_id: string }
+        Returns: undefined
+      }
+      create_organization_invite: {
+        Args: { p_email: string; p_organization_id: string; p_papel: string }
+        Returns: {
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          organization_id: string
+          papel: string
+          status: string
+          token: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "organization_invites"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       criar_notificacao: {
         Args: {
@@ -2627,6 +2784,7 @@ export type Database = {
       dashboard_morador: { Args: { p_aluno_id: string }; Returns: Json }
       dashboard_sindico: { Args: { p_org_id: string }; Returns: Json }
       dashboard_trust: { Args: never; Returns: Json }
+      get_aluno_idade: { Args: { p_aluno_id: string }; Returns: number }
       get_alunos_sem_checkin: {
         Args: { p_dias?: number; p_org_id?: string }
         Returns: {
@@ -2647,6 +2805,21 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      onboard_condominio: {
+        Args: {
+          p_capacidade: number
+          p_cnpj: string
+          p_equipamentos: string[]
+          p_horarios: Json
+          p_nome: string
+          p_professores: string[]
+          p_request_id: string
+          p_restricoes: string[]
+          p_sindico: string
+          p_unidades: number
+        }
+        Returns: string
+      }
       projecao_cenarios: {
         Args: never
         Returns: {
@@ -2707,6 +2880,25 @@ export type Database = {
           nome_plano: string
           total_recebido: number
         }[]
+      }
+      resend_organization_invite: {
+        Args: { p_invite_id: string }
+        Returns: {
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          organization_id: string
+          papel: string
+          status: string
+          token: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "organization_invites"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       user_has_org: { Args: { _org: string; _user: string }; Returns: boolean }
     }
