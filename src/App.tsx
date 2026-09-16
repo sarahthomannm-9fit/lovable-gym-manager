@@ -24,6 +24,7 @@ import PrescriptionAudit from "./pages/admin/PrescriptionAudit";
 import AccessAudit from "./pages/admin/AccessAudit";
 import WorkflowApprovals from "./pages/admin/WorkflowApprovals";
 import AcceptInvite from "./pages/AcceptInvite";
+import FirstAccess from "./pages/FirstAccess";
 import MoradorHome from "./pages/morador/MoradorHome";
 import OnboardingMorador from "./pages/morador/OnboardingMorador";
 import Events from "./pages/morador/Events";
@@ -183,6 +184,7 @@ const App = () => (
                     <Route path="/anamnese/:token" element={<Anamnese />} />
                     <Route path="/entrada" element={<ResidentEntry />} />
                     <Route path="/convite/:token" element={<AcceptInvite />} />
+                    <Route path="/primeiro-acesso" element={<ProtectedRoute><FirstAccess /></ProtectedRoute>} />
                     <Route path="/select-context" element={<ProtectedRoute><SelectContext /></ProtectedRoute>} />
                     <Route path="/sindico" element={<ProtectedRoute><RoleRoute allow={['sindico','admin']}><MainLayout><SindicoHome /></MainLayout></RoleRoute></ProtectedRoute>} />
                     <Route path="/sindico/health-day" element={<ProtectedRoute><RoleRoute allow={['sindico','admin']}><MainLayout><HealthDay /></MainLayout></RoleRoute></ProtectedRoute>} />
