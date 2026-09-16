@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ export function Login() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,7 +45,10 @@ export function Login() {
       p === 'corporate' ? '/corp' :
       p === 'user' ? '/morador' : '/painel';
 
-    if (role === 'admin' || role === 'manager') {
+    const redirect = searchParams.get('redirect');
+    if (redirect) {
+      navigate(redirect, { replace: true });
+    } else if (role === 'admin' || role === 'manager') {
       navigate(routeForRole(role), { replace: true });
     } else if (memberships.length === 0) {
       navigate(routeForRole(role ?? 'user'), { replace: true });
@@ -117,3 +121,4 @@ export function Login() {
     </div>
   );
 }
+
