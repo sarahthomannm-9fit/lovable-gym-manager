@@ -10,7 +10,7 @@ export default function MoradorAgenda() {
   const [events, setEvents] = useState<any[]>([]);
   useEffect(() => {
     if (!activeOrg) return;
-    supabase.from('health_day_events').select('id, title, starts_at, location, description')
+    (supabase as any).from('health_day_events').select('id, title, starts_at, location, description')
       .eq('organization_id', activeOrg.id).eq('status', 'published').order('starts_at')
       .then(({ data }) => setEvents(data || []));
   }, [activeOrg]);
