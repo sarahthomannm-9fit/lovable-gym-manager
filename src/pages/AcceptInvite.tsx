@@ -13,7 +13,7 @@ const roleRoute = (role?: string | null) => {
     case 'sindico': return '/sindico';
     case 'professor': return '/coach';
     case 'corporate': return '/corp';
-    case 'user': return '/morador';
+    case 'user':\n    case 'morador':\n    case 'residente':\n    case 'aluno': return '/morador';
     case 'admin':
     case 'manager': return '/painel';
     default: return '/select-context';
