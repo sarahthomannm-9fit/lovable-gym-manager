@@ -87,7 +87,19 @@ export default function OrganizationsAdmin() {
     const urls = await Promise.all(rows.filter((row: Facility) => row.foto_path).map(async (row: Facility) => { const { data: signed } = await supabase.storage.from('organization-facilities').createSignedUrl(row.foto_path!, 3600); return [row.id, signed?.signedUrl || ''] as const; }));
     setFacilityPhotoUrls(Object.fromEntries(urls.filter(([, url]) => url)));
   };
-  useEffect(() => { if (selected) { loadMembers(selected.id); loadFacilities(selected.id); (async () => { await (supabase as any).rpc('expire_organization_invites'); const { data } = await (supabase as any).from('organization_invites').select('id,email,papel,status,token,expires_at,created_at,organization_invite_deliveries(status,created_at)').eq('organization_id', selected.id).order('created_at', { ascending: false }); setInvites(data || []); })(); } }, [selected]);
+  const loadInvites = async (orgId: string) => {
+    // Mantém a tela utilizável enquanto o rastreamento de entrega ainda não foi aplicado.
+    await (supabase as any).rpc('expire_organization_invites');
+    const detailed = await (supabase as any).from('organization_invites')
+      .select('id,email,papel,status,token,expires_at,created_at,organization_invite_deliveries(status,created_at)')
+      .eq('organization_id', orgId).order('created_at', { ascending: false });
+    if (!detailed.error) return setInvites(detailed.data || []);
+    const basic = await (supabase as any).from('organization_invites')
+      .select('id,email,papel,status,token,expires_at,created_at')
+      .eq('organization_id', orgId).order('created_at', { ascending: false });
+    setInvites((basic.data || []).map((invite: any) => ({ ...invite, organization_invite_deliveries: [] })));
+  };
+  useEffect(() => { if (selected) { loadMembers(selected.id); loadFacilities(selected.id); loadInvites(selected.id); } }, [selected]);
   const addFacility = async () => {
     if (!selected || !newFacility.ambiente.trim() || !newFacility.nome.trim()) return toast.error('Informe ambiente e equipamento.');
     let foto_path: string | null = null;
