@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOperationalContext } from '@/hooks/useOperationalContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +13,7 @@ const personaLabel: Record<string, string> = { sindico: 'Síndico', professor: '
 
 export default function FirstAccess() {
   const { user } = useAuth();
+  const { refresh } = useOperationalContext();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const persona = params.get('persona') || 'user';
@@ -25,6 +27,7 @@ export default function FirstAccess() {
     const { error } = await (supabase as any).from('profiles').upsert({ id: user.id, nome: nome.trim(), email: user.email, telefone: telefone.trim() || null }, { onConflict: 'id' });
     setSaving(false);
     if (error) return toast.error(`Não foi possível concluir seu cadastro: ${error.message}`);
+    await refresh();
     toast.success('Cadastro concluído.');
     navigate('/select-context', { replace: true });
   };
