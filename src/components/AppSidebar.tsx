@@ -55,7 +55,7 @@ import {
 import { useNavigate, useLocation } from "react-router-dom";
 import { useCurrentUserRole, AppRole } from "@/hooks/useCurrentUserRole";
 import { useDataIntegration } from "@/components/DataIntegrationProvider";
-import { useMemo } from "react";
+import { useMemo } from "react";\nimport { useOperationalContext } from "@/hooks/useOperationalContext";
 
 type MenuItem = {
   title: string;
@@ -75,7 +75,7 @@ type MenuCategory = {
 export function AppSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { role } = useCurrentUserRole();
+  const { role: storedRole } = useCurrentUserRole();\n  const { activeRole, primaryRole } = useOperationalContext();\n  const role = storedRole ?? activeRole ?? primaryRole;
   const { signOut, user } = useAuth();
   const { pagamentos, alunos, checkins, leads, aulas } = useDataIntegration();
 
