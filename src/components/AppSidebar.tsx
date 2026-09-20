@@ -79,9 +79,7 @@ export function AppSidebar() {
   const { role: storedRole } = useCurrentUserRole();
   const { activeRole, primaryRole } = useOperationalContext();
   const residentSurface = location.pathname.startsWith('/morador');
-  const role = residentSurface ? 'user' : (activeRole ?? storedRole ?? primaryRole);
-  if (residentSurface) return null;
-  const { signOut, user } = useAuth();
+  const role = residentSurface ? 'user' : (activeRole ?? storedRole ?? primaryRole);\nconst { signOut, user } = useAuth();
   const { pagamentos, alunos, checkins, leads, aulas } = useDataIntegration();
 
   // Dynamic badge counts
