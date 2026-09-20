@@ -134,7 +134,7 @@ export default function OrganizationsAdmin() {
     });
     setInviteEmail("");
     if (data?.token) {
-      const link = `${window.location.origin}/convite/${data.token}`;
+      const link = `${window.location.origin}/convite/${data.token}?email=${encodeURIComponent(inviteEmail.trim().toLowerCase())}`;
       try {
         await navigator.clipboard.writeText(link);
         toast.info("Link do convite copiado");
