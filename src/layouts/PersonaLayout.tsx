@@ -47,7 +47,8 @@ export function PersonaLayout({
   );
   if (activeOrg && !orgOptions.find((o) => o.id === activeOrg.id)) orgOptions.unshift(activeOrg);
 
-  const adminLinks: NavLink[] = isAdmin
+  const residentSurface = location.pathname.startsWith('/morador');
+  const adminLinks: NavLink[] = isAdmin && !residentSurface
     ? [
         { label: 'Painel admin', path: '/painel', icon: LayoutDashboard, accent: 'hsl(var(--primary))' },
         { label: 'Operação 9FIT', path: '/operacao-9fit', icon: ClipboardCheck, accent: 'hsl(var(--primary))' },
@@ -57,7 +58,7 @@ export function PersonaLayout({
     : [];
 
   // Persona links visible: admin sees all; non-admin sees only those matching memberships
-  const visiblePersonas = isAdmin
+  const visiblePersonas = isAdmin && !residentSurface
     ? PERSONA_LINKS
     : PERSONA_LINKS.filter((p) => {
         if (p.path === '/morador') return true;
