@@ -134,7 +134,7 @@ export default function OrganizationsAdmin() {
     });
     setInviteEmail("");
     if (data?.token) {
-      const link = `${window.location.origin}/aceitar-convite?token=${data.token}`;
+      const link = `${window.location.origin}/convite/${data.token}`;
       try {
         await navigator.clipboard.writeText(link);
         toast.info("Link do convite copiado");
@@ -156,7 +156,7 @@ export default function OrganizationsAdmin() {
   };
 
   const copyInviteLink = async (token: string) => {
-    const link = `${window.location.origin}/aceitar-convite?token=${token}`;
+    const link = `${window.location.origin}/convite/${token}`;
     try {
       await navigator.clipboard.writeText(link);
       toast.success("Link copiado");
