@@ -48,6 +48,8 @@ export function Login() {
     const redirect = searchParams.get('redirect');
     if (redirect) {
       navigate(redirect, { replace: true });
+    } else if (memberships.length === 1 && memberships[0].papel !== 'admin' && memberships[0].papel !== 'manager') {
+      navigate(papelToRoute(memberships[0].papel), { replace: true });
     } else if (role === 'admin' || role === 'manager') {
       navigate(routeForRole(role), { replace: true });
     } else if (memberships.length === 0) {
