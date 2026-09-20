@@ -2388,6 +2388,71 @@ export type Database = {
           },
         ]
       }
+      staff_bookings: {
+        Row: {
+          aluno_id: string
+          cancel_synced: boolean
+          created_at: string
+          credit_refunded: boolean
+          credits_charged: number
+          freelancer_id: string
+          hub: string | null
+          id: string
+          integration_status: Database["public"]["Enums"]["staff_booking_status"]
+          method: string
+          professional_name: string | null
+          professional_photo_url: string | null
+          slot: string | null
+          staff_booking_id: string
+          status_reason: string | null
+          updated_at: string
+        }
+        Insert: {
+          aluno_id: string
+          cancel_synced?: boolean
+          created_at?: string
+          credit_refunded?: boolean
+          credits_charged?: number
+          freelancer_id: string
+          hub?: string | null
+          id?: string
+          integration_status?: Database["public"]["Enums"]["staff_booking_status"]
+          method: string
+          professional_name?: string | null
+          professional_photo_url?: string | null
+          slot?: string | null
+          staff_booking_id: string
+          status_reason?: string | null
+          updated_at?: string
+        }
+        Update: {
+          aluno_id?: string
+          cancel_synced?: boolean
+          created_at?: string
+          credit_refunded?: boolean
+          credits_charged?: number
+          freelancer_id?: string
+          hub?: string | null
+          id?: string
+          integration_status?: Database["public"]["Enums"]["staff_booking_status"]
+          method?: string
+          professional_name?: string | null
+          professional_photo_url?: string | null
+          slot?: string | null
+          staff_booking_id?: string
+          status_reason?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_bookings_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_tickets: {
         Row: {
           agent_response: string | null
@@ -2966,6 +3031,12 @@ export type Database = {
         | "produto_digital"
         | "produto_fisico"
         | "academy"
+      staff_booking_status:
+        | "pendente"
+        | "confirmado"
+        | "rejeitado"
+        | "cancelado"
+        | "concluido"
       treino_ia_status: "pendente" | "aprovado" | "rejeitado"
     }
     CompositeTypes: {
@@ -3122,6 +3193,13 @@ export const Constants = {
         "produto_digital",
         "produto_fisico",
         "academy",
+      ],
+      staff_booking_status: [
+        "pendente",
+        "confirmado",
+        "rejeitado",
+        "cancelado",
+        "concluido",
       ],
       treino_ia_status: ["pendente", "aprovado", "rejeitado"],
     },
