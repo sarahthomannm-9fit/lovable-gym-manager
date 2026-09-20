@@ -30,7 +30,6 @@ export default function OrganizationsAdmin() {
   const [eligibleUsers, setEligibleUsers] = useState<EligibleUser[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [selected, setSelected] = useState<Org | null>(null);
-  const [newOrg, setNewOrg] = useState({ nome: '', tipo: 'condominio', cnpj: '' });
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [newFacility, setNewFacility] = useState({ ambiente: '', nome: '', categoria: '', quantidade: '1' });
   const [facilityPhoto, setFacilityPhoto] = useState<File | null>(null);
@@ -163,15 +162,6 @@ export default function OrganizationsAdmin() {
   };
   const toggleProfessor = (id: string) => setDraft((d) => ({ ...d, professores: d.professores.includes(id) ? d.professores.filter((p) => p !== id) : [...d.professores, id] }));
 
-  const criarOrg = async () => {
-    if (!newOrg.nome) return toast.error('Nome obrigatório');
-    const { error } = await (supabase as any).from('organizations').insert(newOrg);
-    if (error) return toast.error(error.message);
-    toast.success('Organização criada');
-    setNewOrg({ nome: '', tipo: 'condominio', cnpj: '' });
-    load();
-  };
-
   const removerOrg = async (id: string) => {
     if (!confirm('Excluir organização?')) return;
     const { error } = await (supabase as any).from('organizations').delete().eq('id', id);
@@ -219,31 +209,6 @@ export default function OrganizationsAdmin() {
             {wizardStep === 3 && <div className="space-y-4"><div><Label>Síndico responsável *</Label><div className="grid gap-2 sm:grid-cols-3"><Input value={draft.sindicoNome} onChange={(e) => setDraft({ ...draft, sindicoNome: e.target.value })} placeholder="Nome completo" /><Input type="email" value={draft.sindicoEmail} onChange={(e) => setDraft({ ...draft, sindicoEmail: e.target.value })} placeholder="E-mail para acesso" /><Input type="tel" value={draft.sindicoTelefone} onChange={(e) => setDraft({ ...draft, sindicoTelefone: e.target.value })} placeholder="Telefone / WhatsApp" /></div></div><div><Label>Coach responsável (opcional)</Label><div className="grid gap-2 sm:grid-cols-3"><Input value={draft.coachNome} onChange={(e) => setDraft({ ...draft, coachNome: e.target.value })} placeholder="Nome completo" /><Input type="email" value={draft.coachEmail} onChange={(e) => setDraft({ ...draft, coachEmail: e.target.value })} placeholder="E-mail para acesso" /><Input type="tel" value={draft.coachTelefone} onChange={(e) => setDraft({ ...draft, coachTelefone: e.target.value })} placeholder="Telefone / WhatsApp" /></div></div><p className="text-xs text-muted-foreground">Ao concluir, os acessos do síndico e do coach serão preparados automaticamente. Moradores podem ser importados em lote depois.</p></div>}
             {wizardStep === 4 && <div className="rounded-sm border p-4 space-y-2 text-sm"><p><strong>Condomínio:</strong> {draft.nome || '—'}</p><p><strong>Unidades:</strong> {draft.unidades || 'Não informado'}</p><p><strong>Infraestrutura:</strong> {draft.equipamentos || 'A validar'}</p><p><strong>Capacidade:</strong> {draft.capacidade || 'A definir'}</p><p><strong>Horários:</strong> {draft.horarios || 'A definir'}</p><p><strong>Restrições:</strong> {draft.restricoes || 'Nenhuma informada'}</p><p><strong>Síndico:</strong> {draft.sindicoNome || '—'} · {draft.sindicoEmail || 'E-mail não informado'} · {draft.sindicoTelefone || 'Telefone não informado'}</p><p><strong>Coach:</strong> {draft.coachNome || 'Não informado'} · {draft.coachEmail || 'Não informado'} · {draft.coachTelefone || 'Não informado'}</p><p className="text-primary">Os convites do síndico e do coach serão preparados automaticamente.</p></div>}
             <div className="flex justify-between pt-3"><Button variant="ghost" disabled={wizardStep === 1 || isSubmitting} onClick={() => setWizardStep((s) => s - 1)}>Voltar</Button>{wizardStep < 4 ? <Button disabled={isSubmitting} onClick={() => setWizardStep((s) => s + 1)}>Continuar</Button> : <Button onClick={createOrganization} disabled={isSubmitting}>{isSubmitting ? 'Criando...' : 'Criar condomínio'}</Button>}</div>
-          </DialogContent>
-        </Dialog>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button><Plus className="w-4 h-4 mr-1" /> Nova organização</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Criar organização</DialogTitle></DialogHeader>
-            <div className="space-y-3">
-              <div><Label>Nome</Label><Input value={newOrg.nome} onChange={(e) => setNewOrg({ ...newOrg, nome: e.target.value })} /></div>
-              <div>
-                <Label>Tipo</Label>
-                <Select value={newOrg.tipo} onValueChange={(v) => setNewOrg({ ...newOrg, tipo: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="condominio">Condomínio</SelectItem>
-                    <SelectItem value="corporate">Corporativo</SelectItem>
-                    <SelectItem value="professor">Profissional</SelectItem>
-                    <SelectItem value="studio">Studio</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div><Label>CNPJ</Label><Input value={newOrg.cnpj} onChange={(e) => setNewOrg({ ...newOrg, cnpj: e.target.value })} /></div>
-              <Button onClick={criarOrg} className="w-full">Criar</Button>
-            </div>
           </DialogContent>
         </Dialog>
       </div>
