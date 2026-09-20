@@ -21,9 +21,15 @@ export default function HealthDay() {
   const load = async () => { if (!activeOrg) return; setLoading(true); const { data, error } = await (supabase as any).from('health_day_events').select('*').eq('organization_id', activeOrg.id).order('inicio', { ascending: true }); if (error) return toast.error(error.message); const rows = await Promise.all((data || []).map(async (event: EventRow) => { const { data: registrations } = await (supabase as any).from('health_day_registrations').select('status').eq('event_id', event.id); const list = registrations || []; return { ...event, inscritos: list.filter((r: any) => ['inscrito','confirmado','checkin'].includes(r.status)).length, espera: list.filter((r: any) => r.status === 'lista_espera').length, checkins: list.filter((r: any) => r.status === 'checkin').length }; })); setEvents(rows); setLoading(false); };
   useEffect(() => { load(); }, [activeOrg?.id]);
   const create = async () => {
-    if (!activeOrg || !form.inicio || !form.fim) return toast.error('Informe início e fim.');
-    const { error } = await (supabase as any).from('health_day_events').insert({ organization_id: activeOrg.id, ...form, capacidade: Number(form.capacidade), inicio: new Date(form.inicio).toISOString(), fim: new Date(form.fim).toISOString() });
-    if (error) toast.error(error.message); else { toast.success('Health Day criado.'); setForm({ nome: 'Health Day', descricao: '', inicio: '', fim: '', capacidade: '15' }); load(); }
+    if (!activeOrg) return toast.error('Selecione um condomínio antes de criar o evento.');
+    if (!form.nome.trim() || !form.inicio || !form.fim) return toast.error('Informe nome, início e fim.');
+    const inicio = new Date(form.inicio);
+    const fim = new Date(form.fim);
+    const capacidade = Number(form.capacidade);
+    if (Number.isNaN(inicio.getTime()) || Number.isNaN(fim.getTime()) || fim <= inicio) return toast.error('O fim deve ser depois do início.');
+    if (!Number.isInteger(capacidade) || capacidade < 1) return toast.error('Informe uma capacidade válida.');
+    const { error } = await (supabase as any).from('health_day_events').insert({ organization_id: activeOrg.id, nome: form.nome.trim(), descricao: form.descricao.trim() || null, inicio: inicio.toISOString(), fim: fim.toISOString(), capacidade, status: 'rascunho' });
+    if (error) toast.error('Não foi possível criar o evento: ' + error.message); else { toast.success('Health Day criado.'); setForm({ nome: 'Health Day', descricao: '', inicio: '', fim: '', capacidade: '15' }); await load(); }
   };
   const showParticipants = async (id: string) => { const { data, error } = await (supabase as any).from('health_day_registrations').select('id, status, checkin_at, alunos(nome, email)').eq('event_id', id); if (error) toast.error(error.message); else { setParticipants(data || []); setSelectedEvent(id); } };
   const exportParticipants = () => { const csv = participants.map((p: any) => [p.alunos?.nome || 'Morador', p.alunos?.email || '', p.status, p.checkin_at || ''].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n'); const blob = new Blob([`nome,email,status,checkin_at\n${csv}`], { type: 'text/csv;charset=utf-8' }); const url = URL.createObjectURL(blob); const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'health-day-participantes.csv'; anchor.click(); URL.revokeObjectURL(url); };
