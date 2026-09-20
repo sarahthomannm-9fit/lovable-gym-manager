@@ -219,11 +219,11 @@ const App = () => (
                     <Route path="/agents" element={<StaffOnly><AgentsHub /></StaffOnly>} />
                     <Route path="/admin/usuarios" element={<AdminOnly><UsersAdmin /></AdminOnly>} />
                     <Route path="/admin/reset-demo" element={<AdminOnly><ResetDemoData /></AdminOnly>} />
-                    <Route path="/painel" element={<Protected><Painel /></Protected>} />
-                    <Route path="/painel/inadimplencia" element={<Protected><Inadimplencia /></Protected>} />
-                    <Route path="/painel/retencao" element={<Protected><Retencao /></Protected>} />
-                    <Route path="/painel/agenda" element={<Protected><AgendaSemanal /></Protected>} />
-                    <Route path="/painel/pipeline" element={<Protected><Pipeline /></Protected>} />
+                    <Route path="/painel" element={<StaffOnly><Painel /></StaffOnly>} />
+                    <Route path="/painel/inadimplencia" element={<StaffOnly><Inadimplencia /></StaffOnly>} />
+                    <Route path="/painel/retencao" element={<StaffOnly><Retencao /></StaffOnly>} />
+                    <Route path="/painel/agenda" element={<StaffOnly><AgendaSemanal /></StaffOnly>} />
+                    <Route path="/painel/pipeline" element={<StaffOnly><Pipeline /></StaffOnly>} />
                     <Route path="/alunos" element={<Protected><SupabaseStudents /></Protected>} />
                     <Route path="/planos" element={<Protected><SupabasePlans /></Protected>} />
                     <Route path="/aulas" element={<Protected><SupabaseClasses /></Protected>} />
