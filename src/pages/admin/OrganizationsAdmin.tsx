@@ -31,7 +31,6 @@ export default function OrganizationsAdmin() {
   const [members, setMembers] = useState<Member[]>([]);
   const [selected, setSelected] = useState<Org | null>(null);
   const [newOrg, setNewOrg] = useState({ nome: '', tipo: 'condominio', cnpj: '' });
-  const [newMember, setNewMember] = useState({ user_id: '', papel: 'sindico' });
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [newFacility, setNewFacility] = useState({ ambiente: '', nome: '', categoria: '', quantidade: '1' });
   const [facilityPhoto, setFacilityPhoto] = useState<File | null>(null);
@@ -186,10 +185,6 @@ export default function OrganizationsAdmin() {
 
   const sendInvite = async () => { if (!selected || !inviteEmail.trim()) return toast.error('Informe o e-mail.'); const { data, error } = await (supabase as any).rpc('create_organization_invite', { p_organization_id: selected.id, p_email: inviteEmail.trim(), p_papel: inviteRole }); if (error) return toast.error(error.message); const link = `${window.location.origin}/convite/${data?.token}`; setInviteLink(link); toast.success('Acesso preparado. Envie o convite para liberar o acesso.'); setInviteEmail(''); };
 
-  // Pendência resolvida: o cadastro de personas agora acontece somente por convite
-  // (create_organization_invite), sem exigir usuário previamente existente.
-
-
   const removerMember = async (id: string) => {
     const { error } = await (supabase as any).from('organization_members').delete().eq('id', id);
     if (error) return toast.error(error.message);
@@ -297,9 +292,9 @@ export default function OrganizationsAdmin() {
         <Card className="rounded-sm shadow-elegant"><CardHeader><CardTitle>Personas e acessos</CardTitle><p className="text-sm text-muted-foreground">Cadastre síndico, coach ou morador e envie o convite para liberar o acesso ao condomínio.</p></CardHeader><CardContent className="flex flex-wrap gap-2 items-end"><div className="flex-1 min-w-[220px]"><Label>E-mail</Label><Input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="pessoa@email.com" /></div><div><Label>Persona</Label><Select value={inviteRole} onValueChange={setInviteRole}><SelectTrigger className="w-40"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="sindico">Síndico</SelectItem><SelectItem value="professor">Coach</SelectItem><SelectItem value="user">Morador</SelectItem></SelectContent></Select></div><Button onClick={sendInvite}>Preparar convite</Button>{inviteLink && <div className="w-full rounded-sm border border-primary/30 bg-primary/5 p-3 text-sm"><p className="font-medium">Acesso preparado</p><div className="flex gap-2 mt-2"><Input readOnly value={inviteLink} /><Button type="button" variant="outline" onClick={() => { navigator.clipboard.writeText(inviteLink); toast.success("Link copiado."); }}>Copiar</Button></div></div>}</CardContent></Card>
 
         <Card>
-          <CardHeader><CardTitle>Membros — {selected.nome}</CardTitle><p className="text-sm text-muted-foreground">Os vínculos são criados quando a pessoa aceita o convite acima.</p></CardHeader>
+          <CardHeader><CardTitle>Membros — {selected.nome}</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-
+            <p className="text-sm text-muted-foreground">Os novos acessos devem ser criados em <strong>Personas e acessos</strong>. Esta lista mostra apenas pessoas que já aceitaram o convite.</p>
 
             <Table>
               <TableHeader><TableRow><TableHead>Usuário</TableHead><TableHead>Papel</TableHead><TableHead></TableHead></TableRow></TableHeader>
