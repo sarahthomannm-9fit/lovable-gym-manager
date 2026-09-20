@@ -192,11 +192,11 @@ const App = () => (
                     <Route path="/coach" element={<ProtectedRoute><RoleRoute allow={['professor','admin']}><MainLayout><CoachHome /></MainLayout></RoleRoute></ProtectedRoute>} />
                     <Route path="/coach/revisoes" element={<ProtectedRoute><RoleRoute allow={['professor','admin']}><MainLayout><ReviewQueue /></MainLayout></RoleRoute></ProtectedRoute>} />
                     <Route path="/corp" element={<ProtectedRoute><RoleRoute allow={['corporate','admin']}><CorpHome /></RoleRoute></ProtectedRoute>} />
-                    <Route path="/morador" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MainLayout><MoradorHome /></MainLayout></RoleRoute></ProtectedRoute>} />
-                    <Route path="/morador/onboarding" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MainLayout><OnboardingMorador /></MainLayout></RoleRoute></ProtectedRoute>} />
-                    <Route path="/morador/eventos" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MainLayout><Events /></MainLayout></RoleRoute></ProtectedRoute>} />
-                    <Route path="/morador/perfil" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MainLayout><MoradorProfile /></MainLayout></RoleRoute></ProtectedRoute>} />
-                    <Route path="/morador/agenda" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MainLayout><MoradorAgenda /></MainLayout></RoleRoute></ProtectedRoute>} />
+                    <Route path="/morador" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MoradorHome /></RoleRoute></ProtectedRoute>} />
+                    <Route path="/morador/onboarding" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><OnboardingMorador /></RoleRoute></ProtectedRoute>} />
+                    <Route path="/morador/eventos" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><Events /></RoleRoute></ProtectedRoute>} />
+                    <Route path="/morador/perfil" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MoradorProfile /></RoleRoute></ProtectedRoute>} />
+                    <Route path="/morador/agenda" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MoradorAgenda /></RoleRoute></ProtectedRoute>} />
                     <Route path="/admin/organizacoes" element={<AdminOnly><OrganizationsAdmin /></AdminOnly>} />
                     <Route path="/admin/auditoria-prescricoes" element={<AdminOnly><PrescriptionAudit /></AdminOnly>} />
                     <Route path="/admin/auditoria-acessos" element={<AdminOnly><AccessAudit /></AdminOnly>} />
