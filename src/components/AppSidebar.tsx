@@ -75,7 +75,7 @@ type MenuCategory = {
 export function AppSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { role: storedRole } = useCurrentUserRole();\n  const { activeRole, primaryRole } = useOperationalContext();\n  const role = activeRole ?? storedRole ?? primaryRole;
+  const { role: storedRole } = useCurrentUserRole();\n  const { activeRole, primaryRole } = useOperationalContext();\n  const residentSurface = location.pathname.startsWith('/morador');\n  const role = residentSurface ? 'user' : (activeRole ?? storedRole ?? primaryRole);
   const { signOut, user } = useAuth();
   const { pagamentos, alunos, checkins, leads, aulas } = useDataIntegration();
 
