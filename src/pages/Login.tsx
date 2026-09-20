@@ -43,7 +43,7 @@ export function Login() {
       p === 'sindico' ? '/sindico' :
       p === 'professor' ? '/coach' :
       p === 'corporate' ? '/corp' :
-      p === 'user' ? '/morador' : '/painel';
+      (p === 'user' || p === 'morador' || p === 'residente' || p === 'aluno') ? '/morador' : '/painel';
 
     const redirect = searchParams.get('redirect');
     if (redirect) {
