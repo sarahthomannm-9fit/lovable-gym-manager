@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
-import { useOperationalContext } from '@/hooks/useOperationalContext';
+import { useOperationalContext, routeForRole } from '@/hooks/useOperationalContext';
 import { AppRole } from '@/hooks/useCurrentUserRole';
 
 export function RoleRoute({ allow, children }: { allow: AppRole[]; children: ReactNode }) {
