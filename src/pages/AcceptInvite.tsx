@@ -23,7 +23,7 @@ const roleRoute = (role?: string | null) => {
 export default function AcceptInvite() {
   const { token } = useParams();
   const navigate = useNavigate();
-  const { session } = useAuth();
+  const { session, signOut } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -41,10 +41,18 @@ export default function AcceptInvite() {
     if (!email || !password) return toast.error('Informe e-mail e senha.');
     setLoading(true);
     try {
+      const invitedEmail = email.trim().toLowerCase();
       let activeSession = session;
+      // Convites são vinculados ao e-mail. Nunca reutilize uma sessão de outra pessoa.
+      if (activeSession?.user?.email?.toLowerCase() !== invitedEmail) {
+        if (activeSession) {
+          await signOut();
+          activeSession = null;
+        }
+      }
       if (!activeSession) {
         if (existingAccount) {
-          const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
+          const { data, error } = await supabase.auth.signInWithPassword({ email: invitedEmail, password });
           if (error) throw error;
           activeSession = data.session;
         } else {
