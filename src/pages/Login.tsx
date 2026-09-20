@@ -39,11 +39,18 @@ export function Login() {
     const role = roleRow?.role;
     const memberships = mems || [];
 
-    const papelToRoute = (p: string) =>
-      p === 'sindico' ? '/sindico' :
-      p === 'professor' ? '/coach' :
-      p === 'corporate' ? '/corp' :
-      (p === 'user' || p === 'morador' || p === 'residente' || p === 'aluno') ? '/morador' : '/painel';
+    const papelToRoute = (p: string) => {
+      switch (p) {
+        case 'sindico': return '/sindico';
+        case 'professor': return '/coach';
+        case 'corporate': return '/corp';
+        case 'user':
+        case 'morador':
+        case 'residente':
+        case 'aluno': return '/morador';
+        default: return '/painel';
+      }
+    };
 
     const redirect = searchParams.get('redirect');
     if (redirect) {
