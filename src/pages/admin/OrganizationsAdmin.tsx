@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { OrgDetail } from "@/components/admin/OrgDetail";
 import { Building2, Copy, Loader2, Mail, Plus, RefreshCw, Trash2, UserPlus } from "lucide-react";
 
 interface Organization {
@@ -275,6 +276,7 @@ export default function OrganizationsAdmin() {
           </Card>
 
           <div className="space-y-6">
+            {selectedOrg && <OrgDetail key={selectedOrg} orgId={selectedOrg} onChanged={loadOrganizations} />}
             {selectedOrgData && (
               <Card>
                 <CardHeader>
