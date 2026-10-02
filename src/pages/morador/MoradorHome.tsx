@@ -50,6 +50,8 @@ export default function MoradorHome() {
   const [treinoAtivo, setTreinoAtivo] = useState<any>(null);
   const [exerciciosHoje, setExerciciosHoje] = useState<any[]>([]);
   const [checkinFeito, setCheckinFeito] = useState(false);
+  const [minhasInscricoes, setMinhasInscricoes] = useState<Set<string>>(new Set());
+  const [checkinsAula, setCheckinsAula] = useState<Set<string>>(new Set());
   const [salvando, setSalvando] = useState(false);
   const [sessao, setSessao] = useState<any>(null);
   const [treinoErro, setTreinoErro] = useState('');
@@ -77,12 +79,21 @@ export default function MoradorHome() {
 
       const hoje = new Date().toISOString().slice(0, 10);
       const proximaSemana = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
-      const { data: aulas } = await supabase.from('aulas')
-        .select('id, nome, data_aula, horario_inicio, capacidade_maxima, inscritos_atual, modalidade')
+      let aulasQuery = supabase.from('aulas')
+        .select('id, nome, data_aula, horario_inicio, horario_fim, capacidade_maxima, inscritos_atual, modalidade, status')
         .gte('data_aula', hoje).lte('data_aula', proximaSemana)
-        .order('data_aula').order('horario_inicio').limit(10);
+        .order('data_aula').order('horario_inicio').limit(30);
+      // Cada morador só vê as aulas do próprio condomínio.
+      if (al?.organization_id) aulasQuery = aulasQuery.eq('organization_id', al.organization_id);
+      const { data: aulas } = await aulasQuery;
       if (!mounted) return;
       setProximas(aulas || []);
+      if (al?.id && aulas?.length) {
+        const ids = aulas.map((a: any) => a.id);
+        const { data: insc } = await supabase.from('aulas_inscritos')
+          .select('aula_id').eq('aluno_id', al.id).in('aula_id', ids).neq('status', 'cancelado');
+        if (mounted) setMinhasInscricoes(new Set((insc || []).map((i: any) => i.aula_id)));
+      }
 
       if (al?.organization_id) {
         const { data: ev } = await supabase.from('eventos_condominio')
@@ -153,11 +164,42 @@ export default function MoradorHome() {
 
   const inscrever = async (aulaId: string, nome: string) => {
     if (!aluno?.id) return toast.error('Aluno não vinculado');
+    const aula = proximas.find(a => a.id === aulaId);
+    if (aula?.status === 'cancelada') return toast.error('Esta aula foi cancelada');
+    if (minhasInscricoes.has(aulaId)) return toast.info('Você já está inscrito nesta aula');
+    if (aula && aula.capacidade_maxima != null && (aula.inscritos_atual ?? 0) >= aula.capacidade_maxima) return toast.error('Aula lotada');
     const { error } = await supabase.from('aulas_inscritos').insert({
       aluno_id: aluno.id, aula_id: aulaId, status: 'inscrito',
     });
     if (error) toast.error('Falha ao inscrever');
-    else toast.success(`Inscrito em ${nome}`);
+    else { toast.success(`Inscrito em ${nome}`); setMinhasInscricoes(prev => new Set(prev).add(aulaId)); }
+  };
+
+  const inicioAula = (a: any) => new Date(`${a.data_aula}T${(a.horario_inicio || '00:00').slice(0, 5)}:00`);
+  const fimAula = (a: any) => new Date(`${a.data_aula}T${(a.horario_fim || a.horario_inicio || '23:59').slice(0, 5)}:00`);
+  // Check-in da aula: aberto de 15 min antes do início até o fim da aula; só para inscritos, nunca em aula cancelada.
+  const motivoSemCheckin = (a: any): string | null => {
+    if (a.status === 'cancelada') return 'Aula cancelada';
+    if (!minhasInscricoes.has(a.id)) return 'Inscreva-se primeiro';
+    if (checkinsAula.has(a.id)) return 'Check-in feito';
+    const agora = Date.now();
+    if (agora > fimAula(a).getTime()) return 'Aula já passou';
+    if (agora < inicioAula(a).getTime() - 15 * 60000) return `Abre às ${new Date(inicioAula(a).getTime() - 15 * 60000).toTimeString().slice(0, 5)}`;
+    return null;
+  };
+  const checkinNaAula = async (a: any) => {
+    const motivo = motivoSemCheckin(a);
+    if (motivo) return toast.error(motivo);
+    if (!aluno?.id) return toast.error('Aluno não vinculado');
+    setSalvando(true);
+    const { error } = await supabase.from('checkins').insert({
+      aluno_id: aluno.id, data_checkin: a.data_aula, horario_entrada: new Date().toISOString(),
+    });
+    setSalvando(false);
+    if (error) return toast.error('Falha no check-in');
+    setCheckinsAula(prev => new Set(prev).add(a.id));
+    if (a.data_aula === new Date().toISOString().slice(0, 10)) { setCheckinFeito(true); setPresencas(p => p + 1); }
+    toast.success(`Presença confirmada em ${a.nome}`);
   };
 
   const fazerCheckin = async () => {
@@ -464,26 +506,45 @@ export default function MoradorHome() {
         {/* AULAS */}
         <TabsContent value="aulas">
           {proximas.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhuma aula nos próximos dias.</p>
+            <p className="text-sm text-muted-foreground border border-dashed border-border/40 rounded-sm p-6 text-center">Nenhuma aula publicada para os próximos 7 dias neste condomínio.</p>
           ) : (
             <div className="space-y-2">
-              {proximas.map(a => (
-                <Card key={a.id} className="bg-card/60 border-border/40">
-                  <CardContent className="p-4 flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="font-medium truncate">{a.nome}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {a.data_aula} • {a.horario_inicio?.slice(0, 5)} • {a.inscritos_atual ?? 0}/{a.capacidade_maxima ?? '—'}
-                      </p>
-                    </div>
-                    <Button size="sm" onClick={() => inscrever(a.id, a.nome)}
-                            style={{ backgroundColor: ACCENT, color: '#000' }}
-                            className="hover:opacity-90 shrink-0">
-                      Inscrever
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
+              {proximas.map(a => {
+                const cancelada = a.status === 'cancelada';
+                const inscrito = minhasInscricoes.has(a.id);
+                const lotada = !cancelada && a.capacidade_maxima != null && (a.inscritos_atual ?? 0) >= a.capacidade_maxima;
+                const semCheckin = motivoSemCheckin(a);
+                return (
+                  <Card key={a.id} className="bg-card/60 border-border/40">
+                    <CardContent className="p-4 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium truncate">{a.nome}</p>
+                          {cancelada && <Badge variant="destructive">Cancelada</Badge>}
+                          {!cancelada && inscrito && <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/40" variant="outline">Inscrito</Badge>}
+                          {lotada && !inscrito && <Badge variant="outline">Lotado</Badge>}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(`${a.data_aula}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })} • {a.horario_inicio?.slice(0, 5)}–{a.horario_fim?.slice(0, 5)} • {a.inscritos_atual ?? 0}/{a.capacidade_maxima ?? '—'}
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-1 shrink-0 items-end">
+                        {!inscrito && !cancelada && (
+                          <Button size="sm" onClick={() => inscrever(a.id, a.nome)} disabled={lotada}
+                                  style={{ backgroundColor: ACCENT, color: '#000' }} className="hover:opacity-90">
+                            {lotada ? 'Lotado' : 'Inscrever'}
+                          </Button>
+                        )}
+                        {inscrito && (
+                          <Button size="sm" variant="outline" onClick={() => checkinNaAula(a)} disabled={!!semCheckin || salvando} title={semCheckin || 'Confirmar presença'}>
+                            <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> {semCheckin ?? 'Fazer check-in'}
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </TabsContent>
@@ -507,6 +568,22 @@ export default function MoradorHome() {
                   <MessageCircle className="w-4 h-4" /> Abrir WhatsApp
                 </a>
               </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card/60 border-border/40">
+            <CardContent className="p-5 space-y-3">
+              <h3 className="text-sm uppercase tracking-wider text-muted-foreground">Perguntas frequentes</h3>
+              {[
+                ['Como faço check-in?', 'Na aba Aulas, inscreva-se e use "Fazer check-in" a partir de 15 minutos antes da aula. Também há o check-in do dia na aba Hoje.'],
+                ['Quando meu treino fica disponível?', 'Depois que o coach recebe sua anamnese e cria o plano. Você será avisado nos comunicados.'],
+                ['Como vejo meus pagamentos?', 'Na aba Mais, em Pagamentos, com plano, valor e vencimento.'],
+              ].map(([q, r]) => (
+                <details key={q} className="text-sm border-b border-border/30 pb-2">
+                  <summary className="cursor-pointer font-medium">{q}</summary>
+                  <p className="text-muted-foreground mt-1">{r}</p>
+                </details>
+              ))}
             </CardContent>
           </Card>
 
@@ -534,6 +611,30 @@ export default function MoradorHome() {
             <Mini icon={CreditCard} label="Pagamentos" value={pgPendentes ? `${pgPendentes} pendente${pgPendentes>1?'s':''}` : 'Em dia'}
                   valueCls={pgPendentes ? 'text-amber-400' : 'text-emerald-400'} />
           </div>
+
+          {(() => {
+            const abertos = pagamentos.filter(p => p.status !== 'pago').sort((a, b) => String(a.data_vencimento).localeCompare(String(b.data_vencimento)));
+            const prox = abertos[0];
+            const hojeIso = new Date().toISOString().slice(0, 10);
+            const atrasado = prox && String(prox.data_vencimento) < hojeIso;
+            return (
+              <Card className="bg-card/60 border-border/40">
+                <CardContent className="p-5 space-y-1">
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground">Minha assinatura</p>
+                  <p className="text-base font-semibold">
+                    {aluno?.valor_mensalidade != null ? `R$ ${Number(aluno.valor_mensalidade).toFixed(2)} / mês` : 'Valor não informado'}
+                  </p>
+                  {prox ? (
+                    <p className={`text-sm ${atrasado ? 'text-amber-400' : 'text-muted-foreground'}`}>
+                      {atrasado
+                        ? `Sua mensalidade de ${new Date(prox.data_vencimento + 'T12:00:00').toLocaleDateString('pt-BR')} está em aberto. Se já pagou, desconsidere; caso contrário, fale com o seu coach ou a administração para regularizar.`
+                        : `Próximo vencimento: ${new Date(prox.data_vencimento + 'T12:00:00').toLocaleDateString('pt-BR')}`}
+                    </p>
+                  ) : <p className="text-sm text-emerald-400">Tudo em dia.</p>}
+                </CardContent>
+              </Card>
+            );
+          })()}
 
           <h3 className="text-sm uppercase tracking-wider text-muted-foreground">Pagamentos</h3>
           <Card className="bg-card/60 border-border/40">
