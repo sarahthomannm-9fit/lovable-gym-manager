@@ -78,7 +78,8 @@ export function PersonaLayout({
               <Icon className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-mono tracking-[0.18em] uppercase text-primary/70">NINE LIVING</p><h1 className="font-display text-xl font-normal truncate">{title}</h1>
+              <p className="block text-[10px] leading-none font-mono tracking-[0.18em] uppercase text-primary/70 mb-1">NINE LIVING</p>
+              <h1 className="block font-display text-xl leading-tight font-normal truncate">{title}</h1>
               {(activeOrg || subtitle) && (
                 <p className="text-xs text-muted-foreground truncate">
                   {activeOrg?.nome || subtitle}
@@ -137,7 +138,14 @@ export function PersonaLayout({
           </div>
         </div>
       </header>
-      <main className="max-w-6xl mx-auto px-4 py-6">{children}</main>
+      <main className="max-w-6xl mx-auto px-4 py-6">
+        {activeOrg && ['suspenso', 'suspended'].includes(String(activeOrg.status).toLowerCase()) && !isAdmin ? (
+          <div className="border border-destructive/40 bg-destructive/10 rounded-sm p-8 text-center">
+            <p className="font-display text-lg mb-1">Acesso suspenso</p>
+            <p className="text-sm text-muted-foreground">O acesso de {activeOrg.nome} está temporariamente suspenso. Fale com a administração do seu condomínio.</p>
+          </div>
+        ) : children}
+      </main>
     </div>
   );
 }
