@@ -326,6 +326,28 @@ export default function OrganizationsAdmin() {
               </Card>
             )}
 
+            {!selectedOrgData ? (
+              <Card>
+                <CardContent className="py-12 text-center text-sm text-muted-foreground">
+                  Selecione uma origem na lista para ver convites e o roteiro de onboarding.
+                </CardContent>
+              </Card>
+            ) : (
+            <Tabs defaultValue="convites">
+              <TabsList>
+                <TabsTrigger value="convites">Convites</TabsTrigger>
+                <TabsTrigger value="onboarding">Onboarding / Roteiro de visita</TabsTrigger>
+              </TabsList>
+              <TabsContent value="onboarding">
+                <OnboardingRoteiro
+                  key={selectedOrgData.id}
+                  orgId={selectedOrgData.id}
+                  onChange={(metadata) =>
+                    setOrganizations((prev) => prev.map((o) => (o.id === selectedOrgData.id ? { ...o, metadata } : o)))
+                  }
+                />
+              </TabsContent>
+              <TabsContent value="convites">
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Convites</CardTitle>
