@@ -9,6 +9,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Building2, Copy, Loader2, Mail, Plus, RefreshCw, Trash2, UserPlus } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { OnboardingRoteiro, onboardingProgress } from "@/components/admin/OnboardingRoteiro";
+
+const TIPO_LABELS: Record<string, string> = {
+  condominio: "Condomínio",
+  corporate: "Corporativo",
+  professor: "Coach/Professor",
+  studio: "Studio",
+};
 
 interface Organization {
   id: string;
@@ -17,6 +26,7 @@ interface Organization {
   status: string;
   onboarding_status: string;
   created_at: string;
+  metadata?: any;
 }
 
 interface Invite {
@@ -54,7 +64,7 @@ export default function OrganizationsAdmin() {
     setLoading(true);
     const { data, error } = await supabase
       .from("organizations")
-      .select("id, nome, tipo, status, onboarding_status, created_at")
+      .select("id, nome, tipo, status, onboarding_status, created_at, metadata")
       .order("created_at", { ascending: false });
     if (error) {
       toast.error("Erro ao carregar organizações", { description: error.message });
@@ -212,9 +222,9 @@ export default function OrganizationsAdmin() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="condominio">Condomínio</SelectItem>
+                      <SelectItem value="corporate">Corporativo</SelectItem>
+                      <SelectItem value="professor">Coach/Professor</SelectItem>
                       <SelectItem value="studio">Studio</SelectItem>
-                      <SelectItem value="academia">Academia</SelectItem>
-                      <SelectItem value="corporativo">Corporativo</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -266,9 +276,17 @@ export default function OrganizationsAdmin() {
                   <div className="flex items-center justify-between gap-2">
                     <span className="truncate">{org.nome}</span>
                     <Badge variant={org.status === "ativo" ? "default" : "secondary"}>
-                      {org.tipo}
+                      {TIPO_LABELS[org.tipo] ?? org.tipo}
                     </Badge>
                   </div>
+                  {(() => {
+                    const p = onboardingProgress(org.metadata);
+                    return (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Onboarding {p.done}/{p.total}
+                      </p>
+                    );
+                  })()}
                 </button>
               ))}
             </CardContent>
@@ -413,6 +431,9 @@ export default function OrganizationsAdmin() {
                 )}
               </CardContent>
             </Card>
+              </TabsContent>
+            </Tabs>
+            )}
           </div>
         </div>
       )}
