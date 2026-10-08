@@ -14,18 +14,21 @@ import { OperationalContextProvider } from "@/hooks/useOperationalContext";
 import { RoleRoute } from "@/components/RoleRoute";
 import SelectContext from "./pages/SelectContext";
 import SindicoHome from "./pages/sindico/SindicoHome";
+import SindicoLoop from "./pages/sindico/SindicoLoop";
 import HealthDay from "./pages/sindico/HealthDay";
 import Announcements from "./pages/sindico/Announcements";
 import CoachHome from "./pages/coach/CoachHome";
 import ReviewQueue from "./pages/coach/ReviewQueue";
 import CorpHome from "./pages/corp/CorpHome";
 import OrganizationsAdmin from "./pages/admin/OrganizationsAdmin";
+import OrigensAdmin from "./pages/admin/OrigensAdmin";
 import PrescriptionAudit from "./pages/admin/PrescriptionAudit";
 import AccessAudit from "./pages/admin/AccessAudit";
 import WorkflowApprovals from "./pages/admin/WorkflowApprovals";
 import AcceptInvite from "./pages/AcceptInvite";
 import FirstAccess from "./pages/FirstAccess";
 import MoradorHome from "./pages/morador/MoradorHome";
+import MoradorLoop from "./pages/morador/MoradorLoop";
 import OnboardingMorador from "./pages/morador/OnboardingMorador";
 import Events from "./pages/morador/Events";
 import ResidentEntry from "./pages/morador/ResidentEntry";
@@ -187,19 +190,22 @@ const App = () => (
                     <Route path="/convite/:token" element={<AcceptInvite />} />
                     <Route path="/primeiro-acesso" element={<ProtectedRoute><FirstAccess /></ProtectedRoute>} />
                     <Route path="/select-context" element={<ProtectedRoute><SelectContext /></ProtectedRoute>} />
-                    <Route path="/sindico" element={<ProtectedRoute><RoleRoute allow={['sindico','admin']}><SindicoHome /></RoleRoute></ProtectedRoute>} />
+                    <Route path="/sindico" element={<ProtectedRoute><RoleRoute allow={['sindico','admin']}><SindicoLoop /></RoleRoute></ProtectedRoute>} />
+                    <Route path="/sindico/painel" element={<ProtectedRoute><RoleRoute allow={['sindico','admin']}><SindicoHome /></RoleRoute></ProtectedRoute>} />
                     <Route path="/sindico/health-day" element={<ProtectedRoute><RoleRoute allow={['sindico','admin']}><HealthDay /></RoleRoute></ProtectedRoute>} />
                     <Route path="/sindico/comunicados" element={<ProtectedRoute><RoleRoute allow={['sindico','admin']}><Announcements /></RoleRoute></ProtectedRoute>} />
                     <Route path="/coach" element={<ProtectedRoute><RoleRoute allow={['professor','admin']}><CoachHome /></RoleRoute></ProtectedRoute>} />
                     <Route path="/coach/revisoes" element={<ProtectedRoute><RoleRoute allow={['professor','admin']}><ReviewQueue /></RoleRoute></ProtectedRoute>} />
                     <Route path="/corp" element={<ProtectedRoute><RoleRoute allow={['corporate','admin']}><CorpHome /></RoleRoute></ProtectedRoute>} />
-                    <Route path="/morador" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MoradorHome /></RoleRoute></ProtectedRoute>} />
+                    <Route path="/morador" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MoradorLoop /></RoleRoute></ProtectedRoute>} />
+                    <Route path="/morador/painel" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MoradorHome /></RoleRoute></ProtectedRoute>} />
                     <Route path="/morador/onboarding" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><OnboardingMorador /></RoleRoute></ProtectedRoute>} />
                     <Route path="/morador/eventos" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><Events /></RoleRoute></ProtectedRoute>} />
                     <Route path="/morador/perfil" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MoradorProfile /></RoleRoute></ProtectedRoute>} />
                     <Route path="/morador/agenda" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MoradorAgenda /></RoleRoute></ProtectedRoute>} />
                     <Route path="/morador/staff" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MoradorStaff /></RoleRoute></ProtectedRoute>} />
                     <Route path="/admin/organizacoes" element={<AdminOnly><OrganizationsAdmin /></AdminOnly>} />
+                    <Route path="/admin/origens" element={<AdminOnly><OrigensAdmin /></AdminOnly>} />
                     <Route path="/admin/auditoria-prescricoes" element={<AdminOnly><PrescriptionAudit /></AdminOnly>} />
                     <Route path="/admin/auditoria-acessos" element={<AdminOnly><AccessAudit /></AdminOnly>} />
                     <Route path="/admin/aprovacoes-workflows" element={<StaffOnly><WorkflowApprovals /></StaffOnly>} />
@@ -274,4 +280,3 @@ const App = () => (
 );
 
 export default App;
-
