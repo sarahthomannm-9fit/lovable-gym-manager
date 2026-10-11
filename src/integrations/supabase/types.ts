@@ -1623,6 +1623,129 @@ export type Database = {
         }
         Relationships: []
       }
+      onboarding_requests: {
+        Row: {
+          created_at: string
+          organization_id: string
+          request_id: string
+        }
+        Insert: {
+          created_at?: string
+          organization_id: string
+          request_id: string
+        }
+        Update: {
+          created_at?: string
+          organization_id?: string
+          request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_facilities: {
+        Row: {
+          ambiente: string
+          categoria: string | null
+          created_at: string
+          foto_path: string | null
+          id: string
+          nome: string
+          organization_id: string
+          quantidade: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          ambiente: string
+          categoria?: string | null
+          created_at?: string
+          foto_path?: string | null
+          id?: string
+          nome: string
+          organization_id: string
+          quantidade?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          ambiente?: string
+          categoria?: string | null
+          created_at?: string
+          foto_path?: string | null
+          id?: string
+          nome?: string
+          organization_id?: string
+          quantidade?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_facilities_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_invites: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string | null
+          organization_id: string
+          papel: string
+          status: string
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by?: string | null
+          organization_id: string
+          papel: string
+          status?: string
+          token?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string | null
+          organization_id?: string
+          papel?: string
+          status?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_invites_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_members: {
         Row: {
           created_at: string
@@ -1657,40 +1780,52 @@ export type Database = {
       }
       organizations: {
         Row: {
+          capacidade_academia: number | null
           cnpj: string | null
           contato_email: string | null
           contato_nome: string | null
           contato_telefone: string | null
           created_at: string
+          horarios_academia: Json | null
           id: string
           metadata: Json
           nome: string
+          onboarding_status: string
+          restricoes_academia: string[] | null
           status: string
           tipo: string
           updated_at: string
         }
         Insert: {
+          capacidade_academia?: number | null
           cnpj?: string | null
           contato_email?: string | null
           contato_nome?: string | null
           contato_telefone?: string | null
           created_at?: string
+          horarios_academia?: Json | null
           id?: string
           metadata?: Json
           nome: string
+          onboarding_status?: string
+          restricoes_academia?: string[] | null
           status?: string
           tipo: string
           updated_at?: string
         }
         Update: {
+          capacidade_academia?: number | null
           cnpj?: string | null
           contato_email?: string | null
           contato_nome?: string | null
           contato_telefone?: string | null
           created_at?: string
+          horarios_academia?: Json | null
           id?: string
           metadata?: Json
           nome?: string
+          onboarding_status?: string
+          restricoes_academia?: string[] | null
           status?: string
           tipo?: string
           updated_at?: string
@@ -2253,6 +2388,71 @@ export type Database = {
           },
         ]
       }
+      staff_bookings: {
+        Row: {
+          aluno_id: string
+          cancel_synced: boolean
+          created_at: string
+          credit_refunded: boolean
+          credits_charged: number
+          freelancer_id: string
+          hub: string | null
+          id: string
+          integration_status: Database["public"]["Enums"]["staff_booking_status"]
+          method: string
+          professional_name: string | null
+          professional_photo_url: string | null
+          slot: string | null
+          staff_booking_id: string
+          status_reason: string | null
+          updated_at: string
+        }
+        Insert: {
+          aluno_id: string
+          cancel_synced?: boolean
+          created_at?: string
+          credit_refunded?: boolean
+          credits_charged?: number
+          freelancer_id: string
+          hub?: string | null
+          id?: string
+          integration_status?: Database["public"]["Enums"]["staff_booking_status"]
+          method: string
+          professional_name?: string | null
+          professional_photo_url?: string | null
+          slot?: string | null
+          staff_booking_id: string
+          status_reason?: string | null
+          updated_at?: string
+        }
+        Update: {
+          aluno_id?: string
+          cancel_synced?: boolean
+          created_at?: string
+          credit_refunded?: boolean
+          credits_charged?: number
+          freelancer_id?: string
+          hub?: string | null
+          id?: string
+          integration_status?: Database["public"]["Enums"]["staff_booking_status"]
+          method?: string
+          professional_name?: string | null
+          professional_photo_url?: string | null
+          slot?: string | null
+          staff_booking_id?: string
+          status_reason?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_bookings_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_tickets: {
         Row: {
           agent_response: string | null
@@ -2587,6 +2787,28 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_organization_invite: {
+        Args: { p_token: string }
+        Returns: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string | null
+          organization_id: string
+          papel: string
+          status: string
+          token: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "organization_invites"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       analise_faturamento_avancada: {
         Args: never
         Returns: {
@@ -2600,6 +2822,14 @@ export type Database = {
           variabilidade: number
         }[]
       }
+      approve_facility: {
+        Args: { p_facility_id: string; p_status: string }
+        Returns: undefined
+      }
+      bulk_import_residents: {
+        Args: { p_organization_id: string; p_rows: Json }
+        Returns: Json
+      }
       calcular_mrr: {
         Args: { p_org_id: string }
         Returns: {
@@ -2610,6 +2840,32 @@ export type Database = {
           receita_mes_atual: number
           ticket_medio: number
         }[]
+      }
+      cancel_organization_invite: {
+        Args: { p_invite_id: string }
+        Returns: undefined
+      }
+      create_organization_invite: {
+        Args: { p_email: string; p_organization_id: string; p_papel: string }
+        Returns: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string | null
+          organization_id: string
+          papel: string
+          status: string
+          token: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "organization_invites"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       criar_notificacao: {
         Args: {
@@ -2627,6 +2883,7 @@ export type Database = {
       dashboard_morador: { Args: { p_aluno_id: string }; Returns: Json }
       dashboard_sindico: { Args: { p_org_id: string }; Returns: Json }
       dashboard_trust: { Args: never; Returns: Json }
+      get_aluno_idade: { Args: { p_aluno_id: string }; Returns: number }
       get_alunos_sem_checkin: {
         Args: { p_dias?: number; p_org_id?: string }
         Returns: {
@@ -2647,6 +2904,36 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      list_comunicados: {
+        Args: { p_org: string }
+        Returns: {
+          agendada_para: string
+          comunicado_id: string
+          criado_em: string
+          enviados: number
+          lidos: number
+          mensagem: string
+          publico: string
+          tipo_label: string
+          titulo: string
+          urgente: boolean
+        }[]
+      }
+      onboard_condominio: {
+        Args: {
+          p_capacidade: number
+          p_cnpj: string
+          p_equipamentos: string[]
+          p_horarios: Json
+          p_nome: string
+          p_professores: string[]
+          p_request_id: string
+          p_restricoes: string[]
+          p_sindico: string
+          p_unidades: number
+        }
+        Returns: string
+      }
       projecao_cenarios: {
         Args: never
         Returns: {
@@ -2657,6 +2944,19 @@ export type Database = {
           receita_projetada_6m: number
           roi_estimado: number
         }[]
+      }
+      publish_comunicado: {
+        Args: {
+          p_agendar?: string
+          p_aula_id?: string
+          p_mensagem: string
+          p_org: string
+          p_publico?: string
+          p_tipo?: string
+          p_titulo: string
+          p_urgente?: boolean
+        }
+        Returns: number
       }
       relatorio_evolucao_receitas: {
         Args: never
@@ -2708,6 +3008,32 @@ export type Database = {
           total_recebido: number
         }[]
       }
+      resend_organization_invite: {
+        Args: { p_invite_id: string }
+        Returns: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string | null
+          organization_id: string
+          papel: string
+          status: string
+          token: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "organization_invites"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_org_metas: {
+        Args: { p_metas: Json; p_org: string }
+        Returns: Json
+      }
       user_has_org: { Args: { _org: string; _user: string }; Returns: boolean }
     }
     Enums: {
@@ -2737,6 +3063,12 @@ export type Database = {
         | "produto_digital"
         | "produto_fisico"
         | "academy"
+      staff_booking_status:
+        | "pendente"
+        | "confirmado"
+        | "rejeitado"
+        | "cancelado"
+        | "concluido"
       treino_ia_status: "pendente" | "aprovado" | "rejeitado"
     }
     CompositeTypes: {
@@ -2893,6 +3225,13 @@ export const Constants = {
         "produto_digital",
         "produto_fisico",
         "academy",
+      ],
+      staff_booking_status: [
+        "pendente",
+        "confirmado",
+        "rejeitado",
+        "cancelado",
+        "concluido",
       ],
       treino_ia_status: ["pendente", "aprovado", "rejeitado"],
     },
