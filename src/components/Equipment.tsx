@@ -7,9 +7,13 @@ import { AddEquipmentDialog } from "./equipment/AddEquipmentDialog";
 import { EquipmentStats } from "./equipment/EquipmentStats";
 import { EquipmentCard, EquipmentItem } from "./equipment/EquipmentCard";
 import { useSupabaseEquipment } from "@/hooks/useSupabaseEquipment";
+import { supabase } from '@/integrations/supabase/client';
+import { useOperationalContext } from '@/hooks/useOperationalContext';
+import { toast } from 'sonner';
 
 export function Equipment() {
-  const { equipment: supabaseEquipment, loading, addEquipment, updateEquipment } = useSupabaseEquipment();
+  const { equipment: supabaseEquipment, maintenanceEvents, loading, addEquipment, refetch } = useSupabaseEquipment();
+  const { activeOrg } = useOperationalContext();
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
@@ -18,9 +22,11 @@ export function Equipment() {
     id: e.id,
     name: e.nome,
     type: e.tipo,
-    status: e.status as EquipmentItem['status'],
+    status: (e.status === 'funcionando' ? 'working' : e.status === 'em_manutencao' ? 'maintenance' : 'broken') as EquipmentItem['status'],
     acquisitionDate: e.data_aquisicao || '',
     cost: e.custo || 0,
+    nextMaintenance: e.proxima_manutencao || undefined,
+    lastMaintenance: maintenanceEvents.find((event) => event.equipment_id === e.id && event.action === 'completed')?.occurred_at.slice(0, 10),
   }));
 
   const filteredEquipment = equipment.filter(item =>
@@ -33,17 +39,24 @@ export function Equipment() {
       nome: newEquipment.name,
       tipo: newEquipment.category || newEquipment.type || 'musculacao',
       status: 'funcionando',
-      data_aquisicao: newEquipment.purchaseDate || new Date().toISOString().split('T')[0],
+      data_aquisicao: newEquipment.purchaseDate instanceof Date ? newEquipment.purchaseDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
       custo: newEquipment.cost || 0,
+      localizacao: newEquipment.location,
+      marca: newEquipment.brand,
+      modelo: newEquipment.model,
+      numero_serie: newEquipment.serialNumber,
+      proxima_manutencao: newEquipment.nextMaintenance instanceof Date ? newEquipment.nextMaintenance.toISOString().split('T')[0] : null,
+      observacoes: newEquipment.notes,
     });
   };
 
-  const handleUpdateEquipment = (id: string, updates: Partial<EquipmentItem>) => {
-    const mapped: any = {};
-    if (updates.name) mapped.nome = updates.name;
-    if (updates.type) mapped.tipo = updates.type;
-    if (updates.status) mapped.status = updates.status;
-    updateEquipment(id, mapped);
+  const handleUpdateEquipment = async (id: string, updates: Partial<EquipmentItem>) => {
+    const action = updates.status === 'maintenance' ? 'opened' : 'completed';
+    const detail = window.prompt(action === 'opened' ? 'Descreva o motivo da manutenção' : 'Descreva a manutenção concluída');
+    if (!detail) return;
+    const { error } = await supabase.rpc('record_equipment_maintenance' as any, { p_equipment_id: id, p_action: action, p_detail: detail });
+    if (error) { toast.error(error.message); return; }
+    toast.success('Manutenção registrada.'); await refetch();
   };
 
   if (loading) {
@@ -57,10 +70,11 @@ export function Equipment() {
           <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Gestão de Equipamentos</h1>
           <p className="text-muted-foreground mt-1">Controle e manutenção dos equipamentos</p>
         </div>
-        <Button onClick={() => setIsAddDialogOpen(true)}><Plus className="w-4 h-4 mr-2" />Novo Equipamento</Button>
+        <Button onClick={() => setIsAddDialogOpen(true)} disabled={!activeOrg}><Plus className="w-4 h-4 mr-2" />Novo Equipamento</Button>
       </div>
 
       <EquipmentStats equipment={equipment} />
+      {!activeOrg && <p className="text-sm text-muted-foreground">Selecione uma organização para gerenciar equipamentos.</p>}
 
       <div className="flex items-center space-x-4">
         <div className="relative flex-1">
@@ -89,3 +103,4 @@ export function Equipment() {
     </div>
   );
 }
+
