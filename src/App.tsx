@@ -260,7 +260,7 @@ const App = () => (
                     <Route path="/9fit/automation" element={<Protected><AutomationDashboard /></Protected>} />
                     <Route path="/9fit/store" element={<Protected><StoreDashboard /></Protected>} />
                     <Route path="/funcionarios" element={<Protected><Funcionarios /></Protected>} />
-                    <Route path="/avaliacoes" element={<Protected><AvaliacoesFisicas /></Protected>} />
+                    <Route path="/avaliacoes" element={<StaffOnly><AvaliacoesFisicas /></StaffOnly>} />
                     <Route path="/experimentais" element={<StaffOnly><AulasExperimentais /></StaffOnly>} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
