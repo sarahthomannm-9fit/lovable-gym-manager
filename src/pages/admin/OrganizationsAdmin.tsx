@@ -12,7 +12,8 @@ import { toast } from 'sonner';
 
 type Org = { id: string; nome: string; tipo: string; status: string; cnpj?: string; metadata?: Record<string, unknown> };
 type Member = { id: string; user_id: string; papel: string; organization_id: string };
-type Profile = { id: string; nome: string; email: string };\ntype Facility = { id: string; ambiente: string; nome: string; categoria: string | null; quantidade: number; status: string; foto_path: string | null };
+type Profile = { id: string; nome: string; email: string };
+type Facility = { id: string; ambiente: string; nome: string; categoria: string | null; quantidade: number; status: string; foto_path: string | null };
 type Draft = { nome: string; cnpj: string; unidades: string; equipamentos: string; sindico: string; professores: string[] };
 const initialDraft: Draft = { nome: '', cnpj: '', unidades: '', equipamentos: '', sindico: '', professores: [] };
 
@@ -22,7 +23,11 @@ export default function OrganizationsAdmin() {
   const [members, setMembers] = useState<Member[]>([]);
   const [selected, setSelected] = useState<Org | null>(null);
   const [newOrg, setNewOrg] = useState({ nome: '', tipo: 'condominio', cnpj: '' });
-  const [newMember, setNewMember] = useState({ user_id: '', papel: 'sindico' });\n  const [facilities, setFacilities] = useState<Facility[]>([]);\n  const [newFacility, setNewFacility] = useState({ ambiente: '', nome: '', categoria: '', quantidade: '1' });\n  const [facilityPhoto, setFacilityPhoto] = useState<File | null>(null);\n  const [facilityPhotoUrls, setFacilityPhotoUrls] = useState<Record<string, string>>({});
+  const [newMember, setNewMember] = useState({ user_id: '', papel: 'sindico' });
+  const [facilities, setFacilities] = useState<Facility[]>([]);
+  const [newFacility, setNewFacility] = useState({ ambiente: '', nome: '', categoria: '', quantidade: '1' });
+  const [facilityPhoto, setFacilityPhoto] = useState<File | null>(null);
+  const [facilityPhotoUrls, setFacilityPhotoUrls] = useState<Record<string, string>>({});
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState(1);
   const [draft, setDraft] = useState<Draft>(initialDraft);
@@ -41,7 +46,32 @@ export default function OrganizationsAdmin() {
   };
 
   useEffect(() => { load(); }, []);
-  const loadFacilities = async (orgId: string) => {\n    const { data } = await (supabase as any).from('organization_facilities').select('id, ambiente, nome, categoria, quantidade, status, foto_path').eq('organization_id', orgId).order('ambiente').order('nome');\n    const rows = data || [];\n    setFacilities(rows);\n    const urls = await Promise.all(rows.filter((row: Facility) => row.foto_path).map(async (row: Facility) => { const { data: signed } = await supabase.storage.from('organization-facilities').createSignedUrl(row.foto_path!, 3600); return [row.id, signed?.signedUrl || ''] as const; }));\n    setFacilityPhotoUrls(Object.fromEntries(urls.filter(([, url]) => url)));\n  };\n  useEffect(() => { if (selected) { loadMembers(selected.id); loadFacilities(selected.id); } }, [selected]);\n  const addFacility = async () => {\n    if (!selected || !newFacility.ambiente.trim() || !newFacility.nome.trim()) return toast.error('Informe ambiente e equipamento.');\n    let foto_path: string | null = null;\n    if (facilityPhoto) {\n      const safeName = facilityPhoto.name.replace(/[^a-zA-Z0-9._-]/g, '-');\n      foto_path = `${selected.id}/${crypto.randomUUID()}-${safeName}`;\n      const { error: uploadError } = await supabase.storage.from('organization-facilities').upload(foto_path, facilityPhoto, { upsert: false, contentType: facilityPhoto.type });\n      if (uploadError) return toast.error(`Não foi possível enviar a foto: ${uploadError.message}`);\n    }\n    const { error } = await (supabase as any).from('organization_facilities').insert({ organization_id: selected.id, ambiente: newFacility.ambiente.trim(), nome: newFacility.nome.trim(), categoria: newFacility.categoria.trim() || null, quantidade: Math.max(0, Number(newFacility.quantidade) || 1), foto_path });\n    if (error) return toast.error(error.message);\n    setNewFacility({ ambiente: '', nome: '', categoria: '', quantidade: '1' }); setFacilityPhoto(null); toast.success('Equipamento adicionado.'); loadFacilities(selected.id);\n  };\n  const approveFacility = async (id: string, status: 'aprovado' | 'inativo') => {\n    const { error } = await (supabase as any).rpc('approve_facility', { p_facility_id: id, p_status: status });\n    if (error) return toast.error(error.message);\n    toast.success(status === 'aprovado' ? 'Equipamento aprovado.' : 'Equipamento desativado.'); if (selected) loadFacilities(selected.id);\n  };
+  const loadFacilities = async (orgId: string) => {
+    const { data } = await (supabase as any).from('organization_facilities').select('id, ambiente, nome, categoria, quantidade, status, foto_path').eq('organization_id', orgId).order('ambiente').order('nome');
+    const rows = data || [];
+    setFacilities(rows);
+    const urls = await Promise.all(rows.filter((row: Facility) => row.foto_path).map(async (row: Facility) => { const { data: signed } = await supabase.storage.from('organization-facilities').createSignedUrl(row.foto_path!, 3600); return [row.id, signed?.signedUrl || ''] as const; }));
+    setFacilityPhotoUrls(Object.fromEntries(urls.filter(([, url]) => url)));
+  };
+  useEffect(() => { if (selected) { loadMembers(selected.id); loadFacilities(selected.id); } }, [selected]);
+  const addFacility = async () => {
+    if (!selected || !newFacility.ambiente.trim() || !newFacility.nome.trim()) return toast.error('Informe ambiente e equipamento.');
+    let foto_path: string | null = null;
+    if (facilityPhoto) {
+      const safeName = facilityPhoto.name.replace(/[^a-zA-Z0-9._-]/g, '-');
+      foto_path = `${selected.id}/${crypto.randomUUID()}-${safeName}`;
+      const { error: uploadError } = await supabase.storage.from('organization-facilities').upload(foto_path, facilityPhoto, { upsert: false, contentType: facilityPhoto.type });
+      if (uploadError) return toast.error(`Não foi possível enviar a foto: ${uploadError.message}`);
+    }
+    const { error } = await (supabase as any).from('organization_facilities').insert({ organization_id: selected.id, ambiente: newFacility.ambiente.trim(), nome: newFacility.nome.trim(), categoria: newFacility.categoria.trim() || null, quantidade: Math.max(0, Number(newFacility.quantidade) || 1), foto_path });
+    if (error) return toast.error(error.message);
+    setNewFacility({ ambiente: '', nome: '', categoria: '', quantidade: '1' }); setFacilityPhoto(null); toast.success('Equipamento adicionado.'); loadFacilities(selected.id);
+  };
+  const approveFacility = async (id: string, status: 'aprovado' | 'inativo') => {
+    const { error } = await (supabase as any).rpc('approve_facility', { p_facility_id: id, p_status: status });
+    if (error) return toast.error(error.message);
+    toast.success(status === 'aprovado' ? 'Equipamento aprovado.' : 'Equipamento desativado.'); if (selected) loadFacilities(selected.id);
+  };
 
   const closeWizard = () => { setWizardOpen(false); setWizardStep(1); setDraft(initialDraft); };
   const createOrganization = async () => {
