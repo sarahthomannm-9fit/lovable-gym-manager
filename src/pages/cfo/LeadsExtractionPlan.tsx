@@ -1,3 +1,4 @@
+import { OperationalDeliveryBoard } from '@/components/OperationalDeliveryBoard';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -259,8 +260,10 @@ export function LeadsExtractionPlan() {
           Cadência SDR Ironman <ArrowRight className="w-4 h-4" />
         </Button>
       </div>
+      <OperationalDeliveryBoard moduleKey="cfo" />
     </div>
   );
 }
 
 export default LeadsExtractionPlan;
+

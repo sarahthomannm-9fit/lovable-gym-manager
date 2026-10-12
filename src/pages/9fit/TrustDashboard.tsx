@@ -1,3 +1,4 @@
+import { OperationalDeliveryBoard } from '@/components/OperationalDeliveryBoard';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useDataIntegration } from "@/components/DataIntegrationProvider";
@@ -62,6 +63,8 @@ export default function TrustDashboard() {
           })}
         </CardContent>
       </Card>
+      <OperationalDeliveryBoard moduleKey="trust" />
     </div>
   );
 }
+

@@ -1,3 +1,4 @@
+import { OperationalDeliveryBoard } from '@/components/OperationalDeliveryBoard';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useDataIntegration } from "@/components/DataIntegrationProvider";
 import { Badge } from "@/components/ui/badge";
@@ -78,6 +79,8 @@ export default function ConsultoriaDashboard() {
           </CardContent>
         </Card>
       )}
+      <OperationalDeliveryBoard moduleKey="consultoria" />
     </div>
   );
 }
+
