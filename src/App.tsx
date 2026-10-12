@@ -228,7 +228,7 @@ const App = () => (
                     <Route path="/painel/pipeline" element={<StaffOnly><Pipeline /></StaffOnly>} />
                     <Route path="/alunos" element={<Protected><SupabaseStudents /></Protected>} />
                     <Route path="/planos" element={<Protected><SupabasePlans /></Protected>} />
-                    <Route path="/aulas" element={<Protected><SupabaseClasses /></Protected>} />
+                    <Route path="/aulas" element={<StaffOnly><SupabaseClasses /></StaffOnly>} />
                     <Route path="/pagamentos" element={<Protected><SupabasePayments /></Protected>} />
                     <Route path="/checkin" element={<Protected><SupabaseCheckIn /></Protected>} />
                     <Route path="/equipamentos" element={<Protected><Equipment /></Protected>} />
