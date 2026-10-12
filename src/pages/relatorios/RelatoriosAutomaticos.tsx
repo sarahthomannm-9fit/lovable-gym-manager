@@ -71,12 +71,13 @@ export default function RelatoriosAutomaticos() {
 
   const gerar = async () => {
     setGerando(true);
-    const { error: err } = await supabase.functions.invoke('agent-hub-chat', {
-      body: { agentId: agente === 'todos' ? 'ceo' : agente, mode: 'report' },
+    const { data, error: err } = await supabase.functions.invoke('agent-daily-reports', {
+      body: {},
     });
     setGerando(false);
     if (err) return toast.error('Não foi possível gerar agora. Tente novamente.');
-    toast.success('Relatório solicitado — atualizando histórico');
+    if (!data?.success) return toast.error('Alguns relatórios não foram gerados. Consulte os registros da função.');
+    toast.success('Relatórios gerados — atualizando histórico');
     carregar();
   };
 
@@ -181,3 +182,4 @@ export default function RelatoriosAutomaticos() {
     </div>
   );
 }
+

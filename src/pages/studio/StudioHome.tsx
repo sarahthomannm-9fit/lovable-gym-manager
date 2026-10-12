@@ -28,8 +28,9 @@ export default function StudioHome() {
       setDash(dashData);
       const [{ data: a }, { data: c }, { data: p }, { data: s }] = await Promise.all([
         supabase.from("alunos").select("id,nome,valor_mensalidade,lifecycle_status").eq("organization_id", o.id).limit(50),
-        supabase.from("aulas").select("*").order("data_aula", { ascending: false }).limit(30),
-        supabase.from("pagamentos").select("valor,data_pagamento,status").eq("status","pago").order("data_pagamento",{ascending:false}).limit(200),
+        supabase.from("aulas").select("*").eq("organization_id", o.id).order("data_aula", { ascending: false }).limit(30),
+        supabase.from("pagamentos").select("valor,data_pagamento,status,alunos!inner(organization_id)")
+          .eq("alunos.organization_id", o.id).eq("status","pago").order("data_pagamento",{ascending:false}).limit(200),
         (supabase as any).rpc("get_alunos_sem_checkin", { p_dias: 15, p_org_id: o.id }),
       ]);
       setAlunos(a || []); setAulas(c || []); setPagamentos(p || []); setSemCheckin(s || []);
@@ -175,3 +176,4 @@ export function FalarCom9FIT({ orgId }: { orgId: string }) {
     </CardContent></Card>
   );
 }
+

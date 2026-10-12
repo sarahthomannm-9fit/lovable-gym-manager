@@ -65,8 +65,6 @@ export default function Home() {
       if (activeOrg && !isAdmin) alunosQuery = alunosQuery.eq('organization_id', activeOrg.id);
       const { data: alunos, error: e1 } = await alunosQuery;
       if (e1) throw e1;
-      const ids = (alunos || []).map((a: any) => a.id);
-
       const [checkins, aulas, pagos, atrasados, avaliacoes, notif, eventos] = await Promise.all([
         supabase.from('checkins').select('id', { count: 'exact', head: true }).eq('data_checkin', hoje),
         supabase.from('aulas').select('id', { count: 'exact', head: true }).eq('data_aula', hoje),
@@ -81,7 +79,7 @@ export default function Home() {
       ]);
 
       setResumo({
-        alunosAtivos: (alunos || []).filter((a: any) => a.status === 'ativo').length || ids.length,
+        alunosAtivos: (alunos || []).filter((a: any) => a.status === 'ativo').length,
         checkinsHoje: checkins.count || 0,
         aulasHoje: aulas.count || 0,
         receitaMes: (pagos.data || []).reduce((s: number, p: any) => s + Number(p.valor || 0), 0),
@@ -230,3 +228,4 @@ export default function Home() {
     </div>
   );
 }
+

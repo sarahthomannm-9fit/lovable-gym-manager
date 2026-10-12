@@ -153,7 +153,7 @@ function AssignDialog({ plano, onClose, userId }: any) {
       data_fim: form.data_fim || null,
     });
     if (error) return toast.error(error.message);
-    toast.success("Treino atribuído! Aluno notificado."); onClose();
+    toast.success("Treino atribuído ao aluno."); onClose();
   };
   return (
     <Dialog open={!!plano} onOpenChange={o => !o && onClose()}>
@@ -176,3 +176,4 @@ function AssignDialog({ plano, onClose, userId }: any) {
     </Dialog>
   );
 }
+

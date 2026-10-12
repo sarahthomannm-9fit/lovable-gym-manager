@@ -85,7 +85,8 @@ export function SupabaseClasses() {
     >
       <div className="mb-4"><AddClassDialog onAddClass={handleAddClass} /></div>
       {renderContent()}
-      <ConfirmDialog open={!!cancellingId} onOpenChange={(open) => !open && setCancellingId(null)} title="Cancelar Aula" description="Cancelar esta aula? Alunos serão notificados." onConfirm={handleCancelClass} confirmLabel="Cancelar Aula" variant="destructive" />
+      <ConfirmDialog open={!!cancellingId} onOpenChange={(open) => !open && setCancellingId(null)} title="Cancelar Aula" description="Cancelar esta aula? Avise os alunos inscritos após confirmar." onConfirm={handleCancelClass} confirmLabel="Cancelar Aula" variant="destructive" />
     </PageShell>
   );
 }
+

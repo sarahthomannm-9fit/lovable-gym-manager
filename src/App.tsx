@@ -216,7 +216,7 @@ const App = () => (
                    <Route path="/" element={<Navigate to="/home" replace />} />
                    <Route path="/home" element={<Protected><Home /></Protected>} />
                    <Route path="/mercados/:tipo" element={<Protected><MercadoLista /></Protected>} />
-                   <Route path="/relatorios/automaticos" element={<StaffOnly><RelatoriosAutomaticos /></StaffOnly>} />
+                    <Route path="/relatorios/automaticos" element={<AdminOnly><RelatoriosAutomaticos /></AdminOnly>} />
 
                     <Route path="/agents" element={<StaffOnly><AgentsHub /></StaffOnly>} />
                     <Route path="/admin/usuarios" element={<AdminOnly><UsersAdmin /></AdminOnly>} />
@@ -274,4 +274,5 @@ const App = () => (
 );
 
 export default App;
+
 

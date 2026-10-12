@@ -20,10 +20,17 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
+    const authorization = req.headers.get('Authorization');
+    if (!authorization?.startsWith('Bearer ')) return json({ error: 'Não autenticado' }, 401);
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
+    const { data: auth, error: authError } = await supabase.auth.getUser(authorization.slice(7));
+    if (authError || !auth.user) return json({ error: 'Sessão inválida' }, 401);
+    const { data: role, error: roleError } = await supabase.from('user_roles')
+      .select('role').eq('user_id', auth.user.id).eq('role', 'admin').maybeSingle();
+    if (roleError || !role) return json({ error: 'Acesso restrito a administrador' }, 403);
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) return json({ error: 'LOVABLE_API_KEY ausente' }, 500);
 
@@ -99,6 +106,8 @@ Deno.serve(async (req) => {
         summary = d.choices?.[0]?.message?.content ?? summary;
       } else {
         console.error(`Report ${agent} failed:`, aiResp.status);
+        results.push({ agent, ok: false, error: 'Falha na geração' });
+        continue;
       }
 
       const { error } = await supabase.from('agent_reports').upsert({
@@ -112,7 +121,7 @@ Deno.serve(async (req) => {
       results.push({ agent, ok: !error });
     }
 
-    return json({ success: true, date: today, results });
+    return json({ success: results.every((result) => result.ok), date: today, results });
   } catch (err) {
     console.error('agent-daily-reports error:', err);
     return json({ error: String(err instanceof Error ? err.message : err) }, 500);
@@ -125,3 +134,4 @@ function json(payload: unknown, status = 200) {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 }
+

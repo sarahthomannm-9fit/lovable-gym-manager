@@ -8,6 +8,19 @@ Deno.serve(async (req) => {
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const db = createClient(supabaseUrl, serviceKey);
   try {
+    const authorization = req.headers.get('Authorization');
+    if (!authorization?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Não autenticado' }), { status: 401, headers: cors });
+    }
+    const { data: auth, error: authError } = await db.auth.getUser(authorization.slice(7));
+    if (authError || !auth.user) {
+      return new Response(JSON.stringify({ error: 'Sessão inválida' }), { status: 401, headers: cors });
+    }
+    const { data: role, error: roleError } = await db.from('user_roles')
+      .select('role').eq('user_id', auth.user.id).eq('role', 'admin').maybeSingle();
+    if (roleError || !role) {
+      return new Response(JSON.stringify({ error: 'Acesso restrito a administrador' }), { status: 403, headers: cors });
+    }
     const body = await req.json().catch(() => ({}));
     const limit = Math.min(Number(body.limit || 20), 100);
     const { data: tasks, error } = await db.from('agent_workflow_tasks')
@@ -78,3 +91,4 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ ok: false, error: String(error) }), { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } });
   }
 });
+

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -33,17 +32,16 @@ export function Anamnese() {
   }, [token]);
 
   const loadAnamnese = async () => {
-    const { data, error } = await supabase
-      .from('anamnese_respostas')
-      .select('*, alunos(nome)')
-      .eq('token', token!)
-      .single();
-
-    if (error || !data) { setStatus('error'); setLoading(false); return; }
-    if (data.status === 'preenchido') { setStatus('already'); setLoading(false); return; }
-
-    setAlunoNome((data as any).alunos?.nome || 'Aluno');
-    setStatus('form');
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/anamnese-public?token=${encodeURIComponent(token!)}`);
+      const data = await response.json();
+      if (!response.ok) { setStatus('error'); return; }
+      if (data.status === 'already') { setStatus('already'); return; }
+      setAlunoNome(data.nome || 'Aluno');
+      setStatus('form');
+    } catch {
+      setStatus('error');
+    }
     setLoading(false);
   };
 
@@ -58,14 +56,19 @@ export function Anamnese() {
       ...extras,
     };
 
-    const { error } = await supabase
-      .from('anamnese_respostas')
-      .update({ respostas, status: 'preenchido', preenchido_em: new Date().toISOString() })
-      .eq('token', token!);
-
-    setSubmitting(false);
-    if (error) { setStatus('error'); return; }
-    setStatus('done');
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/anamnese-public`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, respostas }),
+      });
+      const result = await response.json();
+      setStatus(response.ok && result.status === 'done' ? 'done' : 'error');
+    } catch {
+      setStatus('error');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (status === 'loading') {
@@ -181,3 +184,4 @@ export function Anamnese() {
     </div>
   );
 }
+
