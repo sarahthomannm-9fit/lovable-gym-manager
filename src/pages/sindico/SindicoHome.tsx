@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 11391)
+Total output lines: 739
+
 import { useEffect, useState } from 'react';
 import { PersonaLayout, PersonaEmptyState } from '@/layouts/PersonaLayout';
 import { useOperationalContext } from '@/hooks/useOperationalContext';
@@ -18,7 +21,6 @@ import { MonthlyBarChart } from '@/components/charts/MonthlyBarChart';
 
 const ACCENT = '#60A5FA';
 
-type Inad = { id: string; nome: string; valor: number; dias: number };
 type Aula = { id: string; nome: string; horario_inicio: string; capacidade: number; inscritos: number; professor: string; data: string };
 type Ticket = { id: string; message: string; status: string; created_at: string; agent_response: string | null };
 
@@ -34,10 +36,8 @@ export default function SindicoHome() {
   const [ready, setReady] = useState(false);
   const [metrics, setMetrics] = useState({ alunos: 0, receita: 0, inadCount: 0, ocupacao: 0 });
   const [operacao, setOperacao] = useState({ unidades: 0, adesao: 0, checkinsMes: 0, treinosAtivos: 0, plantao: 'Mensal' });
-  const [inad, setInad] = useState<Inad[]>([]);
   const [aulasHoje, setAulasHoje] = useState<Aula[]>([]);
   const [aulasSemana, setAulasSemana] = useState<Aula[]>([]);
-  const [alunosLista, setAlunosLista] = useState<any[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [mensagem, setMensagem] = useState('');
   const [aviso, setAviso] = useState({ titulo: '', mensagem: '' });
@@ -90,29 +90,23 @@ export default function SindicoHome() {
     if (savedGoals) setActivationGoals({ moradores: Number(savedGoals.moradores || 1), checkins: Number(savedGoals.checkins || 1), eventos: Number(savedGoals.eventos || 1) });
 
     const { data: alunosOrg } = await supabase.from('alunos')
-      .select('id, nome, status, valor_mensalidade, data_matricula')
-      .eq('organization_id', activeOrg.id).order('nome');
+      .select('id, status')
+      .eq('organization_id', activeOrg.id);
     const alunoIds = (alunosOrg || []).map(a => a.id);
-    const alunoMap = Object.fromEntries((alunosOrg || []).map(a => [a.id, a.nome]));
-    setAlunosLista(alunosOrg || []);
     const ativos = (alunosOrg || []).filter((a: any) => a.status === 'ativo').length;
     const unidades = Number((orgRow?.metadata as any)?.total_unidades || (orgRow?.metadata as any)?.unidades || Math.max(ativos, 100));
 
     let receita = 0;
-    let inadList: Inad[] = [];
+    let inadCount = 0;
     if (alunoIds.length) {
       const { data: pagos } = await supabase.from('pagamentos').select('valor')
         .in('aluno_id', alunoIds).eq('status', 'pago').gte('data_pagamento', inicioMes);
       receita = (pagos || []).reduce((s, p: any) => s + Number(p.valor || 0), 0);
 
-      const { data: atr } = await supabase.from('pagamentos')
-        .select('id, aluno_id, valor, data_vencimento')
-        .in('aluno_id', alunoIds).in('status', ['atrasado', 'pendente']).lt('data_vencimento', hoje)
-        .order('data_vencimento').limit(20);
-      inadList = (atr || []).map((p: any) => ({
-        id: p.id, nome: alunoMap[p.aluno_id] || 'Aluno', valor: Number(p.valor),
-        dias: Math.max(0, Math.floor((Date.now() - new Date(p.data_vencimento).getTime()) / 86400000)),
-      }));
+      const { count: atrasados } = await supabase.from('pagamentos')
+        .select('id', { count: 'exact', head: true })
+        .in('aluno_id', alunoIds).in('status', ['atrasado', 'pendente']).lt('data_vencimento', hoje);
+      inadCount = atrasados || 0;
 
       const [{ count: checkinsMes }, { count: treinosAtivos }] = await Promise.all([
         supabase.from('checkins').select('id', { count: 'exact', head: true }).in('aluno_id', alunoIds).gte('data_checkin', inicioMes),
@@ -147,6 +141,7 @@ export default function SindicoHome() {
 
     const { data: aulasFut } = await supabase.from('aulas')
       .select('id, nome, data_aula, horario_inicio, capacidade_maxima, inscritos_atual, professor_id')
+      .eq('organization_id', activeOrg.id)
       .gte('data_aula', hoje).lte('data_aula', seteDias).order('data_aula').order('horario_inicio');
     const profIds = [...new Set((aulasFut || []).map((a: any) => a.professor_id).filter(Boolean))];
     const { data: profs } = profIds.length
@@ -164,14 +159,14 @@ export default function SindicoHome() {
     const seteAtras = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
     const { data: aulas7 } = await supabase.from('aulas')
       .select('capacidade_maxima, inscritos_atual')
+      .eq('organization_id', activeOrg.id)
       .gte('data_aula', seteAtras).lte('data_aula', hoje);
     const ocup = (aulas7 || []).filter((a: any) => a.capacidade_maxima > 0);
     const ocupacao = ocup.length
       ? Math.round(ocup.reduce((s: number, a: any) => s + (a.inscritos_atual / a.capacidade_maxima), 0) / ocup.length * 100)
       : 0;
 
-    setMetrics({ alunos: alunoIds.length, receita, inadCount: inadList.length, ocupacao });
-    setInad(inadList);
+    setMetrics({ alunos: alunoIds.length, receita, inadCount, ocupacao });
 
     const { data: tk } = await supabase.from('support_tickets')
       .select('id, message, status, created_at, agent_response')
@@ -201,17 +196,6 @@ export default function SindicoHome() {
       </PersonaLayout>
     );
   }
-
-  const solicitarCobranca = async (i: Inad) => {
-    if (!activeOrg) return;
-    const { error } = await supabase.from('support_tickets').insert({
-      message: `[${activeOrg.nome}] Solicitar cobrança de ${i.nome} — R$ ${i.valor.toFixed(2)} vencido há ${i.dias} dias`,
-      category: 'cobranca',
-    });
-    if (error) return toast.error('Falha');
-    toast.success(`Cobrança de ${i.nome} solicitada`);
-    carregar();
-  };
 
   const enviarSolicitacao = async () => {
     if (!mensagem.trim() || !activeOrg) return toast.error('Escreva uma mensagem');
@@ -250,7 +234,7 @@ export default function SindicoHome() {
     return <Badge variant="outline" className={map[s] || ''}>{lbl[s] || s}</Badge>;
   };
 
-  const statusSaude = metrics.inadCount > 10
+  const statusSaude = (dash?.inadimplentes ?? metrics.inadCount) > 10
     ? { txt: '⚠ Atenção', cls: 'text-amber-400' }
     : { txt: '✓ Saudável', cls: 'text-emerald-400' };
 
@@ -258,7 +242,7 @@ export default function SindicoHome() {
   // unidades esperadas) mas a consulta direta não retornou nenhum aluno vinculado.
   // Isso é diferente de "condomínio novo, ainda sem alunos" — nesse caso não há
   // unidades esperadas cadastradas, então não mostramos o aviso.
-  const possivelProblemaDeVinculo = !dashLoading && !dashError && metrics.alunos === 0 && orgTemUnidadesEsperadas;
+  const possivelProblemaDeVinculo = !dashLoading && !dashError && (dash?.alunos_ativos ?? metrics.alunos) === 0 && orgTemUnidadesEsperadas;
   const filteredActivationActions = activationActions.filter(a => actionPeriod === '0' || new Date(a.created_at).getTime() >= Date.now() - Number(actionPeriod) * 86400000);
   const resolvedActivationActions = filteredActivationActions.filter(a => a.resolved_at).length;
   const openActivationActions = filteredActivationActions.length - resolvedActivationActions;
@@ -282,8 +266,8 @@ export default function SindicoHome() {
             </div>
           </div>
           <div className="flex gap-2">
-            <Badge variant="secondary">{metrics.alunos} alunos</Badge>
-            <Badge variant="secondary">R$ {(metrics.receita / 1000).toFixed(1)}k</Badge>
+            <Badge variant="secondary">{dash?.alunos_ativos ?? metrics.alunos} alunos</Badge>
+            <Badge variant="secondary">R$ {(Number(dash?.receita_mes ?? metrics.receita) / 1000).toFixed(1)}k</Badge>
           </div>
         </CardContent>
       </Card>
@@ -351,59 +335,7 @@ export default function SindicoHome() {
             {criticalActivationGap && criticalActivationGap.progress < 100 && <p className="text-xs text-amber-400 mt-1">Maior lacuna: {criticalActivationGap.label} ({criticalActivationGap.progress}% da meta).</p>}
             <div className="flex flex-wrap gap-2 mt-3 text-[11px]">
               <span className={`rounded-full px-2 py-1 ${activation.moradores_ativos >= activationGoals.moradores ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>Moradores {activation.moradores_ativos}/{activationGoals.moradores} {activation.moradores_ativos >= activationGoals.moradores ? '✓' : '!'}</span>
-              <span className={`rounded-full px-2 py-1 ${activation.checkins_30_dias >= activationGoals.checkins ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>Check-ins {activation.checkins_30_dias}/{activationGoals.checkins} {activation.checkins_30_dias >= activationGoals.checkins ? '✓' : '!'}</span>
-              <span className={`rounded-full px-2 py-1 ${activation.treinos_ativos >= 1 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>Treinos {activation.treinos_ativos > 0 ? '✓' : '!'}</span>
-              <span className={`rounded-full px-2 py-1 ${activation.eventos_publicados >= activationGoals.eventos ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>Eventos {activation.eventos_publicados}/{activationGoals.eventos} {activation.eventos_publicados >= activationGoals.eventos ? '✓' : '!'}</span>
-            </div>
-            {activation.moradores_ativos === 0 && <p className="text-xs text-muted-foreground mt-2">Meta: ativar o primeiro morador pelo QR ou convite.</p>}
-            {activation.moradores_ativos > 0 && activation.checkins_30_dias === 0 && <p className="text-xs text-muted-foreground mt-2">Meta: obter o primeiro check-in nos próximos 30 dias.</p>}
-            {activation.moradores_ativos > 0 && activation.checkins_30_dias > 0 && activation.eventos_publicados === 0 && <p className="text-xs text-muted-foreground mt-2">Meta: publicar o primeiro evento de saúde.</p>}
-          </div>
-          <div className="relative w-16 h-16 rounded-full border-4 border-border/40 flex items-center justify-center">
-            <span className={`text-sm font-semibold ${activationHealth.color}`}>{activationHealth.score}%</span>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="mb-4 bg-card/60 border-border/40">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between gap-3 mb-3">
-            <div><h2 className="font-semibold text-sm">Metas do condomínio</h2><p className="text-xs text-muted-foreground">Defina o mínimo esperado para acompanhar a ativação.</p></div>
-            <Button size="sm" variant="outline" onClick={async () => {
-              const { data: current } = await supabase.from('organizations').select('metadata').eq('id', activeOrg.id).maybeSingle();
-              const metadata = { ...((current?.metadata as any) || {}), activation_goals: activationGoals };
-              const { error } = await supabase.from('organizations').update({ metadata }).eq('id', activeOrg.id);
-              if (error) toast.error('Não foi possível salvar as metas'); else toast.success('Metas salvas');
-            }}>Salvar metas</Button>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <label className="text-xs text-muted-foreground">Moradores ativos<input type="number" min="1" value={activationGoals.moradores} onChange={e => setActivationGoals(g => ({ ...g, moradores: Number(e.target.value) }))} className="mt-1 w-full rounded-md border border-border/40 bg-background px-2 py-1.5 text-sm text-foreground" /></label>
-            <label className="text-xs text-muted-foreground">Check-ins / 30 dias<input type="number" min="1" value={activationGoals.checkins} onChange={e => setActivationGoals(g => ({ ...g, checkins: Number(e.target.value) }))} className="mt-1 w-full rounded-md border border-border/40 bg-background px-2 py-1.5 text-sm text-foreground" /></label>
-            <label className="text-xs text-muted-foreground">Eventos publicados<input type="number" min="1" value={activationGoals.eventos} onChange={e => setActivationGoals(g => ({ ...g, eventos: Number(e.target.value) }))} className="mt-1 w-full rounded-md border border-border/40 bg-background px-2 py-1.5 text-sm text-foreground" /></label>
-          </div>
-        </CardContent>
-      </Card>
-
-      {(activation.moradores_ativos === 0 || activation.checkins_30_dias === 0 || activation.eventos_publicados === 0) && (
-        <Card className="mb-4 border-amber-500/30 bg-amber-500/5">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <ShieldAlert className="w-4 h-4 text-amber-400" />
-              <h2 className="font-semibold text-sm">Próximas ações recomendadas</h2>
-            </div>
-            <div className="grid gap-2 text-xs">
-              {activation.moradores_ativos === 0 && (
-                <div className="flex items-center justify-between gap-3 rounded-md border border-border/30 p-3">
-                  <span><strong>Ative os moradores:</strong> compartilhe o QR de entrada e convites do condomínio.</span>
-                  <Button size="sm" variant="outline" onClick={async () => { await (supabase as any).rpc('record_activation_alert_action', { p_organization_id: activeOrg.id, p_alert_type: 'moradores_inativos', p_action_label: 'Abrir cadastro' }); window.location.assign('/admin/organizacoes'); }}>Abrir cadastro</Button>
-                </div>
-              )}
-              {activation.checkins_30_dias === 0 && activation.moradores_ativos > 0 && (
-                <div className="flex items-center justify-between gap-3 rounded-md border border-border/30 p-3">
-                  <span><strong>Sem check-ins recentes:</strong> publique um comunicado ou agende um Health Day.</span>
-                  <Button size="sm" variant="outline" onClick={async () => { await (supabase as any).rpc('record_activation_alert_action', { p_organization_id: activeOrg.id, p_alert_type: 'sem_checkins', p_action_label: 'Criar comunicado' }); window.location.assign('/sindico/comunicados'); }}>Criar comunicado</Button>
-                </div>
-              )}
+              <span className={`rounded-full px-2 py-1 ${activation.checkins_30_dias >= activationGoals.checkins ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>Check-ins {activation.checkins…1391 tokens truncated…   )}
               {activation.eventos_publicados === 0 && (
                 <div className="flex items-center justify-between gap-3 rounded-md border border-border/30 p-3">
                   <span><strong>Nenhum evento publicado:</strong> um Health Day ajuda a iniciar o ciclo de engajamento.</span>
@@ -550,7 +482,7 @@ export default function SindicoHome() {
               <div>
                 <h2 className="font-semibold text-sm uppercase tracking-wide">Relatório do mês</h2>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {activeOrg?.nome || 'Organização'} · Receita R$ {metrics.receita.toFixed(2)} · {metrics.inadCount} inadimplente(s) · Ocupação {metrics.ocupacao}%
+                  {activeOrg?.nome || 'Organização'} · Receita R$ {Number(dash?.receita_mes ?? metrics.receita).toFixed(2)} · {dash?.inadimplentes ?? metrics.inadCount} inadimplente(s) · Ocupação {dash?.ocupacao_media ?? metrics.ocupacao}%
                 </p>
               </div>
               <Button
@@ -560,19 +492,16 @@ export default function SindicoHome() {
                   const rows = [
                     ['Métrica', 'Valor'],
                     ['Organização', activeOrg?.nome || ''],
-                    ['Alunos ativos', String(metrics.alunos)],
+                    ['Alunos ativos', String(dash?.alunos_ativos ?? metrics.alunos)],
                     ['Total de unidades', String(operacao.unidades)],
                     ['Taxa de adesão (%)', String(operacao.adesao)],
                     ['Check-ins no mês', String(operacao.checkinsMes)],
                     ['Treinos ativos', String(operacao.treinosAtivos)],
                     ['Plantão presencial', operacao.plantao],
-                    ['Receita do mês (R$)', metrics.receita.toFixed(2)],
-                    ['Inadimplentes (qtd)', String(metrics.inadCount)],
-                    ['Ocupação média (%)', String(metrics.ocupacao)],
+                    ['Receita do mês (R$)', Number(dash?.receita_mes ?? metrics.receita).toFixed(2)],
+                    ['Inadimplentes (qtd)', String(dash?.inadimplentes ?? metrics.inadCount)],
+                    ['Ocupação média (%)', String(dash?.ocupacao_media ?? metrics.ocupacao)],
                     ['Recomendação 9FIT', operacao.adesao < 15 ? 'Reforçar QR em elevador e comunicado no WhatsApp' : 'Manter cadência de plantão e comunicar evolução mensal'],
-                    [],
-                    ['Inadimplente', 'Dias em atraso', 'Valor (R$)'],
-                    ...inad.map(i => [i.nome, String(i.dias), i.valor.toFixed(2)]),
                   ];
                   const csv = rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
                   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -594,25 +523,13 @@ export default function SindicoHome() {
           <Card className="bg-card/60 border-border/40 mb-4">
             <CardContent className="p-5">
               <div className="flex items-center justify-between mb-3">
-                <h2 className="font-semibold text-sm uppercase tracking-wide">Inadimplentes</h2>
+                <h2 className="font-semibold text-sm uppercase tracking-wide">Pendências financeiras</h2>
                 <AlertCircle className="w-4 h-4 text-amber-400" />
               </div>
-              {inad.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum inadimplente. 🎉</p> : (
-                <ul className="divide-y divide-border/30">
-                  {inad.slice(0, 5).map(i => (
-                    <li key={i.id} className="py-3 flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium truncate">{i.nome}</div>
-                        <div className="text-xs text-muted-foreground">Vencido há {i.dias} dias • R$ {i.valor.toFixed(2)}</div>
-                      </div>
-                      <Button size="sm" onClick={() => solicitarCobranca(i)}
-                              className="bg-[#60A5FA] text-black hover:bg-[#60A5FA]/90 shrink-0">
-                        Solicitar cobrança
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <p className="text-sm text-muted-foreground">
+                {dash?.inadimplentes ?? metrics.inadCount} pendência(s) no condomínio.
+                A equipe financeira acompanha os casos individuais.
+              </p>
             </CardContent>
           </Card>
 
@@ -646,32 +563,9 @@ export default function SindicoHome() {
 
         <TabsContent value="alunos">
           <Card className="bg-card/60 border-border/40">
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader><TableRow>
-                  <TableHead>Nome</TableHead><TableHead>Status</TableHead>
-                  <TableHead>Mensalidade</TableHead><TableHead>Desde</TableHead>
-                </TableRow></TableHeader>
-                <TableBody>
-                  {alunosLista.map(a => (
-                    <TableRow key={a.id}>
-                      <TableCell className="font-medium">{a.nome}</TableCell>
-                      <TableCell><Badge variant="outline" className="text-xs">{a.status}</Badge></TableCell>
-                      <TableCell>R$ {Number(a.valor_mensalidade || 0).toFixed(2)}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{a.data_matricula}</TableCell>
-                    </TableRow>
-                  ))}
-                  {!alunosLista.length && (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-6">
-                        {orgTemUnidadesEsperadas
-                          ? 'Nenhum aluno vinculado ainda. Verifique o vínculo do aluno com esta organização.'
-                          : 'Nenhum aluno.'}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+            <CardContent className="p-5">
+              <p className="text-sm">{dash?.alunos_ativos ?? metrics.alunos} alunos ativos.</p>
+              <p className="text-xs text-muted-foreground mt-2">Os dados individuais são acompanhados pela equipe autorizada.</p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -793,3 +687,4 @@ function MetricCard({ label, value, valueCls }: { label: string; value: string; 
     </Card>
   );
 }
+
