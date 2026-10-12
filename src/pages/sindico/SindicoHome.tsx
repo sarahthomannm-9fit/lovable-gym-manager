@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 11391)
-Total output lines: 739
-
 import { useEffect, useState } from 'react';
 import { PersonaLayout, PersonaEmptyState } from '@/layouts/PersonaLayout';
 import { useOperationalContext } from '@/hooks/useOperationalContext';
@@ -210,17 +207,14 @@ export default function SindicoHome() {
   };
 
   const enviarComunicado = async () => {
-    if (!aviso.titulo.trim() || !aviso.mensagem.trim()) return toast.error('Preencha título e mensagem');
-    const { error } = await supabase.from('notificacoes').insert({
-      titulo: `[${activeOrg?.nome}] ${aviso.titulo}`,
-      mensagem: aviso.mensagem,
-      tipo: 'comunicado',
-      destinatario_tipo: 'todos',
-      prioridade: 'normal',
-      status: 'pendente',
-    });
-    if (error) return toast.error('Falha ao enviar');
-    toast.success('Comunicado publicado');
+    if (!activeOrg || !aviso.titulo.trim() || !aviso.mensagem.trim()) return toast.error('Preencha título e mensagem');
+    const { data: draft, error: draftError } = await (supabase as any).from('organization_announcements')
+      .insert({ organization_id: activeOrg.id, titulo: aviso.titulo.trim(), mensagem: aviso.mensagem.trim(), publico: 'condominio' })
+      .select('id').single();
+    if (draftError || !draft) return toast.error(draftError?.message || 'Falha ao salvar comunicado');
+    const { error } = await (supabase as any).rpc('publish_organization_announcement', { p_id: draft.id });
+    if (error) return toast.error(`Rascunho salvo, mas a publicação falhou: ${error.message}`);
+    toast.success('Comunicado disponível no app para este condomínio');
     setAviso({ titulo: '', mensagem: '' });
   };
 
@@ -335,7 +329,59 @@ export default function SindicoHome() {
             {criticalActivationGap && criticalActivationGap.progress < 100 && <p className="text-xs text-amber-400 mt-1">Maior lacuna: {criticalActivationGap.label} ({criticalActivationGap.progress}% da meta).</p>}
             <div className="flex flex-wrap gap-2 mt-3 text-[11px]">
               <span className={`rounded-full px-2 py-1 ${activation.moradores_ativos >= activationGoals.moradores ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>Moradores {activation.moradores_ativos}/{activationGoals.moradores} {activation.moradores_ativos >= activationGoals.moradores ? '✓' : '!'}</span>
-              <span className={`rounded-full px-2 py-1 ${activation.checkins_30_dias >= activationGoals.checkins ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>Check-ins {activation.checkins…1391 tokens truncated…   )}
+              <span className={`rounded-full px-2 py-1 ${activation.checkins_30_dias >= activationGoals.checkins ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>Check-ins {activation.checkins_30_dias}/{activationGoals.checkins} {activation.checkins_30_dias >= activationGoals.checkins ? '✓' : '!'}</span>
+              <span className={`rounded-full px-2 py-1 ${activation.treinos_ativos >= 1 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>Treinos {activation.treinos_ativos > 0 ? '✓' : '!'}</span>
+              <span className={`rounded-full px-2 py-1 ${activation.eventos_publicados >= activationGoals.eventos ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>Eventos {activation.eventos_publicados}/{activationGoals.eventos} {activation.eventos_publicados >= activationGoals.eventos ? '✓' : '!'}</span>
+            </div>
+            {activation.moradores_ativos === 0 && <p className="text-xs text-muted-foreground mt-2">Meta: ativar o primeiro morador pelo QR ou convite.</p>}
+            {activation.moradores_ativos > 0 && activation.checkins_30_dias === 0 && <p className="text-xs text-muted-foreground mt-2">Meta: obter o primeiro check-in nos próximos 30 dias.</p>}
+            {activation.moradores_ativos > 0 && activation.checkins_30_dias > 0 && activation.eventos_publicados === 0 && <p className="text-xs text-muted-foreground mt-2">Meta: publicar o primeiro evento de saúde.</p>}
+          </div>
+          <div className="relative w-16 h-16 rounded-full border-4 border-border/40 flex items-center justify-center">
+            <span className={`text-sm font-semibold ${activationHealth.color}`}>{activationHealth.score}%</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="mb-4 bg-card/60 border-border/40">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div><h2 className="font-semibold text-sm">Metas do condomínio</h2><p className="text-xs text-muted-foreground">Defina o mínimo esperado para acompanhar a ativação.</p></div>
+            <Button size="sm" variant="outline" onClick={async () => {
+              const { data: current } = await supabase.from('organizations').select('metadata').eq('id', activeOrg.id).maybeSingle();
+              const metadata = { ...((current?.metadata as any) || {}), activation_goals: activationGoals };
+              const { error } = await supabase.from('organizations').update({ metadata }).eq('id', activeOrg.id);
+              if (error) toast.error('Não foi possível salvar as metas'); else toast.success('Metas salvas');
+            }}>Salvar metas</Button>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <label className="text-xs text-muted-foreground">Moradores ativos<input type="number" min="1" value={activationGoals.moradores} onChange={e => setActivationGoals(g => ({ ...g, moradores: Number(e.target.value) }))} className="mt-1 w-full rounded-md border border-border/40 bg-background px-2 py-1.5 text-sm text-foreground" /></label>
+            <label className="text-xs text-muted-foreground">Check-ins / 30 dias<input type="number" min="1" value={activationGoals.checkins} onChange={e => setActivationGoals(g => ({ ...g, checkins: Number(e.target.value) }))} className="mt-1 w-full rounded-md border border-border/40 bg-background px-2 py-1.5 text-sm text-foreground" /></label>
+            <label className="text-xs text-muted-foreground">Eventos publicados<input type="number" min="1" value={activationGoals.eventos} onChange={e => setActivationGoals(g => ({ ...g, eventos: Number(e.target.value) }))} className="mt-1 w-full rounded-md border border-border/40 bg-background px-2 py-1.5 text-sm text-foreground" /></label>
+          </div>
+        </CardContent>
+      </Card>
+
+      {(activation.moradores_ativos === 0 || activation.checkins_30_dias === 0 || activation.eventos_publicados === 0) && (
+        <Card className="mb-4 border-amber-500/30 bg-amber-500/5">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <ShieldAlert className="w-4 h-4 text-amber-400" />
+              <h2 className="font-semibold text-sm">Próximas ações recomendadas</h2>
+            </div>
+            <div className="grid gap-2 text-xs">
+              {activation.moradores_ativos === 0 && (
+                <div className="flex items-center justify-between gap-3 rounded-md border border-border/30 p-3">
+                  <span><strong>Ative os moradores:</strong> compartilhe o QR de entrada e convites do condomínio.</span>
+                  <Button size="sm" variant="outline" onClick={async () => { await (supabase as any).rpc('record_activation_alert_action', { p_organization_id: activeOrg.id, p_alert_type: 'moradores_inativos', p_action_label: 'Abrir cadastro' }); window.location.assign('/admin/organizacoes'); }}>Abrir cadastro</Button>
+                </div>
+              )}
+              {activation.checkins_30_dias === 0 && activation.moradores_ativos > 0 && (
+                <div className="flex items-center justify-between gap-3 rounded-md border border-border/30 p-3">
+                  <span><strong>Sem check-ins recentes:</strong> publique um comunicado ou agende um Health Day.</span>
+                  <Button size="sm" variant="outline" onClick={async () => { await (supabase as any).rpc('record_activation_alert_action', { p_organization_id: activeOrg.id, p_alert_type: 'sem_checkins', p_action_label: 'Criar comunicado' }); window.location.assign('/sindico/comunicados'); }}>Criar comunicado</Button>
+                </div>
+              )}
               {activation.eventos_publicados === 0 && (
                 <div className="flex items-center justify-between gap-3 rounded-md border border-border/30 p-3">
                   <span><strong>Nenhum evento publicado:</strong> um Health Day ajuda a iniciar o ciclo de engajamento.</span>
