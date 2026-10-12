@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { PersonaLayout } from '@/layouts/PersonaLayout';
 import { supabase } from '@/integrations/supabase/client';
+import { localDate, safeVideoUrl } from '@/lib/workout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -18,7 +19,7 @@ import { useAlunoVinculo } from '@/hooks/useAlunoVinculo';
 import { ProximoEventoCard, type EventoCondominio } from '@/components/ProximoEventoCard';
 
 
-const ACCENT = '#1B6E6E';
+const ACCENT = '#2563EB';
 
 function saudacao() {
   const h = new Date().getHours();
@@ -75,7 +76,7 @@ export default function MoradorHome() {
       setAluno(al);
 
 
-      const hoje = new Date().toISOString().slice(0, 10);
+      const hoje = localDate();
       const proximaSemana = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
       const { data: aulas } = await supabase.from('aulas')
         .select('id, nome, data_aula, horario_inicio, capacidade_maxima, inscritos_atual, modalidade')
@@ -165,7 +166,7 @@ export default function MoradorHome() {
     setSalvando(true);
     const { error } = await supabase.from('checkins').insert({
       aluno_id: aluno.id,
-      data_checkin: new Date().toISOString().slice(0, 10),
+      data_checkin: localDate(),
       horario_entrada: new Date().toISOString(),
     });
     setSalvando(false);
@@ -265,7 +266,7 @@ export default function MoradorHome() {
               )}
 
               {/* Aula do dia */}
-              {proxAula && proxAula.data_aula === new Date().toISOString().slice(0, 10) && (
+              {proxAula && proxAula.data_aula === localDate() && (
                 <Card className="bg-card/60 border-border/40">
                   <CardContent className="p-5 flex items-center gap-4">
                     <div className="w-14 h-14 rounded-2xl bg-blue-500/15 flex items-center justify-center shrink-0">
@@ -430,16 +431,16 @@ export default function MoradorHome() {
                           {ex.ordem}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{ex.exercicios_biblioteca?.nome || 'Exercício'}</p>
+                          <p className="font-medium truncate">{ex.nome || 'Exercício'}</p>
                           <p className="text-xs text-muted-foreground">
                             {ex.series} séries × {ex.repeticoes}
                             {ex.carga_kg && ` · ${ex.carga_kg}kg`}
                             {ex.descanso_seg && ` · descanso ${ex.descanso_seg}s`}
                           </p>
                         </div>
-                        {ex.exercicios_biblioteca?.video_url && (
+                        {safeVideoUrl(ex.video_url) && (
                           <Button size="sm" variant="ghost" asChild>
-                            <a href={ex.exercicios_biblioteca.video_url} target="_blank" rel="noreferrer">
+                            <a href={safeVideoUrl(ex.video_url) || '#'} target="_blank" rel="noreferrer">
                               <PlayCircle className="w-5 h-5" />
                             </a>
                           </Button>
@@ -598,3 +599,4 @@ function Mini({ icon: Icon, label, value, valueCls }: any) {
     </Card>
   );
 }
+
