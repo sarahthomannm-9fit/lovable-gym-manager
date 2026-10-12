@@ -25,7 +25,7 @@ export interface AnaliseProduto {
   estrategias_recomendadas: any;
   campanhas_sugeridas: any;
   metricas_projetadas: any;
-  score_viabilidade: number;
+  score_viabilidade: number | null;
 }
 
 export function useSupabaseProdutos() {
@@ -64,13 +64,10 @@ export function useSupabaseProdutos() {
 
       if (error) throw error;
       
-      // Gerar análise automática
-      await gerarAnaliseAutomatica(data.id, data);
-      
       await fetchProdutos();
       toast({
         title: "Produto Criado",
-        description: "Produto cadastrado e análise de campanha gerada automaticamente",
+        description: "Produto cadastrado para avaliação",
       });
       
       return data;
@@ -81,117 +78,6 @@ export function useSupabaseProdutos() {
         description: "Falha ao adicionar produto",
         variant: "destructive",
       });
-    }
-  };
-
-  const gerarAnaliseAutomatica = async (produtoId: string, produto: Produto) => {
-    try {
-      // Definir estratégias baseadas no tipo de produto
-      const estrategiasPorTipo = {
-        aplicativo_mobile: [
-          { estrategia: "App Store Optimization (ASO)", prioridade: "alta", descricao: "Otimizar título, descrição e keywords" },
-          { estrategia: "Campanhas de Install", prioridade: "alta", descricao: "Facebook Ads e Google Ads para downloads" },
-          { estrategia: "Influencer Marketing", prioridade: "média", descricao: "Parcerias com influencers fitness" }
-        ],
-        software: [
-          { estrategia: "Content Marketing", prioridade: "alta", descricao: "Blog e tutoriais técnicos" },
-          { estrategia: "SaaS Trial Strategy", prioridade: "alta", descricao: "Freemium ou trial gratuito" },
-          { estrategia: "Webinars e Demos", prioridade: "média", descricao: "Demonstrações online" }
-        ],
-        servicos: [
-          { estrategia: "Local SEO", prioridade: "alta", descricao: "Otimização para busca local" },
-          { estrategia: "Programa de Indicação", prioridade: "alta", descricao: "Desconto para indicações" },
-          { estrategia: "Depoimentos e Cases", prioridade: "média", descricao: "Social proof" }
-        ],
-        produtos: [
-          { estrategia: "E-commerce Marketing", prioridade: "alta", descricao: "Marketplace e loja própria" },
-          { estrategia: "Retargeting", prioridade: "alta", descricao: "Remarketing de carrinho abandonado" },
-          { estrategia: "Unboxing Experience", prioridade: "média", descricao: "Experiência de abertura" }
-        ]
-      };
-
-      // Campanhas sugeridas baseadas no tipo
-      const campanhasPorTipo = {
-        aplicativo_mobile: [
-          {
-            nome: "Campanha de Lançamento - App Store",
-            canal: "google_ads",
-            tipo: "install_campaign",
-            orcamento_sugerido: produto.orcamento_marketing ? produto.orcamento_marketing * 0.4 : 2000,
-            duracao_dias: 30,
-            objetivo: "Conseguir primeiros downloads e reviews"
-          },
-          {
-            nome: "Campanha Social Media - Instagram",
-            canal: "instagram",
-            tipo: "awareness",
-            orcamento_sugerido: produto.orcamento_marketing ? produto.orcamento_marketing * 0.3 : 1500,
-            duracao_dias: 45,
-            objetivo: "Criar awareness e engajamento"
-          }
-        ],
-        software: [
-          {
-            nome: "Campanha Google Ads - Keywords",
-            canal: "google_ads",
-            tipo: "search",
-            orcamento_sugerido: produto.orcamento_marketing ? produto.orcamento_marketing * 0.5 : 3000,
-            duracao_dias: 60,
-            objetivo: "Captar leads qualificados"
-          }
-        ],
-        servicos: [
-          {
-            nome: "Campanha Local - Google My Business",
-            canal: "google",
-            tipo: "local",
-            orcamento_sugerido: produto.orcamento_marketing ? produto.orcamento_marketing * 0.6 : 2500,
-            duracao_dias: 90,
-            objetivo: "Aumentar visibilidade local"
-          }
-        ],
-        produtos: [
-          {
-            nome: "Campanha E-commerce - Facebook",
-            canal: "facebook_ads",
-            tipo: "conversion",
-            orcamento_sugerido: produto.orcamento_marketing ? produto.orcamento_marketing * 0.4 : 2000,
-            duracao_dias: 30,
-            objetivo: "Vendas diretas"
-          }
-        ]
-      };
-
-      const analise = {
-        produto_id: produtoId,
-        analise_mercado: {
-          nicho: "fitness_tech",
-          concorrencia: "média",
-          potencial_mercado: "alto",
-          sazonalidade: "baixa"
-        },
-        estrategias_recomendadas: estrategiasPorTipo[produto.tipo] || [],
-        campanhas_sugeridas: campanhasPorTipo[produto.tipo] || [],
-        metricas_projetadas: {
-          alcance_estimado: produto.orcamento_marketing ? produto.orcamento_marketing * 10 : 20000,
-          conversao_estimada: "2.5%",
-          roi_projetado: "300%",
-          tempo_payback: "6 meses"
-        },
-        score_viabilidade: Math.floor(Math.random() * 30) + 70 // Score entre 70-100
-      };
-
-      const { error } = await supabase
-        .from('analises_produto')
-        .insert(analise);
-
-      // Atualizar status do produto para ativo após análise
-      await supabase
-        .from('produtos')
-        .update({ status: 'ativo' })
-        .eq('id', produtoId);
-    } catch (error) {
-      console.error('Erro ao gerar análise automática:', error);
     }
   };
 
@@ -223,3 +109,4 @@ export function useSupabaseProdutos() {
     refetch: fetchProdutos
   };
 }
+
