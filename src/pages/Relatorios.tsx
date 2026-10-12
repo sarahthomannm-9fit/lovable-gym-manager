@@ -1,268 +1,75 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useOperationalContext } from '@/hooks/useOperationalContext';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Button } from "@/components/ui/button";
-import { BarChart3, TrendingUp, CreditCard, Users, RefreshCw } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { useSupabaseFinancialReports } from "@/hooks/useSupabaseFinancialReports";
-import { ReportsCharts } from "@/components/reports/ReportsCharts";
-import { AdvancedFinancialMetrics } from "@/components/reports/AdvancedFinancialMetrics";
-import { FinancialEvolutionChart } from "@/components/reports/FinancialEvolutionChart";
-import { IntelligentFinancialDashboard } from "@/components/reports/IntelligentFinancialDashboard";
-
-interface ReceitaRelatório {
-  nome_plano: string;
-  forma_pagamento: string;
-  total_recebido: number;
-}
+type Student = { id: string; nome: string; valor_mensalidade: number | null; lifecycle_status: string | null };
+type Payment = { id: string; aluno_id: string | null; valor: number; status: string | null; data_vencimento: string; data_pagamento: string | null };
+type Expense = { id: string; valor: number; status: string; data_vencimento: string; data_pagamento: string | null };
+const currency = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const localDay = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 
 export function Relatorios() {
-  const [receitas, setReceitas] = useState<ReceitaRelatório[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const { toast } = useToast();
+  const { activeOrg } = useOperationalContext();
+  const [students, setStudents] = useState<Student[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [period, setPeriod] = useState(() => localDay().slice(0, 7));
 
-  // Hook para relatórios avançados
-  const {
-    faturamentoMensal,
-    inadimplencia,
-    metricasGerais,
-    evolucaoReceitas,
-    loading: advancedLoading,
-    refetch: refetchAdvanced
-  } = useSupabaseFinancialReports();
-
-  const fetchReceitas = async () => {
+  const load = useCallback(async () => {
+    setLoading(true); setError('');
     try {
-      setLoading(true);
-      console.log('Buscando relatório de receitas...');
-      
-      const { data, error } = await supabase.rpc('relatorio_receitas_por_plano');
-      
-      if (error) {
-        console.error('Erro na função RPC:', error);
-        throw error;
+      if (!activeOrg?.id) { setStudents([]); setPayments([]); setExpenses([]); return; }
+      const [studentResult, expenseResult] = await Promise.all([
+        supabase.from('alunos').select('id,nome,valor_mensalidade,lifecycle_status').eq('organization_id', activeOrg.id),
+        supabase.from('expense_ledger' as any).select('id,valor,status,data_vencimento,data_pagamento').eq('organization_id', activeOrg.id).gte('data_vencimento', `${period}-01`).lt('data_vencimento', nextMonth(period)),
+      ]);
+      if (studentResult.error) throw studentResult.error;
+      if (expenseResult.error) throw expenseResult.error;
+      const people = (studentResult.data || []) as Student[];
+      const ids = people.map((row) => row.id);
+      const received: Payment[] = [];
+      for (let start = 0; start < ids.length; start += 100) {
+        const group = ids.slice(start, start + 100);
+        for (let offset = 0; ; offset += 500) {
+          const page = await supabase.from('pagamentos').select('id,aluno_id,valor,status,data_vencimento,data_pagamento').in('aluno_id', group).gte('data_vencimento', `${period}-01`).lt('data_vencimento', nextMonth(period)).range(offset, offset + 499);
+          if (page.error) throw page.error;
+          received.push(...((page.data || []) as Payment[]));
+          if (!page.data || page.data.length < 500) break;
+        }
       }
-      
-      console.log('Dados do relatório:', data);
-      setReceitas(data || []);
-      setLastUpdated(new Date());
-    } catch (error) {
-      console.error('Erro ao buscar relatório de receitas:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar o relatório financeiro",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+      setStudents(people); setPayments(received); setExpenses((expenseResult.data || []) as unknown as Expense[]);
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : 'Falha no relatório financeiro.';
+      setError(message); setStudents([]); setPayments([]); setExpenses([]); toast.error(message);
+    } finally { setLoading(false); }
+  }, [activeOrg?.id, period]);
+  useEffect(() => { load(); }, [load]);
 
-  useEffect(() => {
-    fetchReceitas();
-  }, []);
-
-  const handleRefresh = () => {
-    toast({
-      title: "Atualizando",
-      description: "Carregando dados mais recentes...",
-    });
-    fetchReceitas();
-    refetchAdvanced();
-  };
-
-  const totalGeral = receitas.reduce((total, receita) => total + receita.total_recebido, 0);
-  const totalPorPlano = receitas.reduce((acc, receita) => {
-    acc[receita.nome_plano] = (acc[receita.nome_plano] || 0) + receita.total_recebido;
-    return acc;
-  }, {} as Record<string, number>);
-
-  const isLoading = loading || advancedLoading;
-
-  if (isLoading) {
-    return (
-      <div className="space-y-6 p-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Relatórios</h1>
-          <p className="text-muted-foreground">Carregando relatórios...</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6 p-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Relatório Financeiro</h1>
-          <p className="text-muted-foreground">
-            Análise detalhada das receitas por plano e forma de pagamento.
-          </p>
-          {lastUpdated && (
-            <p className="text-sm text-gray-500 mt-1">
-              Última atualização: {lastUpdated.toLocaleString('pt-BR')}
-            </p>
-          )}
-        </div>
-        <Button onClick={handleRefresh} variant="outline">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Atualizar
-        </Button>
-      </div>
-
-      {/* Métricas Avançadas */}
-      <AdvancedFinancialMetrics 
-        metricas={metricasGerais} 
-        inadimplencia={inadimplencia} 
-      />
-
-      {/* Gráficos de Evolução */}
-      <FinancialEvolutionChart 
-        faturamentoMensal={faturamentoMensal}
-        evolucaoReceitas={evolucaoReceitas}
-      />
-
-      {/* Dashboard Financeiro Inteligente */}
-      <div className="mt-8">
-        <h2 className="text-xl font-semibold mb-4">Dashboard Financeiro Inteligente</h2>
-        <IntelligentFinancialDashboard />
-      </div>
-
-      {/* Métricas Básicas Existentes */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Receita Total</CardTitle>
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              R$ {totalGeral.toFixed(2)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Total arrecadado
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Planos Ativos</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {Object.keys(totalPorPlano).length}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Tipos de planos com receita
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ticket Médio</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              R$ {receitas.length > 0 ? (totalGeral / receitas.length).toFixed(2) : '0.00'}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Valor médio por transação
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Formas de Pagamento</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {new Set(receitas.map(r => r.forma_pagamento)).size}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Métodos diferentes utilizados
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Detalhamento por Planos e Formas de Pagamento */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Receitas por Plano</CardTitle>
-            <CardDescription>Distribuição de receitas por tipo de plano</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {Object.entries(totalPorPlano).map(([plano, valor]) => (
-                <div key={plano} className="flex items-center justify-between">
-                  <span className="text-sm font-medium">{plano}</span>
-                  <Badge variant="secondary">R$ {valor.toFixed(2)}</Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Detalhamento por Forma de Pagamento</CardTitle>
-            <CardDescription>Receitas detalhadas por método de pagamento</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {receitas.map((receita, index) => (
-                <div key={index}>
-                  <div className="flex items-center justify-between py-2">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        {receita.nome_plano}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        via {receita.forma_pagamento}
-                      </p>
-                    </div>
-                    <Badge variant="outline">
-                      R$ {receita.total_recebido.toFixed(2)}
-                    </Badge>
-                  </div>
-                  {index < receitas.length - 1 && <Separator />}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {receitas.length === 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Nenhuma receita encontrada</CardTitle>
-            <CardDescription>
-              Não há dados de receitas para exibir no momento.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              As receitas aparecerão aqui quando houver vínculos entre alunos e planos com formas de pagamento definidas.
-            </p>
-            <Button onClick={handleRefresh} className="mt-4">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Tentar Novamente
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
+  const totals = useMemo(() => {
+    const paid = payments.filter((row) => row.status === 'pago').reduce((sum, row) => sum + Number(row.valor), 0);
+    const pending = payments.filter((row) => row.status !== 'pago' && row.status !== 'cancelado').reduce((sum, row) => sum + Number(row.valor), 0);
+    const overdue = payments.filter((row) => row.status !== 'pago' && row.status !== 'cancelado' && row.data_vencimento < localDay()).reduce((sum, row) => sum + Number(row.valor), 0);
+    const spent = expenses.filter((row) => row.status === 'paga').reduce((sum, row) => sum + Number(row.valor), 0);
+    const mrr = students.filter((row) => row.lifecycle_status === 'ativo').reduce((sum, row) => sum + Number(row.valor_mensalidade || 0), 0);
+    return { paid, pending, overdue, spent, mrr, balance: paid - spent };
+  }, [payments, expenses, students]);
+  return <div className="space-y-6 p-6">
+    <div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="font-display text-3xl">Dashboard financeiro</h1><p className="text-sm text-muted-foreground">Lançamentos do mês de competência e da organização selecionada. Baixas manuais são exibidas como registradas, não como conciliação bancária.</p></div><div className="flex items-center gap-2"><input aria-label="Mês" type="month" value={period} onChange={(event) => setPeriod(event.target.value)} className="rounded border bg-background px-3 py-2 text-sm" /><Button variant="outline" onClick={load} disabled={loading}>Atualizar</Button></div></div>
+    {!activeOrg && <p className="text-sm text-muted-foreground">Selecione uma organização para consultar o financeiro.</p>}
+    {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{([['Recebido', totals.paid], ['Em aberto', totals.pending], ['Vencido', totals.overdue], ['Despesas pagas', totals.spent], ['Saldo registrado', totals.balance], ['MRR contratado', totals.mrr]] as const).map(([name, value]) => <Card key={name}><CardHeader><CardTitle className="text-sm">{name}</CardTitle></CardHeader><CardContent className="text-2xl font-semibold">{currency(value)}</CardContent></Card>)}</div>
+    <Card><CardHeader><CardTitle>Rastreio dos recebíveis</CardTitle></CardHeader><CardContent className="space-y-2">{loading ? <p>Carregando…</p> : payments.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum lançamento neste mês.</p> : payments.map((row) => <div key={row.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-border/50 py-2 text-sm"><div><p className="font-medium">{students.find((student) => student.id === row.aluno_id)?.nome || 'Aluno'}</p><p className="text-muted-foreground">Vence {row.data_vencimento}{row.data_pagamento ? ` · baixa ${row.data_pagamento}` : ''}</p></div><div className="flex items-center gap-2"><Badge variant="outline">{row.status || 'pendente'}</Badge><strong>{currency(Number(row.valor))}</strong></div></div>)}</CardContent></Card>
+  </div>;
 }
+
+function nextMonth(month: string) {
+  const [year, number] = month.split('-').map(Number);
+  return new Date(Date.UTC(year, number, 1)).toISOString().slice(0, 10);
+}
+
