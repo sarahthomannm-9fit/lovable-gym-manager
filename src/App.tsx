@@ -206,7 +206,7 @@ const App = () => (
                     <Route path="/admin/fitpro" element={<AdminOnly><FitProIntegration /></AdminOnly>} />
                     <Route path="/operacao-9fit" element={<StaffOnly><Operacao9FIT /></StaffOnly>} />
                     <Route path="/cfo/leads" element={<AdminOnly><LeadsExtractionPlan /></AdminOnly>} />
-                    <Route path="/pipeline" element={<AdminOnly><PipelineComercial /></AdminOnly>} />
+                    <Route path="/pipeline" element={<StaffOnly><PipelineComercial /></StaffOnly>} />
                     <Route path="/clientes" element={<Protected><Clientes /></Protected>} />
                     <Route path="/contratos" element={<Protected><Contratos /></Protected>} />
                     <Route path="/planos-treino" element={<Protected><PlanosTreino /></Protected>} />
@@ -261,7 +261,7 @@ const App = () => (
                     <Route path="/9fit/store" element={<Protected><StoreDashboard /></Protected>} />
                     <Route path="/funcionarios" element={<Protected><Funcionarios /></Protected>} />
                     <Route path="/avaliacoes" element={<Protected><AvaliacoesFisicas /></Protected>} />
-                    <Route path="/experimentais" element={<Protected><AulasExperimentais /></Protected>} />
+                    <Route path="/experimentais" element={<StaffOnly><AulasExperimentais /></StaffOnly>} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </BrowserRouter>
