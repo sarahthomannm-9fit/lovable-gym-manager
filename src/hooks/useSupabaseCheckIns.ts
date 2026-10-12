@@ -41,15 +41,14 @@ export function useSupabaseCheckIns() {
 
   const addCheckIn = async (checkInData: Omit<SupabaseCheckIn, 'id' | 'created_at'>) => {
     try {
-      const { data, error } = await supabase
-        .from('checkins')
-        .insert([checkInData])
-        .select()
-        .single();
+      const { data, error } = await (supabase as any).rpc('record_daily_checkin', {
+        p_aluno_id: checkInData.aluno_id,
+        p_date: checkInData.data_checkin || null,
+      });
 
       if (error) throw error;
       
-      setCheckIns(prev => [data, ...prev]);
+      setCheckIns(prev => prev.some((row) => row.id === data.id) ? prev : [data, ...prev]);
       toast({
         title: "Sucesso",
         description: "Check-in registrado com sucesso!",
@@ -108,3 +107,4 @@ export function useSupabaseCheckIns() {
     refetch: fetchCheckIns
   };
 }
+

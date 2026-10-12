@@ -164,10 +164,8 @@ export default function MoradorHome() {
   const fazerCheckin = async () => {
     if (!aluno?.id) return toast.error('Aluno não vinculado');
     setSalvando(true);
-    const { error } = await supabase.from('checkins').insert({
-      aluno_id: aluno.id,
-      data_checkin: localDate(),
-      horario_entrada: new Date().toISOString(),
+    const { error } = await (supabase as any).rpc('record_daily_checkin', {
+      p_aluno_id: aluno.id, p_date: localDate(),
     });
     setSalvando(false);
     if (error) toast.error('Falha no check-in');

@@ -151,7 +151,7 @@ export default function CoachHome() {
   };
   const presentes = new Set(checkins.filter((c) => c.data_checkin === presencaAula?.data_aula).map((c) => c.aluno_id));
   const marcarPresenca = async (alunoId: string) => {
-    const { error } = await supabase.from('checkins').insert({ aluno_id: alunoId, data_checkin: presencaAula?.data_aula || hoje });
+    const { error } = await (supabase as any).rpc('record_daily_checkin', { p_aluno_id: alunoId, p_date: presencaAula?.data_aula || hoje });
     if (error) return toast.error('Falha ao registrar presença');
     toast.success(`Presença de ${nomeAluno(alunoId)} registrada`);
     carregar();
@@ -447,3 +447,4 @@ export default function CoachHome() {
     </PersonaLayout>
   );
 }
+
