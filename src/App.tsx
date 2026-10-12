@@ -15,14 +15,23 @@ import { RoleRoute } from "@/components/RoleRoute";
 import SelectContext from "./pages/SelectContext";
 import SindicoHome from "./pages/sindico/SindicoHome";
 import HealthDay from "./pages/sindico/HealthDay";
+import Announcements from "./pages/sindico/Announcements";
 import CoachHome from "./pages/coach/CoachHome";
 import ReviewQueue from "./pages/coach/ReviewQueue";
 import CorpHome from "./pages/corp/CorpHome";
 import OrganizationsAdmin from "./pages/admin/OrganizationsAdmin";
+import PrescriptionAudit from "./pages/admin/PrescriptionAudit";
+import AccessAudit from "./pages/admin/AccessAudit";
+import WorkflowApprovals from "./pages/admin/WorkflowApprovals";
+import AcceptInvite from "./pages/AcceptInvite";
+import FirstAccess from "./pages/FirstAccess";
 import MoradorHome from "./pages/morador/MoradorHome";
 import OnboardingMorador from "./pages/morador/OnboardingMorador";
 import Events from "./pages/morador/Events";
 import ResidentEntry from "./pages/morador/ResidentEntry";
+import MoradorProfile from "./pages/morador/Profile";
+import MoradorAgenda from "./pages/morador/Agenda";
+import MoradorStaff from "./pages/morador/MoradorStaff";
 import FitProIntegration from "./pages/admin/FitProIntegration";
 import Operacao9FIT from "./pages/admin/Operacao9FIT";
 import LeadsExtractionPlan from "./pages/cfo/LeadsExtractionPlan";
@@ -175,16 +184,25 @@ const App = () => (
                     <Route path="/reset-password" element={<ResetPassword />} />
                     <Route path="/anamnese/:token" element={<Anamnese />} />
                     <Route path="/entrada" element={<ResidentEntry />} />
+                    <Route path="/convite/:token" element={<AcceptInvite />} />
+                    <Route path="/primeiro-acesso" element={<ProtectedRoute><FirstAccess /></ProtectedRoute>} />
                     <Route path="/select-context" element={<ProtectedRoute><SelectContext /></ProtectedRoute>} />
                     <Route path="/sindico" element={<ProtectedRoute><RoleRoute allow={['sindico','admin']}><SindicoHome /></RoleRoute></ProtectedRoute>} />
                     <Route path="/sindico/health-day" element={<ProtectedRoute><RoleRoute allow={['sindico','admin']}><HealthDay /></RoleRoute></ProtectedRoute>} />
+                    <Route path="/sindico/comunicados" element={<ProtectedRoute><RoleRoute allow={['sindico','admin']}><Announcements /></RoleRoute></ProtectedRoute>} />
                     <Route path="/coach" element={<ProtectedRoute><RoleRoute allow={['professor','admin']}><CoachHome /></RoleRoute></ProtectedRoute>} />
                     <Route path="/coach/revisoes" element={<ProtectedRoute><RoleRoute allow={['professor','admin']}><ReviewQueue /></RoleRoute></ProtectedRoute>} />
                     <Route path="/corp" element={<ProtectedRoute><RoleRoute allow={['corporate','admin']}><CorpHome /></RoleRoute></ProtectedRoute>} />
                     <Route path="/morador" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MoradorHome /></RoleRoute></ProtectedRoute>} />
                     <Route path="/morador/onboarding" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><OnboardingMorador /></RoleRoute></ProtectedRoute>} />
                     <Route path="/morador/eventos" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><Events /></RoleRoute></ProtectedRoute>} />
+                    <Route path="/morador/perfil" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MoradorProfile /></RoleRoute></ProtectedRoute>} />
+                    <Route path="/morador/agenda" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MoradorAgenda /></RoleRoute></ProtectedRoute>} />
+                    <Route path="/morador/staff" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MoradorStaff /></RoleRoute></ProtectedRoute>} />
                     <Route path="/admin/organizacoes" element={<AdminOnly><OrganizationsAdmin /></AdminOnly>} />
+                    <Route path="/admin/auditoria-prescricoes" element={<AdminOnly><PrescriptionAudit /></AdminOnly>} />
+                    <Route path="/admin/auditoria-acessos" element={<AdminOnly><AccessAudit /></AdminOnly>} />
+                    <Route path="/admin/aprovacoes-workflows" element={<StaffOnly><WorkflowApprovals /></StaffOnly>} />
                     <Route path="/admin/fitpro" element={<AdminOnly><FitProIntegration /></AdminOnly>} />
                     <Route path="/operacao-9fit" element={<StaffOnly><Operacao9FIT /></StaffOnly>} />
                     <Route path="/cfo/leads" element={<AdminOnly><LeadsExtractionPlan /></AdminOnly>} />
@@ -203,11 +221,11 @@ const App = () => (
                     <Route path="/agents" element={<StaffOnly><AgentsHub /></StaffOnly>} />
                     <Route path="/admin/usuarios" element={<AdminOnly><UsersAdmin /></AdminOnly>} />
                     <Route path="/admin/reset-demo" element={<AdminOnly><ResetDemoData /></AdminOnly>} />
-                    <Route path="/painel" element={<Protected><Painel /></Protected>} />
-                    <Route path="/painel/inadimplencia" element={<Protected><Inadimplencia /></Protected>} />
-                    <Route path="/painel/retencao" element={<Protected><Retencao /></Protected>} />
-                    <Route path="/painel/agenda" element={<Protected><AgendaSemanal /></Protected>} />
-                    <Route path="/painel/pipeline" element={<Protected><Pipeline /></Protected>} />
+                    <Route path="/painel" element={<StaffOnly><Painel /></StaffOnly>} />
+                    <Route path="/painel/inadimplencia" element={<StaffOnly><Inadimplencia /></StaffOnly>} />
+                    <Route path="/painel/retencao" element={<StaffOnly><Retencao /></StaffOnly>} />
+                    <Route path="/painel/agenda" element={<StaffOnly><AgendaSemanal /></StaffOnly>} />
+                    <Route path="/painel/pipeline" element={<StaffOnly><Pipeline /></StaffOnly>} />
                     <Route path="/alunos" element={<Protected><SupabaseStudents /></Protected>} />
                     <Route path="/planos" element={<Protected><SupabasePlans /></Protected>} />
                     <Route path="/aulas" element={<Protected><SupabaseClasses /></Protected>} />
@@ -256,5 +274,4 @@ const App = () => (
 );
 
 export default App;
-
 

@@ -485,7 +485,7 @@ export default function AgentsHub() {
           <div className="flex items-center gap-3">
             <div className="w-2.5 h-2.5 rounded-full bg-[#FF5A00]" />
             <div>
-              <h1 className="text-base font-bold text-foreground tracking-tight">FitManager — Hub de Agentes IA</h1>
+              <h1 className="text-base font-bold text-foreground tracking-tight">NINE LIVING — Hub de Agentes IA</h1>
               <p className="text-[11px] text-muted-foreground font-mono tracking-wider">9FIT · ELEVENSOFT · CEO: RONI</p>
             </div>
           </div>
@@ -506,7 +506,7 @@ export default function AgentsHub() {
             : metrics.map((m) => {
                 const Icon = m.icon;
                 return (
-                  <div key={m.label} className="bg-secondary rounded-lg p-4">
+                  <div key={m.label} className="bg-secondary rounded-sm p-4">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">{m.label}</span>
                       <Icon className="w-3.5 h-3.5 text-muted-foreground" />
@@ -538,7 +538,7 @@ export default function AgentsHub() {
                     <button
                       key={a.id}
                       onClick={() => setActiveAgentId(a.id)}
-                      className={`text-left p-4 rounded-lg border bg-card transition-all ${
+                      className={`text-left p-4 rounded-sm border bg-card transition-all ${
                         active ? 'border-2 shadow-md' : 'border-border/40 hover:border-border'
                       } ${g === 'core' ? 'lg:col-span-1' : ''}`}
                       style={active ? { borderColor: a.color } : undefined}
@@ -582,7 +582,7 @@ export default function AgentsHub() {
                 {chats[activeAgentId].map((m, i) => (
                   <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     <div
-                      className={`max-w-[80%] px-3 py-2 rounded-lg text-sm ${
+                      className={`max-w-[80%] px-3 py-2 rounded-sm text-sm ${
                         m.role === 'user'
                           ? 'bg-[#E6F1FB] text-[#0C447C]'
                           : 'bg-secondary text-foreground'
@@ -594,7 +594,7 @@ export default function AgentsHub() {
                 ))}
                 {sending && (
                   <div className="flex justify-start">
-                    <div className="bg-secondary rounded-lg px-3 py-2">
+                    <div className="bg-secondary rounded-sm px-3 py-2">
                       <div className="flex gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" />
                         <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce [animation-delay:0.15s]" />
@@ -683,7 +683,7 @@ export default function AgentsHub() {
                   return (
                     <div
                       key={i}
-                      className="p-3 rounded-lg flex items-start gap-3"
+                      className="p-3 rounded-sm flex items-start gap-3"
                       style={{ backgroundColor: styles.bg, color: styles.text }}
                     >
                       <span className="mt-0.5">{styles.icon}</span>

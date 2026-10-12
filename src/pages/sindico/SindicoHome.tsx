@@ -44,6 +44,10 @@ export default function SindicoHome() {
   const [enviando, setEnviando] = useState(false);
   const [orgTemUnidadesEsperadas, setOrgTemUnidadesEsperadas] = useState(false);
   const [engajamentoMensal, setEngajamentoMensal] = useState<{ mes: string; checkins: number }[]>([]);
+  const [activation, setActivation] = useState({ moradores_ativos: 0, treinos_ativos: 0, eventos_publicados: 0, checkins_30_dias: 0 });
+  const [activationActions, setActivationActions] = useState<any[]>([]);
+  const [actionPeriod, setActionPeriod] = useState('30');
+  const [activationGoals, setActivationGoals] = useState({ moradores: 1, checkins: 1, eventos: 1 });
 
   // Indicadores principais sempre pela RPC oficial
   const { data: dash, loading: dashLoading, error: dashError, refresh: refreshDash } =
@@ -64,6 +68,12 @@ export default function SindicoHome() {
   const carregar = async () => {
     if (!activeOrg) { setReady(true); return; }
     const hoje = new Date().toISOString().slice(0, 10);
+    const { data: activationData } = await (supabase as any).rpc('organization_activation_metrics', { p_organization_id: activeOrg.id });
+    if (activationData) setActivation(activationData as any);
+    const { data: actionRows } = await (supabase as any).from('organization_activation_alert_actions')
+      .select('id, alert_type, action_label, created_at, acted_by, resolved_at').eq('organization_id', activeOrg.id)
+      .order('created_at', { ascending: false }).limit(8);
+    setActivationActions(actionRows || []);
     const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
     const seteDias = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
 
@@ -76,6 +86,8 @@ export default function SindicoHome() {
     // isso ajuda a distinguir "condomínio novo, sem alunos mesmo" de "vínculo quebrado".
     const unidadesEsperadas = Number((orgRow?.metadata as any)?.total_unidades || (orgRow?.metadata as any)?.unidades || 0);
     setOrgTemUnidadesEsperadas(unidadesEsperadas > 0);
+    const savedGoals = (orgRow?.metadata as any)?.activation_goals;
+    if (savedGoals) setActivationGoals({ moradores: Number(savedGoals.moradores || 1), checkins: Number(savedGoals.checkins || 1), eventos: Number(savedGoals.eventos || 1) });
 
     const { data: alunosOrg } = await supabase.from('alunos')
       .select('id, nome, status, valor_mensalidade, data_matricula')
@@ -168,7 +180,11 @@ export default function SindicoHome() {
     setTickets(tk || []);
   };
 
-  useEffect(() => { carregar(); }, [activeOrg]);
+  useEffect(() => {
+    carregar();
+    const timer = window.setInterval(carregar, 5 * 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, [activeOrg]);
 
   if (!ready) {
     return (
@@ -243,6 +259,15 @@ export default function SindicoHome() {
   // Isso é diferente de "condomínio novo, ainda sem alunos" — nesse caso não há
   // unidades esperadas cadastradas, então não mostramos o aviso.
   const possivelProblemaDeVinculo = !dashLoading && !dashError && metrics.alunos === 0 && orgTemUnidadesEsperadas;
+  const filteredActivationActions = activationActions.filter(a => actionPeriod === '0' || new Date(a.created_at).getTime() >= Date.now() - Number(actionPeriod) * 86400000);
+  const resolvedActivationActions = filteredActivationActions.filter(a => a.resolved_at).length;
+  const openActivationActions = filteredActivationActions.length - resolvedActivationActions;
+  const activationResolutionRate = filteredActivationActions.length ? Math.round((resolvedActivationActions / filteredActivationActions.length) * 100) : 0;
+  const goalProgress = [activation.moradores_ativos >= activationGoals.moradores, activation.checkins_30_dias >= activationGoals.checkins, activation.eventos_publicados >= activationGoals.eventos];
+  const goalScore = Math.round((goalProgress.filter(Boolean).length / goalProgress.length) * 100);
+  const activationHealth = goalScore === 100 ? { label: 'Saudável', color: 'text-emerald-400', score: 100 } : goalScore > 0 ? { label: 'Em evolução', color: 'text-amber-400', score: goalScore } : { label: 'Precisa de ativação', color: 'text-red-400', score: 0 };
+  const activationGaps = [{ label: 'Moradores', current: activation.moradores_ativos, goal: activationGoals.moradores }, { label: 'Check-ins', current: activation.checkins_30_dias, goal: activationGoals.checkins }, { label: 'Eventos', current: activation.eventos_publicados, goal: activationGoals.eventos }].map(item => ({ ...item, progress: Math.min(100, Math.round((item.current / Math.max(1, item.goal)) * 100)) })).sort((a, b) => a.progress - b.progress);
+  const criticalActivationGap = activationGaps[0];
 
   return (
     <PersonaLayout title="Painel do Síndico" accent={ACCENT}>
@@ -279,6 +304,161 @@ export default function SindicoHome() {
                 {' '}<code className="font-mono">organization_id</code>) ainda não foi feito para esta
                 organização — verifique antes de considerar o painel "vazio".
               </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card className="mb-4 bg-card/60 border-border/40">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h2 className="font-semibold text-sm">Ativação do condomínio</h2>
+              <p className="text-xs text-muted-foreground">Sinais operacionais atualizados automaticamente</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-primary border-primary/30">30 dias</Badge>
+              <Button size="sm" variant="ghost" onClick={carregar} className="h-7 px-2 text-xs">Atualizar</Button>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="rounded-lg border border-border/30 p-3">
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Moradores ativos</div>
+              <div className="text-xl font-semibold mt-1">{activation.moradores_ativos}</div>
+            </div>
+            <div className="rounded-lg border border-border/30 p-3">
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Treinos ativos</div>
+              <div className="text-xl font-semibold mt-1">{activation.treinos_ativos}</div>
+            </div>
+            <div className="rounded-lg border border-border/30 p-3">
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Eventos publicados</div>
+              <div className="text-xl font-semibold mt-1">{activation.eventos_publicados}</div>
+            </div>
+            <div className="rounded-lg border border-border/30 p-3">
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Check-ins recentes</div>
+              <div className="text-xl font-semibold mt-1">{activation.checkins_30_dias}</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="mb-4 bg-card/60 border-border/40">
+        <CardContent className="p-4 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Saúde da ativação</p>
+            <p className={`text-lg font-semibold ${activationHealth.color}`}>{activationHealth.label}</p>
+            <p className="text-xs text-muted-foreground mt-1">Baseado em moradores, check-ins e eventos publicados.</p>
+            {criticalActivationGap && criticalActivationGap.progress < 100 && <p className="text-xs text-amber-400 mt-1">Maior lacuna: {criticalActivationGap.label} ({criticalActivationGap.progress}% da meta).</p>}
+            <div className="flex flex-wrap gap-2 mt-3 text-[11px]">
+              <span className={`rounded-full px-2 py-1 ${activation.moradores_ativos >= activationGoals.moradores ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>Moradores {activation.moradores_ativos}/{activationGoals.moradores} {activation.moradores_ativos >= activationGoals.moradores ? '✓' : '!'}</span>
+              <span className={`rounded-full px-2 py-1 ${activation.checkins_30_dias >= activationGoals.checkins ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>Check-ins {activation.checkins_30_dias}/{activationGoals.checkins} {activation.checkins_30_dias >= activationGoals.checkins ? '✓' : '!'}</span>
+              <span className={`rounded-full px-2 py-1 ${activation.treinos_ativos >= 1 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>Treinos {activation.treinos_ativos > 0 ? '✓' : '!'}</span>
+              <span className={`rounded-full px-2 py-1 ${activation.eventos_publicados >= activationGoals.eventos ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>Eventos {activation.eventos_publicados}/{activationGoals.eventos} {activation.eventos_publicados >= activationGoals.eventos ? '✓' : '!'}</span>
+            </div>
+            {activation.moradores_ativos === 0 && <p className="text-xs text-muted-foreground mt-2">Meta: ativar o primeiro morador pelo QR ou convite.</p>}
+            {activation.moradores_ativos > 0 && activation.checkins_30_dias === 0 && <p className="text-xs text-muted-foreground mt-2">Meta: obter o primeiro check-in nos próximos 30 dias.</p>}
+            {activation.moradores_ativos > 0 && activation.checkins_30_dias > 0 && activation.eventos_publicados === 0 && <p className="text-xs text-muted-foreground mt-2">Meta: publicar o primeiro evento de saúde.</p>}
+          </div>
+          <div className="relative w-16 h-16 rounded-full border-4 border-border/40 flex items-center justify-center">
+            <span className={`text-sm font-semibold ${activationHealth.color}`}>{activationHealth.score}%</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="mb-4 bg-card/60 border-border/40">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div><h2 className="font-semibold text-sm">Metas do condomínio</h2><p className="text-xs text-muted-foreground">Defina o mínimo esperado para acompanhar a ativação.</p></div>
+            <Button size="sm" variant="outline" onClick={async () => {
+              const { data: current } = await supabase.from('organizations').select('metadata').eq('id', activeOrg.id).maybeSingle();
+              const metadata = { ...((current?.metadata as any) || {}), activation_goals: activationGoals };
+              const { error } = await supabase.from('organizations').update({ metadata }).eq('id', activeOrg.id);
+              if (error) toast.error('Não foi possível salvar as metas'); else toast.success('Metas salvas');
+            }}>Salvar metas</Button>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <label className="text-xs text-muted-foreground">Moradores ativos<input type="number" min="1" value={activationGoals.moradores} onChange={e => setActivationGoals(g => ({ ...g, moradores: Number(e.target.value) }))} className="mt-1 w-full rounded-md border border-border/40 bg-background px-2 py-1.5 text-sm text-foreground" /></label>
+            <label className="text-xs text-muted-foreground">Check-ins / 30 dias<input type="number" min="1" value={activationGoals.checkins} onChange={e => setActivationGoals(g => ({ ...g, checkins: Number(e.target.value) }))} className="mt-1 w-full rounded-md border border-border/40 bg-background px-2 py-1.5 text-sm text-foreground" /></label>
+            <label className="text-xs text-muted-foreground">Eventos publicados<input type="number" min="1" value={activationGoals.eventos} onChange={e => setActivationGoals(g => ({ ...g, eventos: Number(e.target.value) }))} className="mt-1 w-full rounded-md border border-border/40 bg-background px-2 py-1.5 text-sm text-foreground" /></label>
+          </div>
+        </CardContent>
+      </Card>
+
+      {(activation.moradores_ativos === 0 || activation.checkins_30_dias === 0 || activation.eventos_publicados === 0) && (
+        <Card className="mb-4 border-amber-500/30 bg-amber-500/5">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <ShieldAlert className="w-4 h-4 text-amber-400" />
+              <h2 className="font-semibold text-sm">Próximas ações recomendadas</h2>
+            </div>
+            <div className="grid gap-2 text-xs">
+              {activation.moradores_ativos === 0 && (
+                <div className="flex items-center justify-between gap-3 rounded-md border border-border/30 p-3">
+                  <span><strong>Ative os moradores:</strong> compartilhe o QR de entrada e convites do condomínio.</span>
+                  <Button size="sm" variant="outline" onClick={async () => { await (supabase as any).rpc('record_activation_alert_action', { p_organization_id: activeOrg.id, p_alert_type: 'moradores_inativos', p_action_label: 'Abrir cadastro' }); window.location.assign('/admin/organizacoes'); }}>Abrir cadastro</Button>
+                </div>
+              )}
+              {activation.checkins_30_dias === 0 && activation.moradores_ativos > 0 && (
+                <div className="flex items-center justify-between gap-3 rounded-md border border-border/30 p-3">
+                  <span><strong>Sem check-ins recentes:</strong> publique um comunicado ou agende um Health Day.</span>
+                  <Button size="sm" variant="outline" onClick={async () => { await (supabase as any).rpc('record_activation_alert_action', { p_organization_id: activeOrg.id, p_alert_type: 'sem_checkins', p_action_label: 'Criar comunicado' }); window.location.assign('/sindico/comunicados'); }}>Criar comunicado</Button>
+                </div>
+              )}
+              {activation.eventos_publicados === 0 && (
+                <div className="flex items-center justify-between gap-3 rounded-md border border-border/30 p-3">
+                  <span><strong>Nenhum evento publicado:</strong> um Health Day ajuda a iniciar o ciclo de engajamento.</span>
+                  <Button size="sm" variant="outline" onClick={async () => { await (supabase as any).rpc('record_activation_alert_action', { p_organization_id: activeOrg.id, p_alert_type: 'sem_eventos', p_action_label: 'Criar evento' }); window.location.assign('/sindico/health-day'); }}>Criar evento</Button>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {activationActions.length > 0 && (
+        <Card className="mb-4 bg-card/60 border-border/40">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <div>
+                <h2 className="font-semibold text-sm">Histórico de ações de ativação</h2>
+                <div className="flex gap-2 mt-1 text-[11px]">
+                  <span className="text-amber-400">{openActivationActions} abertas</span>
+                  <span className="text-emerald-400">{resolvedActivationActions} concluídas</span>
+                  <span className="text-muted-foreground">{activationResolutionRate}% resolvidas</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <select value={actionPeriod} onChange={e => setActionPeriod(e.target.value)} className="h-8 rounded-md border border-border/40 bg-background px-2 text-xs">
+                  <option value="7">7 dias</option><option value="30">30 dias</option><option value="90">90 dias</option><option value="0">Tudo</option>
+                </select>
+                <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => {
+                  const cutoff = actionPeriod === '0' ? 0 : Date.now() - Number(actionPeriod) * 86400000;
+                  const rows = activationActions.filter(a => !cutoff || new Date(a.created_at).getTime() >= cutoff);
+                  const csv = [['Ação','Tipo de alerta','Data'], ...rows.map(a => [a.action_label, a.alert_type, new Date(a.created_at).toLocaleString('pt-BR')])]
+                    .map(row => row.map(cell => '"' + String(cell).replace(/"/g, '""') + '"').join(',')).join('\n');
+                  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+                  const link = document.createElement('a'); link.href = url; link.download = 'historico-ativacao.csv'; link.click(); URL.revokeObjectURL(url);
+                  toast.success('Histórico exportado');
+                }}>Exportar</Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {filteredActivationActions.map((action) => (
+                <div key={action.id} className="flex items-center justify-between gap-3 rounded-md border border-border/30 px-3 py-2 text-xs">
+                  <div>
+                    <span className="font-medium">{action.action_label}</span>
+                    <span className="text-muted-foreground ml-2">({action.alert_type.replace(/_/g, ' ')})</span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={action.resolved_at ? "text-emerald-400" : "text-amber-400"}>{action.resolved_at ? "Concluída" : "Aberta"}</span>
+                    {!action.resolved_at && <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={async () => {
+                      await (supabase as any).rpc('resolve_activation_alert_action', { p_action_id: action.id });
+                      carregar();
+                    }}>Concluir</Button>}
+                    <span className="text-muted-foreground">{new Date(action.created_at).toLocaleString('pt-BR')}</span>
+                  </div>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>

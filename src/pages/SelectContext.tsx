@@ -9,7 +9,7 @@ import { Building2, GraduationCap, Briefcase, Crown, LogOut, User, Eye } from 'l
 const TIPO_META: Record<string, { icon: any; label: string; accent: string }> = {
   condominio: { icon: Building2, label: 'Condomínio', accent: '#60A5FA' },
   corporate: { icon: Briefcase, label: 'Corporativo', accent: '#A78BFA' },
-  professor: { icon: GraduationCap, label: 'Profissional', accent: '#C8FF00' },
+  professor: { icon: GraduationCap, label: 'Profissional', accent: 'hsl(var(--primary))' },
   studio: { icon: GraduationCap, label: 'Studio', accent: '#F472B6' },
 };
 
@@ -19,7 +19,7 @@ const PAPEL_LABEL: Record<string, string> = {
 
 const ADMIN_PREVIEWS = [
   { label: 'Síndico (preview)', tipo: 'condominio' as const, route: '/sindico', icon: Building2, accent: '#60A5FA' },
-  { label: 'Professor (preview)', tipo: 'professor' as const, route: '/coach', icon: GraduationCap, accent: '#C8FF00' },
+  { label: 'Professor (preview)', tipo: 'professor' as const, route: '/coach', icon: GraduationCap, accent: 'hsl(var(--primary))' },
   { label: 'Corporativo (preview)', tipo: 'corporate' as const, route: '/corp', icon: Briefcase, accent: '#A78BFA' },
   { label: 'Morador / Aluno (preview)', tipo: null, route: '/morador', icon: User, accent: '#F472B6' },
 ];
@@ -40,7 +40,7 @@ export default function SelectContext() {
   }, [loading, isAdmin, memberships, navigate, setActiveOrg]);
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-[#07070A] text-muted-foreground">Carregando…</div>;
+    return <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--background))] text-muted-foreground">Carregando…</div>;
   }
 
   const entrarComoPreview = async (tipo: string | null, route: string) => {
@@ -63,11 +63,11 @@ export default function SelectContext() {
   };
 
   return (
-    <div className="min-h-screen bg-[#07070A] text-foreground p-6">
+    <div className="min-h-screen bg-[hsl(var(--background))] text-foreground p-6">
       <div className="max-w-3xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold">Como você quer entrar?</h1>
+            <h1 className="text-2xl font-normal font-display">Como você quer entrar?</h1>
             <p className="text-sm text-muted-foreground">Escolha o contexto operacional.</p>
           </div>
           <Button variant="ghost" size="sm" onClick={signOut}><LogOut className="w-4 h-4 mr-1" /> Sair</Button>
@@ -75,14 +75,14 @@ export default function SelectContext() {
 
         <div className="grid sm:grid-cols-2 gap-4">
           {isAdmin && (
-            <Card className="border-[#C8FF00]/40 bg-card/60 hover:bg-card cursor-pointer transition"
+            <Card className="border-[hsl(var(--primary))]/40 bg-card/60 hover:bg-card cursor-pointer transition"
                   onClick={() => { setActiveOrg(null); navigate('/painel'); }}>
               <CardContent className="p-5 flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-[#C8FF00]/15 flex items-center justify-center">
-                  <Crown className="w-5 h-5 text-[#C8FF00]" />
+                <div className="w-10 h-10 rounded-sm bg-[hsl(var(--primary))]/15 flex items-center justify-center">
+                  <Crown className="w-5 h-5 text-[hsl(var(--primary))]" />
                 </div>
                 <div>
-                  <p className="text-xs uppercase tracking-wider text-[#C8FF00]">Admin Geral</p>
+                  <p className="text-xs uppercase tracking-wider text-[hsl(var(--primary))]">Admin Geral</p>
                   <p className="font-semibold">9FIT — Visão Completa</p>
                   <p className="text-xs text-muted-foreground mt-1">Acesso a tudo: painel, alunos, agentes, organizações.</p>
                 </div>
@@ -98,7 +98,7 @@ export default function SelectContext() {
                     className="bg-card/60 hover:bg-card cursor-pointer transition border-border/40"
                     onClick={() => { setActiveOrg(m.organization); navigate(routeForRole(m.papel)); }}>
                 <CardContent className="p-5 flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center"
+                  <div className="w-10 h-10 rounded-sm flex items-center justify-center"
                        style={{ backgroundColor: `${meta.accent}1A`, color: meta.accent }}>
                     <Icon className="w-5 h-5" />
                   </div>
@@ -134,7 +134,7 @@ export default function SelectContext() {
                         className="bg-card/40 hover:bg-card cursor-pointer transition border-border/30"
                         onClick={() => entrarComoPreview(p.tipo, p.route)}>
                     <CardContent className="p-4 flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg flex items-center justify-center"
+                      <div className="w-9 h-9 rounded-sm flex items-center justify-center"
                            style={{ backgroundColor: `${p.accent}1A`, color: p.accent }}>
                         <Icon className="w-4 h-4" />
                       </div>

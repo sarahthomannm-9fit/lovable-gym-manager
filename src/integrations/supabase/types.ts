@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "13.0.4"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -2904,21 +2904,6 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
-      list_comunicados: {
-        Args: { p_org: string }
-        Returns: {
-          agendada_para: string
-          comunicado_id: string
-          criado_em: string
-          enviados: number
-          lidos: number
-          mensagem: string
-          publico: string
-          tipo_label: string
-          titulo: string
-          urgente: boolean
-        }[]
-      }
       onboard_condominio: {
         Args: {
           p_capacidade: number
@@ -2944,19 +2929,6 @@ export type Database = {
           receita_projetada_6m: number
           roi_estimado: number
         }[]
-      }
-      publish_comunicado: {
-        Args: {
-          p_agendar?: string
-          p_aula_id?: string
-          p_mensagem: string
-          p_org: string
-          p_publico?: string
-          p_tipo?: string
-          p_titulo: string
-          p_urgente?: boolean
-        }
-        Returns: number
       }
       relatorio_evolucao_receitas: {
         Args: never
@@ -3029,10 +3001,6 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
-      }
-      update_org_metas: {
-        Args: { p_metas: Json; p_org: string }
-        Returns: Json
       }
       user_has_org: { Args: { _org: string; _user: string }; Returns: boolean }
     }

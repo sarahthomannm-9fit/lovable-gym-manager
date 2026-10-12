@@ -102,7 +102,7 @@ export default function FitProIntegration() {
         <Plug className="h-7 w-7 text-primary" />
         <div>
           <h1 className="text-2xl font-bold">Integração com FitPro</h1>
-          <p className="text-sm text-muted-foreground">Conecte o FitPro ao FitManager via API Key segura.</p>
+          <p className="text-sm text-muted-foreground">Conecte o FitPro ao NINE LIVING via API Key segura.</p>
         </div>
       </header>
 
@@ -151,7 +151,7 @@ export default function FitProIntegration() {
             <Button size="sm" variant="ghost" onClick={() => copy(fnBase)}><Copy className="h-3 w-3" /></Button>
           </div>
           <p className="text-xs text-muted-foreground mt-3">Autenticação: header <code>x-api-key: SUA_API_KEY</code></p>
-          <div className="mt-4 divide-y divide-border border rounded-lg">
+          <div className="mt-4 divide-y divide-border border rounded-sm">
             {ENDPOINTS.map((e) => (
               <div key={e.path} className="flex items-center gap-3 px-3 py-2 text-sm">
                 <Badge variant="outline" className="font-mono text-[10px]">{e.method}</Badge>

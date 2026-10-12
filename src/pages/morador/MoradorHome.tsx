@@ -3,6 +3,7 @@ import { PersonaLayout } from '@/layouts/PersonaLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -17,7 +18,7 @@ import { useAlunoVinculo } from '@/hooks/useAlunoVinculo';
 import { ProximoEventoCard, type EventoCondominio } from '@/components/ProximoEventoCard';
 
 
-const ACCENT = '#F472B6';
+const ACCENT = '#1B6E6E';
 
 function saudacao() {
   const h = new Date().getHours();
@@ -45,12 +46,14 @@ export default function MoradorHome() {
   const [presencas, setPresencas] = useState(0);
   const [presencasMesAnterior, setPresencasMesAnterior] = useState<number | null>(null);
   const [notifs, setNotifs] = useState<any[]>([]);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
   const [treinoAtivo, setTreinoAtivo] = useState<any>(null);
   const [exerciciosHoje, setExerciciosHoje] = useState<any[]>([]);
   const [checkinFeito, setCheckinFeito] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [sessao, setSessao] = useState<any>(null);
   const [treinoErro, setTreinoErro] = useState('');
+  const [feedbackTreino, setFeedbackTreino] = useState('');
 
   useEffect(() => {
     if (!user || vinculoLoading) return;
@@ -86,7 +89,7 @@ export default function MoradorHome() {
           .select('id, nome, data_evento, horario_inicio, horario_fim, local')
           .eq('organization_id', al.organization_id).eq('ativo', true)
           .gte('data_evento', hoje).order('data_evento').limit(3);
-        if (mounted) setEventos(ev || []);
+        if (mounted) { setEventos(ev || []); const { data: announcementsData } = await (supabase as any).rpc('resident_announcements', { p_aluno_id: al.id }); setAnnouncements((announcementsData || []).slice(0, 5)); }
       }
 
       if (al?.id) {
@@ -184,7 +187,7 @@ export default function MoradorHome() {
   const iniciarTreino = () => atualizarSessao(sessao?.status === 'pausado' ? 'resume' : 'start');
   const concluirTreino = () => {
     const progress = Object.fromEntries(exerciciosHoje.map((ex: any) => [ex.id, { completed: true, carga: ex.carga_kg == null ? '' : String(ex.carga_kg) }]));
-    return atualizarSessao('finish', progress);
+    return atualizarSessao('finish', progress, feedbackTreino);
   };
 
   const s = saudacao();
@@ -253,7 +256,7 @@ export default function MoradorHome() {
                       <p className="text-sm text-muted-foreground truncate">{treinoAtivo.descricao || 'Plano personalizado'}</p>
                     </div>
                     <Button size="lg" onClick={iniciarTreino} disabled={salvando || sessao?.status === 'concluido'}
-                            style={{ backgroundColor: ACCENT, color: '#000' }}
+                            style={{ backgroundColor: ACCENT, color: '#FFFFFF' }}
                             className="hover:opacity-90 shrink-0 text-base px-6 h-12">
                       <PlayCircle className="w-5 h-5 mr-1.5" /> {sessao?.status === 'pausado' ? 'Retomar' : sessao?.status === 'em_andamento' ? 'Em andamento' : 'Começar'}
                     </Button>
@@ -337,6 +340,8 @@ export default function MoradorHome() {
           </div>
 
           {/* Próximo evento do condomínio */}
+          {announcements.length > 0 && <div><h2 className="text-sm uppercase tracking-wider text-muted-foreground mb-3">Comunicados do condomínio</h2><div className="space-y-2">{announcements.map((item: any) => <Card key={item.id} className="bg-card/60 border-border/40"><CardContent className="p-4"><p className="font-medium">{item.titulo}</p><p className="text-sm text-muted-foreground mt-1">{item.mensagem}</p></CardContent></Card>)}</div></div>}
+
           {eventos.length > 0 && (
             <div>
               <h2 className="text-sm uppercase tracking-wider text-muted-foreground mb-3">
@@ -446,6 +451,7 @@ export default function MoradorHome() {
               )}
 
               {sessao?.status === 'em_andamento' && <Button size="lg" variant="outline" onClick={() => atualizarSessao('pause')} disabled={salvando} className="w-full h-12">Pausar treino</Button>}
+              <Textarea value={feedbackTreino} onChange={(e) => setFeedbackTreino(e.target.value)} placeholder="Como foi o treino? Dor, dificuldade ou observação (opcional)" className="min-h-20" />
               <Button size="lg" onClick={sessao?.status === 'concluido' ? undefined : concluirTreino} disabled={salvando || sessao?.status === 'concluido'}
                       className="w-full h-14 text-base"
                       style={{ backgroundColor: ACCENT, color: '#000' }}>

@@ -1,7 +1,7 @@
-# Roadmap
-
-- [x] Corrigir build de publicação (quebras de linha inválidas, seção de condomínios sem fechamento)
-- [ ] Onboarding / Roteiro de visita visível para Morador, Síndico e Coach, cada etapa ligada a uma ação real
-- [ ] Morador: Check-in, Meus treinos, Grade de aulas, Comunicados, Suporte, Anamnese, Pagamento
-- [ ] Síndico: KPIs, grade de aulas, comunicados e metas
-- [ ] Adm: cadastro, financeiro, situações de uso e criar comunicado em Condomínios
+# Roadmap — loops de experiência
+- [ ] Etapa 0: header NINE LIVING, abas em uma linha, acesso suspenso
+- [ ] Etapa 1: Coach (Aulas | Fila | Alunos | Treinos | Histórico), mover Operação para Adm
+- [ ] Etapa 2: Morador
+- [ ] Etapa 3: Síndico
+- [ ] Etapa 4: Adm (detalhe da origem com Onboarding)
+- [ ] Relatório final de pendências do banco (sem migrations sem aprovação)

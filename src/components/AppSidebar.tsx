@@ -56,6 +56,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useCurrentUserRole, AppRole } from "@/hooks/useCurrentUserRole";
 import { useDataIntegration } from "@/components/DataIntegrationProvider";
 import { useMemo } from "react";
+import { useOperationalContext } from "@/hooks/useOperationalContext";
 
 type MenuItem = {
   title: string;
@@ -75,8 +76,11 @@ type MenuCategory = {
 export function AppSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { role } = useCurrentUserRole();
-  const { signOut, user } = useAuth();
+  const { role: storedRole } = useCurrentUserRole();
+  const { activeRole, primaryRole } = useOperationalContext();
+  const residentSurface = location.pathname.startsWith('/morador');
+  const role = residentSurface ? 'user' : (activeRole ?? storedRole ?? primaryRole);
+const { signOut, user } = useAuth();
   const { pagamentos, alunos, checkins, leads, aulas } = useDataIntegration();
 
   // Dynamic badge counts
@@ -132,7 +136,7 @@ export function AppSidebar() {
       category: "CENTRAL DE OPERAÇÕES",
       items: [
         { title: "Visão geral", icon: LayoutDashboard, path: "/painel" },
-        { title: "Operação 9FIT", icon: ClipboardCheck, path: "/operacao-9fit", roles: ['admin','manager'] },
+        { title: "Operação NLIT", icon: ClipboardCheck, path: "/operacao-9fit", roles: ['admin','manager'] },
         { title: "Pipeline comercial", icon: Target, path: "/pipeline", roles: ['admin','manager'] },
         { title: "Clientes ativos", icon: Building2, path: "/clientes", roles: ['admin','manager'] },
         { title: "Alunos", icon: Users, path: "/alunos", roles: ['admin', 'manager'], badge: badges.alunosSemFreq || undefined, badgeColor: 'bg-amber-500' },
@@ -202,11 +206,21 @@ export function AppSidebar() {
       ],
     },
     {
+      category: "NINE LIVING",
+      items: [
+        { title: "Health Day · Gestão", icon: HeartHandshake, path: "/sindico/health-day", roles: ['sindico', 'admin'] },
+        { title: "Comunicados do condomínio", icon: MessageSquare, path: "/sindico/comunicados", roles: ['sindico', 'admin'] },
+        { title: "Eventos do condomínio", icon: Calendar, path: "/morador/eventos", roles: ['user', 'admin'] },
+      ],
+    },
+    {
       category: "ADMINISTRAÇÃO",
       roles: ['admin'],
       items: [
         { title: "Usuários", icon: Shield, path: "/admin/usuarios", roles: ['admin'] },
         { title: "Organizações", icon: Network, path: "/admin/organizacoes", roles: ['admin'] },
+        { title: "Auditoria de prescrições", icon: ClipboardCheck, path: "/admin/auditoria-prescricoes", roles: ['admin'] },
+        { title: "Auditoria de acessos", icon: Shield, path: "/admin/auditoria-acessos", roles: ['admin'] },
         { title: "Produtos & equipamentos", icon: Package, path: "/produtos", roles: ['admin'] },
         { title: "Equipamentos", icon: Dumbbell, path: "/equipamentos", roles: ['admin'] },
       ],
@@ -247,8 +261,8 @@ export function AppSidebar() {
               9F
             </div>
             <div>
-              <div className="text-[12px] font-bold font-display text-sidebar-foreground tracking-wide">FITMANAGER</div>
-              <div className="text-[8px] text-primary/70 font-mono tracking-[0.2em] uppercase mt-0.5">9FIT · Ecosystem</div>
+              <div className="text-[12px] font-bold font-display text-sidebar-foreground tracking-wide">NINE LIVING</div>
+              <div className="text-[8px] text-primary/70 font-mono tracking-[0.2em] uppercase mt-0.5">SAÚDE · COMUNIDADE</div>
             </div>
           </div>
         </div>
@@ -266,20 +280,23 @@ export function AppSidebar() {
                 </SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>
-                    {visibleItems.map((item) => {
+                    {visibleItems.map((item, itemIndex) => {
                       const isActive = location.pathname === item.path;
+                      const isPrimaryAction = itemIndex === 0;
                       return (
                         <SidebarMenuItem key={item.path}>
                           <SidebarMenuButton
                             onClick={() => navigate(item.path)}
                             isActive={isActive}
-                            className={`w-full justify-start text-xs rounded-md transition-all duration-150 ${
+                            className={`w-full justify-start text-xs rounded-md transition-all duration-150 ${isPrimaryAction ? 'mt-0.5' : 'ml-3 w-[calc(100%-0.75rem)]'} ${
                               isActive
                                 ? 'bg-primary/10 text-primary border-l-2 border-primary font-semibold'
-                                : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent border-l-2 border-transparent'
+                                : isPrimaryAction
+                                  ? 'text-sidebar-foreground font-semibold hover:text-sidebar-foreground hover:bg-sidebar-accent border-l-2 border-transparent'
+                                  : 'text-sidebar-foreground/65 hover:text-sidebar-foreground hover:bg-sidebar-accent border-l-2 border-sidebar-border/40'
                             }`}
                           >
-                            <item.icon className={`mr-2 h-3.5 w-3.5 ${isActive ? 'text-primary' : ''}`} />
+                            <item.icon className={`mr-2 h-3.5 w-3.5 ${isActive || isPrimaryAction ? 'text-primary' : ''}`} />
                             <span className="flex-1">{item.title}</span>
                             {item.badge && item.badge > 0 && (
                               <span className={`ml-auto min-w-[18px] h-[18px] rounded-full ${item.badgeColor || 'bg-destructive'} text-white text-[9px] font-mono font-bold flex items-center justify-center px-1.5 shadow-sm`}>
@@ -304,7 +321,7 @@ export function AppSidebar() {
             </div>
             <div className="min-w-0">
               <div className="text-[11px] font-semibold text-sidebar-foreground truncate">{nomeUsuario}</div>
-              <div className="text-[8px] text-primary/60 font-mono tracking-wider uppercase">{roleLabel} · 9FIT</div>
+              <div className="text-[8px] text-primary/60 font-mono tracking-wider uppercase">{roleLabel} · NINE LIVING</div>
             </div>
           </div>
           <button onClick={() => signOut()} className="p-1.5 rounded-md hover:bg-sidebar-accent text-sidebar-foreground/50 hover:text-primary transition-colors shrink-0" title="Sair">
@@ -315,3 +332,4 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
+

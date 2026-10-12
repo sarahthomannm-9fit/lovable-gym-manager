@@ -24,6 +24,8 @@ export default tseslint.config(
         { allowConstantExport: true },
       ],
       "@typescript-eslint/no-unused-vars": "off",
+      // Existing Supabase rows are intentionally dynamic until generated database types are adopted.
+      "@typescript-eslint/no-explicit-any": "warn",
     },
   }
 );

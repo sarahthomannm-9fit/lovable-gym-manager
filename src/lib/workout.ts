@@ -17,8 +17,8 @@ export function validateWorkout(draft: WorkoutDraft): string | null {
   if (!draft.aluno_id) return 'Escolha o aluno.';
   if (!draft.nome.trim()) return 'Informe o nome do treino.';
   if (!/^\d{4}-\d{2}-\d{2}$/.test(draft.data_inicio) || Number.isNaN(Date.parse(draft.data_inicio))) return 'Informe uma data válida.';
-  if (!Number.isInteger(draft.semanas) || draft.semanas < 1 || draft.semanas > 52) return 'Escolha entre 1 e 52 semanas.';
-  if (!draft.exercicios.length) return 'Adicione pelo menos um exercício.';
+  if (!Number.isInteger(draft.semanas) || draft.semanas < 4 || draft.semanas > 12) return 'Escolha entre 4 e 12 semanas.';
+  if (draft.exercicios.length < 3) return 'Adicione pelo menos 3 exercícios.';
   for (const [i, ex] of draft.exercicios.entries()) {
     if (!ex.exercicio_id) return `Escolha o exercício ${i + 1}.`;
     if (!Number.isInteger(ex.dia_semana) || ex.dia_semana < 1 || ex.dia_semana > 7) return 'Escolha o dia de cada exercício.';
