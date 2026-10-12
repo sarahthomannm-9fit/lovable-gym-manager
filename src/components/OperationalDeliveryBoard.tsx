@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 
 type Case = { id: string; title: string; description: string | null; status: string; due_on: string | null; outcome: string | null; evidence_url: string | null };
-type Props = { moduleKey: 'operacao' | 'ceo' | 'consultoria' | 'concierge' | 'trust' | 'network' | 'automacao' | 'cfo'; title?: string };
+type Props = { moduleKey: 'operacao' | 'ceo' | 'consultoria' | 'concierge' | 'trust' | 'network' | 'automacao' | 'cfo' | 'finance_strategy'; title?: string };
 
 export function OperationalDeliveryBoard({ moduleKey, title = 'Ações e entregas' }: Props) {
   const { activeOrg } = useOperationalContext();
