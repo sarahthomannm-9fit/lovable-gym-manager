@@ -12,3 +12,5 @@ Allow: /
 
 User-agent: *
 Allow: /
+
+Sitemap: https://lovable-gym-manager.lovable.app/sitemap.xml
