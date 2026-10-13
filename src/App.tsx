@@ -15,6 +15,7 @@ import { RoleRoute } from "@/components/RoleRoute";
 import SelectContext from "./pages/SelectContext";
 import SindicoHome from "./pages/sindico/SindicoHome";
 import HealthDay from "./pages/sindico/HealthDay";
+import SindicoOperacao from "./pages/sindico/Operacao";
 import Announcements from "./pages/sindico/Announcements";
 import CoachHome from "./pages/coach/CoachHome";
 import ReviewQueue from "./pages/coach/ReviewQueue";
@@ -191,6 +192,7 @@ const App = () => (
                     <Route path="/select-context" element={<ProtectedRoute><SelectContext /></ProtectedRoute>} />
                     <Route path="/sindico" element={<ProtectedRoute><RoleRoute allow={['sindico','admin']}><SindicoHome /></RoleRoute></ProtectedRoute>} />
                     <Route path="/sindico/health-day" element={<ProtectedRoute><RoleRoute allow={['sindico','admin']}><HealthDay /></RoleRoute></ProtectedRoute>} />
+                    <Route path="/sindico/operacao" element={<ProtectedRoute><RoleRoute allow={['sindico','admin']}><SindicoOperacao /></RoleRoute></ProtectedRoute>} />
                     <Route path="/sindico/comunicados" element={<ProtectedRoute><RoleRoute allow={['sindico','admin']}><Announcements /></RoleRoute></ProtectedRoute>} />
                     <Route path="/coach" element={<ProtectedRoute><RoleRoute allow={['professor','admin']}><CoachHome /></RoleRoute></ProtectedRoute>} />
                     <Route path="/coach/revisoes" element={<ProtectedRoute><RoleRoute allow={['professor','admin']}><ReviewQueue /></RoleRoute></ProtectedRoute>} />
@@ -277,6 +279,7 @@ const App = () => (
 );
 
 export default App;
+
 
 
 

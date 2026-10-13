@@ -1,0 +1,7 @@
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+export function OperationsActivation({orgId,onActivated}:{orgId:string;onActivated:()=>void}){const [metrics,setMetrics]=useState<any>({areas:[],servicos:[]});useEffect(()=>{(supabase as any).rpc("organization_common_area_metrics",{p_organization_id:orgId}).then(({data}:any)=>setMetrics(data||{areas:[],servicos:[]}))},[orgId]);const activate=async()=>{const {error}=await (supabase as any).rpc("activate_organization_operation",{p_organization_id:orgId});if(error)toast.error(error.message);else{toast.success("Condomínio ativado para operação recorrente");onActivated()}};return <Card><CardHeader><CardTitle>Operação e utilização</CardTitle></CardHeader><CardContent className="space-y-4"><div className="grid gap-3 md:grid-cols-2"><div><p className="text-sm font-medium">Áreas comuns · 30 dias</p>{metrics.areas?.map((x:any)=><p key={x.area} className="text-sm text-muted-foreground">{x.area}: {x.reservas} reservas</p>)}</div><div><p className="text-sm font-medium">Serviços · 30 dias</p>{metrics.servicos?.map((x:any)=><p key={x.tipo} className="text-sm text-muted-foreground">{x.tipo}: {x.total} solicitados · {x.em_aberto} em aberto</p>)}</div></div><Button onClick={activate}>Ativar operação recorrente</Button></CardContent></Card>}
+
