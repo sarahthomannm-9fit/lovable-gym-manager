@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { FileText, ArrowRight } from "lucide-react";
+import { useOperationalContext } from "@/hooks/useOperationalContext";
 
 const STATUS_COLOR: Record<string, string> = {
   rascunho: 'bg-muted text-muted-foreground',
@@ -21,18 +22,20 @@ const escapeHtml = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, (
 }[char] || char));
 
 export default function Contratos() {
+  const { activeOrg } = useOperationalContext();
   const [propostas, setPropostas] = useState<any[]>([]);
   const [contratos, setContratos] = useState<any[]>([]);
   const [viewHtml, setViewHtml] = useState<string | null>(null);
 
   const load = async () => {
+    if (!activeOrg) { setPropostas([]); setContratos([]); return; }
     const [{ data: props }, { data: contr }] = await Promise.all([
-      (supabase as any).from("proposals").select("*, leads(nome, nome_contato, empresa, tipo, email, telefone)").order("created_at", { ascending: false }),
-      supabase.from("propostas_b2b").select("*").order("created_at", { ascending: false }),
+      (supabase as any).from("proposals").select("*, leads(nome, nome_contato, empresa, tipo, email, telefone)").eq('organization_id', activeOrg.id).order("created_at", { ascending: false }),
+      (supabase as any).from("propostas_b2b").select("*").eq('organization_id', activeOrg.id).order("created_at", { ascending: false }),
     ]);
     setPropostas(props || []); setContratos(contr || []);
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [activeOrg?.id]);
 
   const gerarContrato = async (p: any) => {
     const lead = p.leads || {};
@@ -46,7 +49,9 @@ export default function Contratos() {
 <p>Data: ${new Date().toLocaleDateString('pt-BR')}</p>
 </body></html>`;
     const servicos = (p.itens_inclusos || '').split('\n').filter(Boolean).map((t: string) => ({ item: t }));
+    if (!activeOrg) return toast.error('Selecione uma organização.');
     const { error } = await supabase.from("propostas_b2b").insert({
+      organization_id: activeOrg.id,
       empresa: lead.empresa || 'Sem empresa',
       contato: lead.nome_contato || lead.nome || '',
       email: lead.email || '',
