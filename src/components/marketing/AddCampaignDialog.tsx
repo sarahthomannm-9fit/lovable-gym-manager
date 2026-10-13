@@ -20,7 +20,7 @@ export function AddCampaignDialog({ triggerLabel = "Nova Campanha", initialCateg
   const [form, setForm] = useState({
     titulo: "",
     categoria: "",
-    status: "ativa",
+    status: "draft",
     canal: "",
     orcamento: "",
     data_inicio: "",
@@ -68,7 +68,7 @@ export function AddCampaignDialog({ triggerLabel = "Nova Campanha", initialCateg
     setForm({
       titulo: "",
       categoria: "",
-      status: "ativa",
+      status: "draft",
       canal: "",
       orcamento: "",
       data_inicio: "",
@@ -135,3 +135,4 @@ export function AddCampaignDialog({ triggerLabel = "Nova Campanha", initialCateg
     </Dialog>
   );
 }
+
