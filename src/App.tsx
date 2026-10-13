@@ -32,6 +32,7 @@ import ResidentEntry from "./pages/morador/ResidentEntry";
 import MoradorProfile from "./pages/morador/Profile";
 import MoradorAgenda from "./pages/morador/Agenda";
 import MoradorStaff from "./pages/morador/MoradorStaff";
+import MoradorOperacao from "./pages/morador/OperacaoAreas";
 import FitProIntegration from "./pages/admin/FitProIntegration";
 import Operacao9FIT from "./pages/admin/Operacao9FIT";
 import LeadsExtractionPlan from "./pages/cfo/LeadsExtractionPlan";
@@ -200,6 +201,7 @@ const App = () => (
                     <Route path="/morador/perfil" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MoradorProfile /></RoleRoute></ProtectedRoute>} />
                     <Route path="/morador/agenda" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MoradorAgenda /></RoleRoute></ProtectedRoute>} />
                     <Route path="/morador/staff" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MoradorStaff /></RoleRoute></ProtectedRoute>} />
+                    <Route path="/morador/operacao" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MoradorOperacao /></RoleRoute></ProtectedRoute>} />
                     <Route path="/admin/organizacoes" element={<AdminOnly><OrganizationsAdmin /></AdminOnly>} />
                     <Route path="/admin/auditoria-prescricoes" element={<AdminOnly><PrescriptionAudit /></AdminOnly>} />
                     <Route path="/admin/auditoria-acessos" element={<AdminOnly><AccessAudit /></AdminOnly>} />
@@ -275,5 +277,8 @@ const App = () => (
 );
 
 export default App;
+
+
+
 
 

@@ -225,7 +225,7 @@ export default function MoradorHome() {
           <TabsTrigger value="treino">Meu treino</TabsTrigger>
           <TabsTrigger value="aulas">Aulas</TabsTrigger>
           <TabsTrigger value="suporte">Suporte</TabsTrigger>
-          <TabsTrigger value="mais">Mais</TabsTrigger>
+          <TabsTrigger value="mais">Mais</TabsTrigger><a href="/morador/operacao" className="ml-2 inline-flex h-9 items-center rounded-md bg-primary px-3 text-sm text-primary-foreground">Reservas e serviços</a>
         </TabsList>
 
         {/* HOJE — foco em simplicidade sênior */}
@@ -597,4 +597,5 @@ function Mini({ icon: Icon, label, value, valueCls }: any) {
     </Card>
   );
 }
+
 
