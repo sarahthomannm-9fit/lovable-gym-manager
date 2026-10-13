@@ -4,10 +4,13 @@ import { useOperationalContext } from '@/hooks/useOperationalContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Users, TrendingUp, Activity, Download, DollarSign, FileText } from 'lucide-react';
+import { Users, TrendingUp, Activity, Download, DollarSign, FileText, UserPlus, UserX } from 'lucide-react';
 import { toast } from 'sonner';
 import { MonthlyBarChart } from '@/components/charts/MonthlyBarChart';
 
@@ -19,6 +22,9 @@ export default function CorpHome() {
   const [alunos, setAlunos] = useState<any[]>([]);
   const [engajamento, setEngajamento] = useState<Record<string, number>>({});
   const [faturamento, setFaturamento] = useState<{ mes: string; total: number }[]>([]);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [employeeEmail, setEmployeeEmail] = useState('');
+  const [inviting, setInviting] = useState(false);
 
   useEffect(() => { ensureOrgForPersona('corporate').finally(() => setReady(true)); }, []);
 
@@ -88,6 +94,30 @@ export default function CorpHome() {
     if (error) toast.error('Falha'); else toast.success('Relatório solicitado à equipe 9FIT');
   };
 
+  const inviteEmployee = async () => {
+    if (!activeOrg?.id || !employeeEmail.trim()) return toast.error('Informe o e-mail do colaborador');
+    setInviting(true);
+    const { data, error } = await (supabase as any).rpc('create_organization_invite', {
+      p_organization_id: activeOrg.id, p_email: employeeEmail.trim(), p_papel: 'user',
+    });
+    setInviting(false);
+    if (error) return toast.error(error.message);
+    const link = `${window.location.origin}/convite/${data.token}?email=${encodeURIComponent(employeeEmail.trim().toLowerCase())}`;
+    try { await navigator.clipboard.writeText(link); toast.success('Convite de colaborador criado e copiado.'); }
+    catch { toast.success(`Convite criado: ${link}`); }
+    setEmployeeEmail(''); setInviteOpen(false);
+  };
+
+  const setEligibility = async (aluno: any, active: boolean) => {
+    const reason = active ? 'Reativação de elegibilidade' : window.prompt('Motivo do desligamento (mínimo 5 caracteres):');
+    if (reason === null) return;
+    const { error } = await (supabase as any).rpc('set_corporate_employee_eligibility', { p_aluno_id: aluno.id, p_active: active, p_reason: reason });
+    if (error) return toast.error(error.message);
+    toast.success(active ? 'Elegibilidade reativada.' : 'Elegibilidade encerrada e acesso removido.');
+    const { data } = await supabase.from('alunos').select('id, nome, status, data_matricula, valor_mensalidade').eq('organization_id', activeOrg?.id).order('nome');
+    setAlunos(data || []);
+  };
+
   if (!activeOrg && ready) {
     return (
       <PersonaLayout title="Painel Corporativo" accent={ACCENT}>
@@ -103,6 +133,13 @@ export default function CorpHome() {
         <KPI icon={Activity} label="Ativos" value={ativos} accent={ACCENT} />
         <KPI icon={TrendingUp} label="Adesão" value={`${adesao}%`} accent={ACCENT} />
         <KPI icon={DollarSign} label="Faturado (6m)" value={`R$ ${(totalFat/1000).toFixed(1)}k`} accent={ACCENT} />
+      </div>
+
+      <div className="flex justify-end mb-4">
+        <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+          <DialogTrigger asChild><Button size="sm" style={{ backgroundColor: ACCENT, color: '#000' }}><UserPlus className="w-4 h-4 mr-1" /> Convidar colaborador</Button></DialogTrigger>
+          <DialogContent><DialogHeader><DialogTitle>Convidar colaborador elegível</DialogTitle></DialogHeader><div className="space-y-3"><div><Label>E-mail corporativo</Label><Input type="email" value={employeeEmail} onChange={(e) => setEmployeeEmail(e.target.value)} placeholder="nome@empresa.com" /></div><Button className="w-full" onClick={inviteEmployee} disabled={inviting}>{inviting ? 'Criando...' : 'Criar convite'}</Button></div></DialogContent>
+        </Dialog>
       </div>
 
       <Tabs defaultValue="resumo">
@@ -141,7 +178,7 @@ export default function CorpHome() {
             <CardContent className="p-0">
               <Table>
                 <TableHeader><TableRow>
-                  <TableHead>Nome</TableHead><TableHead>Status</TableHead><TableHead>Desde</TableHead>
+                  <TableHead>Colaborador</TableHead><TableHead>Status</TableHead><TableHead>Desde</TableHead><TableHead />
                 </TableRow></TableHeader>
                 <TableBody>
                   {alunos.map(a => (
@@ -149,9 +186,10 @@ export default function CorpHome() {
                       <TableCell>{a.nome}</TableCell>
                       <TableCell><Badge variant="outline" className="text-xs">{a.status}</Badge></TableCell>
                       <TableCell className="text-xs text-muted-foreground">{a.data_matricula}</TableCell>
+                      <TableCell className="text-right"><Button size="sm" variant="outline" onClick={() => setEligibility(a, a.status !== 'ativo')}>{a.status === 'ativo' ? <><UserX className="w-3 h-3 mr-1" /> Desligar</> : 'Reativar'}</Button></TableCell>
                     </TableRow>
                   ))}
-                  {!alunos.length && <TableRow><TableCell colSpan={3} className="text-center text-sm text-muted-foreground py-6">Nenhum vinculado.</TableCell></TableRow>}
+                  {!alunos.length && <TableRow><TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-6">Nenhum vinculado.</TableCell></TableRow>}
                 </TableBody>
               </Table>
             </CardContent>
@@ -235,3 +273,4 @@ function KPI({ icon: Icon, label, value, accent }: any) {
     </Card>
   );
 }
+
