@@ -41,7 +41,7 @@ export default function RelatoriosAutomaticos() {
       let q = supabase.from('agent_reports')
         .select('id, agent_id, report_date, summary, metrics, highlights, created_at')
         .order('report_date', { ascending: false }).limit(200);
-      if (activeOrg) q = q.eq('organization_id', activeOrg.id);
+      if (activeOrg) q = (q as any).eq('organization_id', activeOrg.id);
       if (periodo !== 'all') {
         const desde = new Date(Date.now() - Number(periodo) * 86400000).toISOString().slice(0, 10);
         q = q.gte('report_date', desde);
