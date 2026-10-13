@@ -10,12 +10,15 @@ import { Grid, List, Calendar } from "lucide-react";
 import { useSupabaseGymData } from "@/contexts/SupabaseGymDataContext";
 import { useOperationalContext } from '@/hooks/useOperationalContext';
 import { useSearchParams } from 'react-router-dom';
+import { useFuncionarios } from '@/hooks/useFuncionarios';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type ViewType = "calendar" | "daily" | "packages";
 
 export function SupabaseClasses() {
   const { classes: allClasses, addClass, updateClass } = useSupabaseGymData();
   const { activeOrg } = useOperationalContext();
+  const { getProfessores } = useFuncionarios();
   const [params] = useSearchParams();
   const focusedId = params.get('focus');
   const classes = allClasses.filter((item) => activeOrg?.id && (item as any).organization_id === activeOrg.id);
@@ -92,6 +95,7 @@ export function SupabaseClasses() {
       }
     >
       <div className="mb-4"><AddClassDialog onAddClass={handleAddClass} /></div>
+      {semInstrutor.length > 0 && <div className="mb-4 space-y-2 rounded border p-3"><p className="text-sm font-medium">Aulas sem professor</p>{semInstrutor.map((aula) => <div key={aula.id} className="flex items-center justify-between gap-3 text-sm"><span>{aula.nome} · {aula.data_aula} {aula.horario_inicio}</span><Select onValueChange={async (id) => { try { await updateClass(aula.id, { professor_id: id }); } catch (error) { console.error('Erro ao atribuir professor:', error); } }}><SelectTrigger className="w-52"><SelectValue placeholder="Atribuir professor" /></SelectTrigger><SelectContent>{getProfessores().map((professor) => <SelectItem key={professor.id} value={professor.id}>{professor.nome}</SelectItem>)}</SelectContent></Select></div>)}</div>}
       {focusedId && <p className="mb-3 text-sm text-muted-foreground">{visibleClasses.length ? `Aula selecionada: ${visibleClasses[0].nome}` : 'Aula não encontrada nesta organização.'}</p>}
       {renderContent()}
       <ConfirmDialog open={!!cancellingId} onOpenChange={(open) => !open && setCancellingId(null)} title="Cancelar Aula" description="Cancelar esta aula? Avise os alunos inscritos após confirmar." onConfirm={handleCancelClass} confirmLabel="Cancelar Aula" variant="destructive" />
