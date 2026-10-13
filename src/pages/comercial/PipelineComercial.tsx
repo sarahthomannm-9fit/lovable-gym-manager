@@ -11,6 +11,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Building2, Building, Dumbbell, Plus, Phone, Mail } from "lucide-react";
 import { toast } from "sonner";
+import { useOperationalContext } from "@/hooks/useOperationalContext";
 
 type Lead = any;
 
@@ -26,6 +27,7 @@ const STAGES = [
 const TIPO_ICON: Record<string, any> = { corporativo: Building, condominio: Building2, estudio: Dumbbell };
 
 export default function PipelineComercial() {
+  const { activeOrg } = useOperationalContext();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [selected, setSelected] = useState<Lead | null>(null);
   const [followUps, setFollowUps] = useState<any[]>([]);
@@ -36,10 +38,12 @@ export default function PipelineComercial() {
   const [dragId, setDragId] = useState<string | null>(null);
 
   const load = async () => {
-    const { data } = await supabase.from("leads").select("*").order("created_at", { ascending: false });
+    if (!activeOrg) { setLeads([]); return; }
+    const { data, error } = await supabase.from("leads").select("*").eq("organization_id", activeOrg.id).order("created_at", { ascending: false });
+    if (error) toast.error(error.message);
     setLeads(data || []);
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [activeOrg?.id]);
 
   const loadDrawer = async (l: Lead) => {
     setSelected(l);
@@ -138,7 +142,7 @@ export default function PipelineComercial() {
         })}
       </div>
 
-      <NewLeadDialog open={openNew} onOpenChange={setOpenNew} onCreated={load} />
+      <NewLeadDialog open={openNew} onOpenChange={setOpenNew} onCreated={load} organizationId={activeOrg?.id} />
 
       <Sheet open={!!selected} onOpenChange={o => !o && setSelected(null)}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
@@ -209,12 +213,22 @@ function Field({ label, value, icon: Icon }: { label: string; value: any; icon?:
   );
 }
 
-function NewLeadDialog({ open, onOpenChange, onCreated }: any) {
+function NewLeadDialog({ open, onOpenChange, onCreated, organizationId }: any) {
   const [form, setForm] = useState<any>({ status: 'novo', tipo: 'corporativo', fonte: 'Instagram' });
   const save = async () => {
+    if (!organizationId) return toast.error("Selecione uma organização antes de criar o lead");
     if (!form.nome && !form.nome_contato) return toast.error("Informe o nome do contato");
-    const payload = { ...form, nome: form.nome_contato || form.nome };
-    const { error } = await supabase.from("leads").insert(payload);
+    if (!form.email && !form.telefone) return toast.error("Informe e-mail ou telefone");
+    const { error } = await (supabase as any).rpc("capture_lead", {
+      p_organization_id: organizationId,
+      p_nome: form.nome_contato || form.nome,
+      p_email: form.email || null,
+      p_telefone: form.telefone || null,
+      p_fonte: form.fonte || 'Outro',
+      p_consent: true,
+      p_source_detail: form.observacoes || null,
+      p_campaign_id: null,
+    });
     if (error) return toast.error(error.message);
     toast.success("Lead criado"); onOpenChange(false); setForm({ status: 'novo', tipo: 'corporativo' }); onCreated();
   };
@@ -315,3 +329,4 @@ function ProposalDialog({ open, onOpenChange, lead, onCreated }: any) {
     </Dialog>
   );
 }
+

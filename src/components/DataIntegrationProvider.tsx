@@ -14,6 +14,7 @@ import { useNotificacoes } from '@/hooks/useNotificacoes';
 import { useSupabaseLeads } from '@/hooks/marketing/useSupabaseLeads';
 import { useCrossMetrics, CrossMetrics } from '@/hooks/useCrossMetrics';
 import { useSmartAlerts, SmartAlert } from '@/hooks/useSmartAlerts';
+import { useOperationalContext } from '@/hooks/useOperationalContext';
 
 interface IntegratedData {
   // Dados brutos
@@ -52,33 +53,45 @@ interface IntegratedData {
 const DataIntegrationContext = createContext<IntegratedData>({} as IntegratedData);
 
 export function DataIntegrationProvider({ children }: { children: React.ReactNode }) {
-  const { students: alunos, loading: loadingStudents, refetch: refetchStudents } = useSupabaseStudents();
+  const { activeOrg, isAdmin } = useOperationalContext();
+  const { students: alunosRaw, loading: loadingStudents, refetch: refetchStudents } = useSupabaseStudents();
   const { plans: planos, loading: loadingPlans, refetch: refetchPlans } = useSupabasePlans();
-  const { payments: pagamentos, loading: loadingPayments, refetch: refetchPayments } = useSupabasePayments();
-  const { classes: aulas, loading: loadingClasses, refetch: refetchClasses } = useSupabaseClasses();
+  const { payments: pagamentosRaw, loading: loadingPayments, refetch: refetchPayments } = useSupabasePayments();
+  const { classes: aulasRaw, loading: loadingClasses, refetch: refetchClasses } = useSupabaseClasses();
   const { produtos, loading: loadingProdutos, refetch: refetchProdutos } = useSupabaseProdutos();
   const { campaigns: campanhas, campaignsLoading: loadingCampaigns, refetchCampaigns } = useSupabaseCampaigns();
-  const { checkIns: checkins, loading: loadingCheckins, refetch: refetchCheckins } = useSupabaseCheckIns();
-  const { avaliacoes, loading: loadingAvaliacoes, refetch: refetchAvaliacoes } = useAvaliacoesFisicas();
-  const { aulasExperimentais: experimentais, loading: loadingExperimentais, refetch: refetchExperimentais } = useAulasExperimentais();
-  const { frequencias, loading: loadingFrequencias, refetch: refetchFrequencias } = useFrequencia();
-  const { funcionarios, loading: loadingFuncionarios, refetch: refetchFuncionarios } = useFuncionarios();
+  const { checkIns: checkinsRaw, loading: loadingCheckins, refetch: refetchCheckins } = useSupabaseCheckIns();
+  const { avaliacoes: avaliacoesRaw, loading: loadingAvaliacoes, refetch: refetchAvaliacoes } = useAvaliacoesFisicas();
+  const { aulasExperimentais: experimentaisRaw, loading: loadingExperimentais, refetch: refetchExperimentais } = useAulasExperimentais();
+  const { frequencias: frequenciasRaw, loading: loadingFrequencias, refetch: refetchFrequencias } = useFrequencia();
+  const { funcionarios: funcionariosRaw, loading: loadingFuncionarios, refetch: refetchFuncionarios } = useFuncionarios();
   const { notificacoes, loading: loadingNotificacoes, refetch: refetchNotificacoes } = useNotificacoes();
   const { leads, leadsLoading: loadingLeads, refetchLeads } = useSupabaseLeads();
+
+  const alunos = useMemo(() => activeOrg?.id ? alunosRaw.filter(a => a.organization_id === activeOrg.id) : isAdmin ? alunosRaw : [], [alunosRaw, activeOrg?.id, isAdmin]);
+  const alunoIds = useMemo(() => new Set(alunos.map(a => a.id)), [alunos]);
+  const pagamentos = useMemo(() => pagamentosRaw.filter(p => alunoIds.has(p.aluno_id)), [pagamentosRaw, alunoIds]);
+  const aulas = useMemo(() => activeOrg?.id ? aulasRaw.filter(a => (a as any).organization_id === activeOrg.id) : isAdmin ? aulasRaw : [], [aulasRaw, activeOrg?.id, isAdmin]);
+  const checkins = useMemo(() => checkinsRaw.filter(c => alunoIds.has(c.aluno_id)), [checkinsRaw, alunoIds]);
+  const avaliacoes = useMemo(() => avaliacoesRaw.filter(a => alunoIds.has(a.aluno_id)), [avaliacoesRaw, alunoIds]);
+  const experimentais = useMemo(() => activeOrg?.id ? experimentaisRaw.filter(e => e.organization_id === activeOrg.id) : isAdmin ? experimentaisRaw : [], [experimentaisRaw, activeOrg?.id, isAdmin]);
+  const frequencias = useMemo(() => frequenciasRaw.filter(f => alunoIds.has(f.aluno_id)), [frequenciasRaw, alunoIds]);
+  const funcionarios = useMemo(() => activeOrg?.id ? funcionariosRaw.filter(f => (f as any).organization_id === activeOrg.id) : isAdmin ? funcionariosRaw : [], [funcionariosRaw, activeOrg?.id, isAdmin]);
 
   const loading = loadingStudents || loadingPlans || loadingPayments || loadingClasses || 
     loadingProdutos || loadingCampaigns || loadingCheckins || loadingAvaliacoes || 
     loadingExperimentais || loadingFrequencias || loadingFuncionarios || loadingNotificacoes || loadingLeads;
 
   // Treinos - fetch directly since there's no dedicated hook in context
-  const [treinos, setTreinos] = useState<any[]>([]);
+  const [treinosRaw, setTreinos] = useState<any[]>([]);
   useEffect(() => {
     import('@/integrations/supabase/client').then(({ supabase }) => {
       supabase.from('treinos').select('*').order('created_at', { ascending: false }).then(({ data }) => {
         setTreinos(data || []);
       });
     });
-  }, []);
+  }, [activeOrg?.id]);
+  const treinos = useMemo(() => treinosRaw.filter(t => alunoIds.has(t.aluno_id)), [treinosRaw, alunoIds]);
 
   // Cross metrics
   const metrics = useCrossMetrics({
@@ -206,3 +219,4 @@ export const useDataIntegration = () => {
   }
   return context;
 };
+

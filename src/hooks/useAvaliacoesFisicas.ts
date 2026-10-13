@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useOperationalContext } from '@/hooks/useOperationalContext';
 
 export interface AvaliacaoFisica {
   id: string;
@@ -49,13 +50,20 @@ export function useAvaliacoesFisicas() {
   const [avaliacoes, setAvaliacoes] = useState<AvaliacaoFisica[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { activeOrg } = useOperationalContext();
 
   const fetchAvaliacoes = useCallback(async () => {
     try {
       setLoading(true);
+      if (!activeOrg?.id) { setAvaliacoes([]); return; }
+      const { data: students, error: studentError } = await supabase.from('alunos').select('id').eq('organization_id', activeOrg.id);
+      if (studentError) throw studentError;
+      const ids = (students || []).map((student) => student.id);
+      if (!ids.length) { setAvaliacoes([]); return; }
       const { data, error } = await supabase
         .from('avaliacoes_fisicas')
         .select('*')
+        .in('aluno_id', ids)
         .order('data_avaliacao', { ascending: false });
 
       if (error) throw error;
@@ -70,7 +78,7 @@ export function useAvaliacoesFisicas() {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, activeOrg?.id]);
 
   const addAvaliacao = useCallback(async (avaliacao: AvaliacaoFisicaInput) => {
     try {
@@ -178,3 +186,4 @@ export function useAvaliacoesFisicas() {
     refetch: fetchAvaliacoes,
   };
 }
+

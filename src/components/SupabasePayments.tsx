@@ -12,6 +12,8 @@ import { useSupabaseGymData } from "@/contexts/SupabaseGymDataContext";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { PageShell } from "./warroom/PageShell";
 import { cn } from "@/lib/utils";
+import { supabase } from '@/integrations/supabase/client';
+import { useOperationalContext } from '@/hooks/useOperationalContext';
 
 function getEtapaRegua(dueDate: string): { etapa: string; num: number; color: string } {
   const diff = Math.ceil((Date.now() - new Date(dueDate).getTime()) / 86400000);
@@ -24,11 +26,17 @@ function getEtapaRegua(dueDate: string): { etapa: string; num: number; color: st
 }
 
 export function SupabasePayments() {
-  const { payments, students, addPayment, updatePayment } = useSupabaseGymData();
+  const { payments: allPayments, students: allStudents, addPayment, refetchPayments } = useSupabaseGymData();
+  const { activeOrg } = useOperationalContext();
+  const students = allStudents.filter((student) => activeOrg?.id && student.organization_id === activeOrg.id);
+  const studentIds = new Set(students.map((student) => student.id));
+  const payments = allPayments.filter((payment) => studentIds.has(payment.aluno_id));
   const { toast } = useToast();
   const [newPayment, setNewPayment] = useState({ studentId: "", amount: "", dueDate: "", method: "" });
   const [batchLoading, setBatchLoading] = useState(false);
   const [markingPaidId, setMarkingPaidId] = useState<string | null>(null);
+  const [reversingId, setReversingId] = useState<string | null>(null);
+  const [settlementReference, setSettlementReference] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
 
   useEffect(() => {
@@ -77,19 +85,22 @@ export function SupabasePayments() {
     } catch (error) { toast({ title: "Erro", description: "Falha ao gerar cobranças", variant: "destructive" }); } finally { setBatchLoading(false); }
   };
 
-  const confirmMarkAsPaid = async () => {
-    if (!markingPaidId) return;
+  const recordSettlement = async (action: 'settle' | 'reverse') => {
+    const id = action === 'settle' ? markingPaidId : reversingId;
+    if (!id || settlementReference.trim().length < 5) { toast({ title: 'Informe uma referência ou justificativa', variant: 'destructive' }); return; }
     try {
-      await updatePayment(markingPaidId, { status: 'pago', data_pagamento: new Date().toISOString().split('T')[0] });
-      toast({ title: "Pagamento confirmado" });
-    } catch (error) { console.error('Failed to update payment:', error); }
-    setMarkingPaidId(null);
+      const { error } = await supabase.rpc('record_manual_payment' as any, { p_payment_id: id, p_action: action, p_reference: settlementReference.trim() });
+      if (error) throw error;
+      await refetchPayments();
+      toast({ title: action === 'settle' ? 'Baixa manual registrada' : 'Estorno manual registrado' });
+      setMarkingPaidId(null); setReversingId(null); setSettlementReference('');
+    } catch (error) { toast({ title: 'Falha ao registrar baixa ou estorno', description: error instanceof Error ? error.message : '', variant: 'destructive' }); }
   };
 
   const hojeStr = new Date().toISOString().split('T')[0];
   const totalPendente = payments.filter(p => p.status === "pendente").reduce((sum, p) => sum + Number(p.valor), 0);
   const totalRecebido = payments.filter(p => p.status === "pago").reduce((sum, p) => sum + Number(p.valor), 0);
-  const overduePayments = payments.filter(p => p.status !== "pago" && p.data_vencimento && p.data_vencimento < hojeStr);
+  const overduePayments = payments.filter(p => p.status !== "pago" && p.status !== 'cancelado' && p.data_vencimento && p.data_vencimento < hojeStr);
   const totalVencido = overduePayments.reduce((sum, p) => sum + Number(p.valor), 0);
 
   const filteredPayments = filterStatus === 'all' ? payments :
@@ -138,7 +149,7 @@ export function SupabasePayments() {
               <div><Label>Aluno</Label><Select value={newPayment.studentId} onValueChange={(v) => setNewPayment(p => ({...p, studentId: v}))}><SelectTrigger><SelectValue placeholder="Selecione o aluno" /></SelectTrigger><SelectContent>{students.map(s => <SelectItem key={s.id} value={s.id}>{s.nome}{s.valor_mensalidade ? ` (R$ ${s.valor_mensalidade})` : ''}</SelectItem>)}</SelectContent></Select></div>
               <div><Label>Valor (R$)</Label><Input type="number" step="0.01" value={newPayment.amount} onChange={(e) => setNewPayment(p => ({...p, amount: e.target.value}))} /></div>
               <div><Label>Vencimento</Label><Input type="date" value={newPayment.dueDate} onChange={(e) => setNewPayment(p => ({...p, dueDate: e.target.value}))} /></div>
-              <div><Label>Método</Label><Select value={newPayment.method} onValueChange={(v) => setNewPayment(p => ({...p, method: v}))}><SelectTrigger><SelectValue placeholder="Método" /></SelectTrigger><SelectContent><SelectItem value="pix">PIX</SelectItem><SelectItem value="cartao">Cartão</SelectItem><SelectItem value="dinheiro">Dinheiro</SelectItem><SelectItem value="boleto">Boleto</SelectItem><SelectItem value="credito_recorrente">Recorrente</SelectItem></SelectContent></Select></div>
+              <div><Label>Método</Label><Select value={newPayment.method} onValueChange={(v) => setNewPayment(p => ({...p, method: v}))}><SelectTrigger><SelectValue placeholder="Método" /></SelectTrigger><SelectContent><SelectItem value="pix">PIX</SelectItem><SelectItem value="cartao">Cartão</SelectItem><SelectItem value="dinheiro">Dinheiro</SelectItem><SelectItem value="transferencia">Transferência</SelectItem></SelectContent></Select></div>
               <Button onClick={handleAddPayment} className="w-full">Criar Cobrança</Button>
             </div>
           </DialogContent>
@@ -179,9 +190,10 @@ export function SupabasePayments() {
                 <div className="text-xs text-muted-foreground capitalize">{payment.metodo_pagamento || 'Não informado'}</div>
                 {payment.status !== "pago" && (
                   <Button size="sm" variant="outline" className="w-full text-xs h-7 mt-1" onClick={() => setMarkingPaidId(payment.id)}>
-                    Marcar Pago
+                    Registrar baixa manual
                   </Button>
                 )}
+                {payment.status === 'pago' && <Button size="sm" variant="outline" className="w-full text-xs h-7 mt-1" onClick={() => setReversingId(payment.id)}>Estornar baixa</Button>}
               </CardContent>
             </Card>
           );
@@ -196,7 +208,8 @@ export function SupabasePayments() {
         </CardContent></Card>
       )}
 
-      <ConfirmDialog open={!!markingPaidId} onOpenChange={(open) => !open && setMarkingPaidId(null)} title="Confirmar Pagamento" description="Marcar este pagamento como pago? Data de hoje será registrada." onConfirm={confirmMarkAsPaid} confirmLabel="Confirmar" />
+      <Dialog open={!!markingPaidId || !!reversingId} onOpenChange={(open) => { if (!open) { setMarkingPaidId(null); setReversingId(null); setSettlementReference(''); } }}><DialogContent><DialogHeader><DialogTitle>{markingPaidId ? 'Baixa manual' : 'Estorno manual'}</DialogTitle></DialogHeader><p className="text-sm text-muted-foreground">Registre a referência do comprovante ou a justificativa. Esta ação não confirma liquidação por gateway.</p><Input value={settlementReference} onChange={(event) => setSettlementReference(event.target.value)} placeholder="Referência bancária ou justificativa" /><Button onClick={() => recordSettlement(markingPaidId ? 'settle' : 'reverse')}>Confirmar registro</Button></DialogContent></Dialog>
     </PageShell>
   );
 }
+

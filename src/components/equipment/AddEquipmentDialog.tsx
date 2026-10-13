@@ -23,7 +23,7 @@ interface AddEquipmentDialogProps {
     warrantyUntil?: Date;
     location: string;
     notes?: string;
-  }) => void;
+  }) => Promise<void>;
 }
 
 export function AddEquipmentDialog({ open, onOpenChange, onAddEquipment }: AddEquipmentDialogProps) {
@@ -58,7 +58,7 @@ export function AddEquipmentDialog({ open, onOpenChange, onAddEquipment }: AddEq
     { value: "retired", label: "Aposentado" }
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.name || !formData.category || !formData.brand || !formData.location) {
@@ -75,7 +75,7 @@ export function AddEquipmentDialog({ open, onOpenChange, onAddEquipment }: AddEq
       new Date(formData.nextMaintenance) : 
       new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000); // 90 dias
 
-    onAddEquipment({
+    try { await onAddEquipment({
       name: formData.name,
       category: formData.category,
       brand: formData.brand,
@@ -88,7 +88,10 @@ export function AddEquipmentDialog({ open, onOpenChange, onAddEquipment }: AddEq
       warrantyUntil: formData.warrantyUntil ? new Date(formData.warrantyUntil) : undefined,
       location: formData.location,
       notes: formData.notes || undefined
-    });
+    }); } catch (error) {
+      toast({ title: 'Erro', description: error instanceof Error ? error.message : 'Falha ao cadastrar equipamento', variant: 'destructive' });
+      return;
+    }
 
     // Reset form
     setFormData({
@@ -278,3 +281,4 @@ export function AddEquipmentDialog({ open, onOpenChange, onAddEquipment }: AddEq
     </Dialog>
   );
 }
+

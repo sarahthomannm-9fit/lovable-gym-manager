@@ -1,3 +1,4 @@
+import { OperationalDeliveryBoard } from '@/components/OperationalDeliveryBoard';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -175,7 +176,9 @@ export default function Operacao9FIT() {
             </Card>
           </div>
         </div>
+        <OperationalDeliveryBoard moduleKey="operacao" title="Implantação e entregas" />
       </section>
     </PersonaLayout>
   );
 }
+

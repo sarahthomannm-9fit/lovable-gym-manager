@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useSupabaseLeads } from "@/hooks/marketing/useSupabaseLeads";
 import { useToast } from "@/components/ui/use-toast";
+import { Checkbox } from '@/components/ui/checkbox';
 
 export function AddLeadDialog() {
   const { addLead } = useSupabaseLeads();
@@ -18,6 +19,7 @@ export function AddLeadDialog() {
     fonte: "",
     status: "novo",
     score: "",
+    consent_marketing: false,
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -36,6 +38,7 @@ export function AddLeadDialog() {
       fonte: form.fonte || null,
       status: (form.status as any) || "novo",
       score: form.score ? Number(form.score) : null,
+      consent_marketing: form.consent_marketing,
       observacoes: null,
       created_at: "" as any,
       updated_at: "" as any,
@@ -43,7 +46,7 @@ export function AddLeadDialog() {
     } as any);
     toast({ title: "Lead cadastrado com sucesso" });
     setOpen(false);
-    setForm({ nome: "", email: "", telefone: "", fonte: "", status: "novo", score: "" });
+    setForm({ nome: "", email: "", telefone: "", fonte: "", status: "novo", score: "", consent_marketing: false });
   };
 
   return (
@@ -84,6 +87,7 @@ export function AddLeadDialog() {
               <Input name="score" value={form.score} onChange={handleChange} placeholder="0-100" />
             </div>
           </div>
+          <label className="flex items-center gap-2 text-sm"><Checkbox checked={form.consent_marketing} onCheckedChange={(checked) => setForm({ ...form, consent_marketing: checked === true })} /> Autorizou comunicações de marketing</label>
           <div className="flex justify-end">
             <Button onClick={handleSave}>Salvar</Button>
           </div>
@@ -92,3 +96,4 @@ export function AddLeadDialog() {
     </Dialog>
   );
 }
+

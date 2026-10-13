@@ -1,9 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useOperationalContext } from '@/hooks/useOperationalContext';
 
 export interface Funcionario {
   id: string;
+  organization_id: string;
+  user_id: string | null;
   nome: string;
   email: string | null;
   telefone: string | null;
@@ -25,16 +28,19 @@ export type FuncionarioInput = Partial<Omit<Funcionario, 'id' | 'created_at' | '
 };
 
 export function useFuncionarios() {
+  const { activeOrg } = useOperationalContext();
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   const fetchFuncionarios = useCallback(async () => {
+    if (!activeOrg?.id) { setFuncionarios([]); setLoading(false); return; }
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from('funcionarios')
         .select('*')
+        .eq('organization_id', activeOrg.id)
         .order('nome');
 
       if (error) throw error;
@@ -49,13 +55,14 @@ export function useFuncionarios() {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, activeOrg?.id]);
 
   const addFuncionario = useCallback(async (funcionario: FuncionarioInput) => {
+    if (!activeOrg?.id) throw new Error('Selecione uma organização.');
     try {
       const { data, error } = await supabase
         .from('funcionarios')
-        .insert(funcionario)
+        .insert({ ...funcionario, organization_id: activeOrg.id, user_id: null })
         .select()
         .single();
 
@@ -76,14 +83,16 @@ export function useFuncionarios() {
       });
       throw error;
     }
-  }, [toast]);
+  }, [toast, activeOrg?.id]);
 
   const updateFuncionario = useCallback(async (id: string, updates: Partial<FuncionarioInput>) => {
+    if (!activeOrg?.id) throw new Error('Selecione uma organização.');
     try {
       const { data, error } = await supabase
         .from('funcionarios')
         .update(updates)
         .eq('id', id)
+        .eq('organization_id', activeOrg.id)
         .select()
         .single();
 
@@ -106,32 +115,11 @@ export function useFuncionarios() {
       });
       throw error;
     }
-  }, [toast]);
+  }, [toast, activeOrg?.id]);
 
   const deleteFuncionario = useCallback(async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('funcionarios')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
-      setFuncionarios(prev => prev.filter(f => f.id !== id));
-      toast({
-        title: "Sucesso",
-        description: "Funcionário removido com sucesso!",
-      });
-    } catch (error) {
-      console.error('Error deleting funcionario:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível remover o funcionário",
-        variant: "destructive",
-      });
-      throw error;
-    }
-  }, [toast]);
+    return updateFuncionario(id, { ativo: false });
+  }, [updateFuncionario]);
 
   const getProfessores = useCallback(() => {
     return funcionarios.filter(f => 
@@ -153,3 +141,4 @@ export function useFuncionarios() {
     refetch: fetchFuncionarios,
   };
 }
+

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useOperationalContext } from '@/hooks/useOperationalContext';
 
 export interface AulaExperimental {
   id: string;
@@ -21,6 +22,8 @@ export interface AulaExperimental {
   atendido_por: string | null;
   created_at: string;
   updated_at: string;
+  organization_id?: string | null;
+  aluno_convertido_id?: string | null;
 }
 
 export type AulaExperimentalInput = Omit<AulaExperimental, 'id' | 'created_at' | 'updated_at'>;
@@ -29,14 +32,13 @@ export function useAulasExperimentais() {
   const [aulasExperimentais, setAulasExperimentais] = useState<AulaExperimental[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { activeOrg } = useOperationalContext();
 
   const fetchAulasExperimentais = useCallback(async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('aulas_experimentais')
-        .select('*')
-        .order('data_agendada', { ascending: false });
+      const query = supabase.from('aulas_experimentais').select('*').order('data_agendada', { ascending: false });
+      const { data, error } = await (activeOrg ? query.eq('organization_id', activeOrg.id) : query);
       if (error) throw error;
       setAulasExperimentais((data || []) as AulaExperimental[]);
     } catch (error) {
@@ -45,11 +47,12 @@ export function useAulasExperimentais() {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, activeOrg?.id]);
 
   const addAulaExperimental = useCallback(async (aula: AulaExperimentalInput) => {
     try {
-      const { data, error } = await supabase.from('aulas_experimentais').insert(aula).select().single();
+      if (!activeOrg) throw new Error('Selecione uma organização para agendar.');
+      const { data, error } = await supabase.from('aulas_experimentais').insert({ ...aula, organization_id: activeOrg.id }).select().single();
       if (error) throw error;
       setAulasExperimentais(prev => [data as AulaExperimental, ...prev]);
       toast({ title: "Sucesso", description: "Aula experimental agendada com sucesso!" });
@@ -59,7 +62,7 @@ export function useAulasExperimentais() {
       toast({ title: "Erro", description: "Não foi possível agendar a aula experimental", variant: "destructive" });
       throw error;
     }
-  }, [toast]);
+  }, [toast, activeOrg?.id]);
 
   const updateAulaExperimental = useCallback(async (id: string, updates: Partial<AulaExperimentalInput>) => {
     try {
@@ -75,76 +78,25 @@ export function useAulasExperimentais() {
     }
   }, [toast]);
 
-  // REAL conversion: creates student + first charge + updates experimental status
+  // The database transaction creates the student, charge and conversion together.
   const converterParaAluno = useCallback(async (id: string, planoId: string): Promise<{ alunoId: string }> => {
     try {
-      // 1. Get the experimental class data
       const aula = aulasExperimentais.find(a => a.id === id);
       if (!aula) throw new Error('Aula experimental não encontrada');
-
-      // 2. Get the selected plan
-      const { data: plano, error: planoError } = await supabase
-        .from('planos')
-        .select('*')
-        .eq('id', planoId)
-        .single();
-      if (planoError) throw planoError;
-
-      // 3. Create the student record
-      const { data: novoAluno, error: alunoError } = await supabase
-        .from('alunos')
-        .insert({
-          nome: aula.nome,
-          email: aula.email || `${aula.nome.toLowerCase().replace(/\s/g, '.')}@pendente.com`,
-          telefone: aula.telefone,
-          plano_id: planoId,
-          tipo: 'presencial',
-          status: 'ativo',
-          categoria_aluno: 'fixo',
-          valor_mensalidade: plano.preco,
-          data_matricula: new Date().toISOString().split('T')[0],
-          dia_pagamento: new Date().getDate(),
-        })
-        .select()
-        .single();
-      if (alunoError) throw alunoError;
-
-      // 4. Create the first payment/charge
-      const today = new Date();
-      const dueDate = new Date(today.getFullYear(), today.getMonth(), Math.min(novoAluno.dia_pagamento || today.getDate(), 28));
-      if (dueDate < today) dueDate.setMonth(dueDate.getMonth() + 1);
-
-      await supabase.from('pagamentos').insert({
-        aluno_id: novoAluno.id,
-        valor: plano.preco,
-        data_vencimento: dueDate.toISOString().split('T')[0],
-        referencia_mes: `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`,
-        status: 'pendente',
+      if (!activeOrg) throw new Error('Selecione a organização para converter.');
+      const { data: alunoId, error } = await (supabase as any).rpc('convert_experimental_class', {
+        p_experimental_id: id, p_plano_id: planoId, p_organization_id: activeOrg.id,
       });
-
-      // 5. Update experimental class status
-      const { data: updatedAula, error: updateError } = await supabase
-        .from('aulas_experimentais')
-        .update({
-          status: 'convertida',
-          data_conversao: today.toISOString().split('T')[0],
-          plano_convertido_id: planoId,
-        })
-        .eq('id', id)
-        .select()
-        .single();
-      if (updateError) throw updateError;
-
-      setAulasExperimentais(prev => prev.map(a => a.id === id ? (updatedAula as AulaExperimental) : a));
-      
-      toast({ title: "🎉 Lead convertido!", description: `${aula.nome} agora é aluno(a) com plano ${plano.nome}. Primeira cobrança gerada.` });
-      return { alunoId: novoAluno.id };
+      if (error) throw error;
+      await fetchAulasExperimentais();
+      toast({ title: 'Lead convertido', description: `${aula.nome} foi vinculado ao plano e a primeira cobrança ficou pendente.` });
+      return { alunoId };
     } catch (error) {
       console.error('Error converting aula experimental:', error);
       toast({ title: "Erro", description: "Não foi possível converter o lead", variant: "destructive" });
       throw error;
     }
-  }, [toast, aulasExperimentais]);
+  }, [toast, aulasExperimentais, activeOrg?.id, fetchAulasExperimentais]);
 
   const marcarNaoCompareceu = useCallback(async (id: string) => updateAulaExperimental(id, { status: 'nao_compareceu' }), [updateAulaExperimental]);
   const marcarRealizada = useCallback(async (id: string) => updateAulaExperimental(id, { status: 'realizada' }), [updateAulaExperimental]);
@@ -173,3 +125,4 @@ export function useAulasExperimentais() {
 
   return { aulasExperimentais, loading, addAulaExperimental, updateAulaExperimental, converterParaAluno, marcarNaoCompareceu, marcarRealizada, getMetricasFunil, getByFonte, refetch: fetchAulasExperimentais };
 }
+

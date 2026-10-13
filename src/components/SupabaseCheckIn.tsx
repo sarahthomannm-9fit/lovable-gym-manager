@@ -10,11 +10,13 @@ import { useSupabaseGymData } from "@/contexts/SupabaseGymDataContext";
 import { QRCodeCheckIn } from "./checkin/QRCodeCheckIn";
 import { PageShell } from "./warroom/PageShell";
 import { cn } from "@/lib/utils";
+import { useOperationalContext } from "@/hooks/useOperationalContext";
 
 type ScanState = 'idle' | 'success' | 'error_inadimplente' | 'error_cancelado' | 'error_not_found';
 
 export function SupabaseCheckIn() {
   const { students, checkIns, payments, addCheckIn, updateCheckIn } = useSupabaseGymData();
+  const { activeOrg } = useOperationalContext();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("qrcode");
@@ -23,8 +25,13 @@ export function SupabaseCheckIn() {
 
   const resetScan = () => { setTimeout(() => { setScanState('idle'); setScanName(''); }, 2000); };
 
+  const scopedStudents = activeOrg ? students.filter((student: any) => student.organization_id === activeOrg.id) : students;
+  const scopedStudentIds = new Set(scopedStudents.map((student: any) => student.id));
+  const scopedCheckIns = checkIns.filter((record: any) => scopedStudentIds.has(record.aluno_id));
+  const scopedPayments = payments.filter((payment: any) => scopedStudentIds.has(payment.aluno_id));
+
   const handleCheckIn = async (studentId: string) => {
-    const student = students.find(s => s.id === studentId);
+    const student = scopedStudents.find(s => s.id === studentId);
     if (!student) {
       setScanState('error_not_found'); setScanName(''); resetScan();
       toast({ title: "Erro", description: "Aluno não encontrado", variant: "destructive" });
@@ -37,7 +44,7 @@ export function SupabaseCheckIn() {
     }
     // Check inadimplência
     const hojeStr = new Date().toISOString().split('T')[0];
-    const temAtraso = (payments || []).some((p: any) => p.aluno_id === studentId && p.status !== 'pago' && p.data_vencimento < hojeStr);
+    const temAtraso = (scopedPayments || []).some((p: any) => p.aluno_id === studentId && p.status !== 'pago' && p.data_vencimento < hojeStr);
     if (temAtraso) {
       setScanState('error_inadimplente'); setScanName(student.nome); resetScan();
       toast({ title: "Pagamento pendente", description: `${student.nome} tem pagamento em atraso`, variant: "destructive" });
@@ -45,7 +52,7 @@ export function SupabaseCheckIn() {
     }
 
     const today = new Date().toISOString().split('T')[0];
-    const activeCheckIn = checkIns.find(
+    const activeCheckIn = scopedCheckIns.find(
       record => record.aluno_id === studentId && 
       (record.data_checkin === today || record.horario_entrada?.startsWith(today)) && !record.horario_saida
     );
@@ -63,10 +70,10 @@ export function SupabaseCheckIn() {
   };
 
   const handleCheckOut = async (studentId: string) => {
-    const student = students.find(s => s.id === studentId);
+    const student = scopedStudents.find(s => s.id === studentId);
     if (!student) return;
     const today = new Date().toISOString().split('T')[0];
-    const activeCheckIn = checkIns.find(
+    const activeCheckIn = scopedCheckIns.find(
       record => record.aluno_id === studentId && 
       (record.data_checkin === today || record.horario_entrada?.startsWith(today)) && !record.horario_saida
     );
@@ -77,24 +84,24 @@ export function SupabaseCheckIn() {
     } catch (error) { console.error('Failed to update check-in:', error); }
   };
 
-  const filteredStudents = students.filter(student =>
+  const filteredStudents = scopedStudents.filter(student =>
     student.nome.toLowerCase().includes(searchQuery.toLowerCase()) || student.id.toString().includes(searchQuery)
   );
 
   const today = new Date().toISOString().split('T')[0];
-  const activeStudents = students.filter(student => 
-    checkIns.some(record => record.aluno_id === student.id && 
+  const activeStudents = scopedStudents.filter(student => 
+    scopedCheckIns.some(record => record.aluno_id === student.id && 
       (record.data_checkin === today || record.horario_entrada?.startsWith(today)) && !record.horario_saida)
   );
-  const todayCheckIns = checkIns.filter(record => 
+  const todayCheckIns = scopedCheckIns.filter(record => 
     record.data_checkin === today || (record.horario_entrada && record.horario_entrada.startsWith(today))
   ).length;
 
   const shellMetrics = [
     { label: 'NA ACADEMIA', value: String(activeStudents.length), color: 'text-[hsl(var(--urgency-opportunity))]' },
     { label: 'HOJE', value: String(todayCheckIns) },
-    { label: 'TOTAL HISTÓRICO', value: String(checkIns.length) },
-    { label: 'ALUNOS', value: String(students.length) },
+    { label: 'TOTAL HISTÓRICO', value: String(scopedCheckIns.length) },
+    { label: 'ALUNOS', value: String(scopedStudents.length) },
   ];
 
   // Scan state overlay
@@ -161,7 +168,7 @@ export function SupabaseCheckIn() {
               <CardContent>
                 <div className="max-h-80 overflow-y-auto space-y-2">
                   {activeStudents.map((student) => {
-                    const lastEntry = checkIns.filter(c => c.aluno_id === student.id && c.horario_entrada && !c.horario_saida).sort((a, b) => new Date(b.horario_entrada!).getTime() - new Date(a.horario_entrada!).getTime())[0];
+                    const lastEntry = scopedCheckIns.filter(c => c.aluno_id === student.id && c.horario_entrada && !c.horario_saida).sort((a, b) => new Date(b.horario_entrada!).getTime() - new Date(a.horario_entrada!).getTime())[0];
                     const entryTime = lastEntry?.horario_entrada ? new Date(lastEntry.horario_entrada) : new Date();
                     const minutesInGym = Math.floor((Date.now() - entryTime.getTime()) / 60000);
                     return (
@@ -184,3 +191,4 @@ export function SupabaseCheckIn() {
     </PageShell>
   );
 }
+

@@ -1,3 +1,4 @@
+import { OperationalDeliveryBoard } from '@/components/OperationalDeliveryBoard';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useDataIntegration } from "@/components/DataIntegrationProvider";
 import { Crown, DollarSign, Heart } from "lucide-react";
@@ -58,6 +59,8 @@ export default function ConciergeDashboard() {
           ))}
         </CardContent>
       </Card>
+      <OperationalDeliveryBoard moduleKey="concierge" />
     </div>
   );
 }
+

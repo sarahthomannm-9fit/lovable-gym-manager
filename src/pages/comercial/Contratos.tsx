@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { FileText, ArrowRight } from "lucide-react";
+import { useOperationalContext } from "@/hooks/useOperationalContext";
 
 const STATUS_COLOR: Record<string, string> = {
   rascunho: 'bg-muted text-muted-foreground',
@@ -16,45 +17,52 @@ const STATUS_COLOR: Record<string, string> = {
   rejeitada: 'bg-destructive/10 text-destructive',
 };
 
+const escapeHtml = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+}[char] || char));
+
 export default function Contratos() {
+  const { activeOrg } = useOperationalContext();
   const [propostas, setPropostas] = useState<any[]>([]);
   const [contratos, setContratos] = useState<any[]>([]);
   const [viewHtml, setViewHtml] = useState<string | null>(null);
 
   const load = async () => {
+    if (!activeOrg) { setPropostas([]); setContratos([]); return; }
     const [{ data: props }, { data: contr }] = await Promise.all([
-      (supabase as any).from("proposals").select("*, leads(nome, nome_contato, empresa, tipo, email, telefone)").order("created_at", { ascending: false }),
-      supabase.from("propostas_b2b").select("*").order("created_at", { ascending: false }),
+      (supabase as any).from("proposals").select("*, leads(nome, nome_contato, empresa, tipo, email, telefone)").eq('organization_id', activeOrg.id).order("created_at", { ascending: false }),
+      (supabase as any).from("propostas_b2b").select("*").eq('organization_id', activeOrg.id).order("created_at", { ascending: false }),
     ]);
     setPropostas(props || []); setContratos(contr || []);
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [activeOrg?.id]);
 
   const gerarContrato = async (p: any) => {
     const lead = p.leads || {};
     const html = `<!doctype html><html><body style="font-family:sans-serif;padding:32px;">
 <h1>Contrato de Assessoria — 9FIT</h1>
-<p><b>Empresa:</b> ${lead.empresa || '—'}</p>
-<p><b>Contato:</b> ${lead.nome_contato || lead.nome || '—'}</p>
+<p><b>Empresa:</b> ${escapeHtml(lead.empresa || '—')}</p>
+<p><b>Contato:</b> ${escapeHtml(lead.nome_contato || lead.nome || '—')}</p>
 <p><b>Valor mensal:</b> R$ ${Number(p.valor).toLocaleString('pt-BR')}</p>
-<p><b>Descrição:</b><br/>${p.descricao || ''}</p>
-<p><b>Serviços inclusos:</b><br/>${(p.itens_inclusos || '').replace(/\n/g,'<br/>')}</p>
+<p><b>Descrição:</b><br/>${escapeHtml(p.descricao || '')}</p>
+<p><b>Serviços inclusos:</b><br/>${escapeHtml(p.itens_inclusos || '').replace(/\n/g,'<br/>')}</p>
 <p>Data: ${new Date().toLocaleDateString('pt-BR')}</p>
 </body></html>`;
     const servicos = (p.itens_inclusos || '').split('\n').filter(Boolean).map((t: string) => ({ item: t }));
+    if (!activeOrg) return toast.error('Selecione uma organização.');
     const { error } = await supabase.from("propostas_b2b").insert({
+      organization_id: activeOrg.id,
       empresa: lead.empresa || 'Sem empresa',
       contato: lead.nome_contato || lead.nome || '',
       email: lead.email || '',
       telefone: lead.telefone || '',
       valor: p.valor,
       servicos,
-      status: 'enviado',
+      status: 'rascunho',
       html,
     });
     if (error) return toast.error(error.message);
-    await (supabase as any).from("proposals").update({ status: 'aprovada' }).eq('id', p.id);
-    toast.success("Contrato gerado e enviado ao cliente!");
+    toast.success("Rascunho do contrato gerado. Revise antes de enviar ao cliente.");
     load();
   };
 
@@ -68,7 +76,7 @@ export default function Contratos() {
       <Tabs defaultValue="propostas">
         <TabsList>
           <TabsTrigger value="propostas">Propostas ({propostas.length})</TabsTrigger>
-          <TabsTrigger value="contratos">Contratos Ativos ({contratos.filter(c => ['enviado','aceito'].includes(c.status)).length})</TabsTrigger>
+          <TabsTrigger value="contratos">Contratos ({contratos.filter(c => ['rascunho','enviado','aceito'].includes(c.status)).length})</TabsTrigger>
           <TabsTrigger value="historico">Histórico</TabsTrigger>
         </TabsList>
 
@@ -108,7 +116,7 @@ export default function Contratos() {
         </TabsContent>
 
         <TabsContent value="contratos" className="space-y-3 mt-4">
-          {contratos.filter(c => ['enviado','aceito'].includes(c.status)).map(c => (
+          {contratos.filter(c => ['rascunho','enviado','aceito'].includes(c.status)).map(c => (
             <Card key={c.id}><CardContent className="p-4">
               <div className="flex justify-between items-start">
                 <div>
@@ -122,7 +130,7 @@ export default function Contratos() {
                 </div>
                 <div className="flex flex-col items-end gap-2">
                   <Badge className={c.status === 'aceito' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}>
-                    {c.status === 'aceito' ? 'Assinado ✓' : 'Aguardando assinatura'}
+                    {c.status === 'aceito' ? 'Aceito' : c.status === 'enviado' ? 'Enviado' : 'Rascunho'}
                   </Badge>
                   <Button size="sm" variant="outline" onClick={() => setViewHtml(c.html)}>Ver contrato</Button>
                 </div>
@@ -161,3 +169,4 @@ export default function Contratos() {
     </div>
   );
 }
+

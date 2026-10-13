@@ -26,6 +26,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { skillsForAgent } from '@/lib/agentSkills';
+import { useOperationalContext } from '@/hooks/useOperationalContext';
 
 // ============================================
 // AGENT CONFIG
@@ -296,6 +297,7 @@ interface MetricCard {
 // COMPONENT
 // ============================================
 export default function AgentsHub() {
+  const { activeOrg } = useOperationalContext();
   const [activeAgentId, setActiveAgentId] = useState<AgentId>('ron');
   const [chats, setChats] = useState<Record<AgentId, ChatMessage[]>>({
     ron: [], sdr: [], prep: [], reativacao: [], upsell: [], b2b: [],
@@ -313,7 +315,7 @@ export default function AgentsHub() {
   // ---- Load metrics + briefing
   useEffect(() => {
     loadMetrics();
-  }, []);
+  }, [activeOrg?.id]);
 
   // ---- Auto-greeting when switching agent
   useEffect(() => {
@@ -350,16 +352,22 @@ export default function AgentsHub() {
       monthStart.setDate(1);
       const monthStartStr = monthStart.toISOString().slice(0, 10);
 
-      const [leadsRes, alunosRes, pagosRes, inadRes, ticketsRes] = await Promise.all([
-        supabase.from('leads').select('id, created_at', { count: 'exact', head: false }),
-        supabase.from('alunos').select('id, status').eq('status', 'ativo'),
-        supabase.from('pagamentos').select('valor, status, data_pagamento').eq('status', 'pago').gte('data_pagamento', monthStartStr),
-        supabase.from('pagamentos').select('id, status, data_vencimento').neq('status', 'pago').lt('data_vencimento', today),
-        supabase.from('support_tickets').select('id, status, escalated_to_ceo').eq('status', 'open'),
+      let leadsQuery = supabase.from('leads').select('id, created_at', { count: 'exact', head: false });
+      let alunosQuery = supabase.from('alunos').select('id, status').eq('status', 'ativo');
+      let ticketsQuery = supabase.from('support_tickets').select('id, status, escalated_to_ceo').eq('status', 'open');
+      if (activeOrg) { leadsQuery = leadsQuery.eq('organization_id', activeOrg.id); alunosQuery = alunosQuery.eq('organization_id', activeOrg.id); ticketsQuery = ticketsQuery.eq('organization_id', activeOrg.id); }
+      const alunosAtivosRows = await alunosQuery;
+      const ids = (alunosAtivosRows.data || []).map((row: any) => row.id);
+      const safeIds = ids.length ? ids : ['00000000-0000-0000-0000-000000000000'];
+      const [leadsRes, pagosRes, inadRes, ticketsRes] = await Promise.all([
+        leadsQuery,
+        supabase.from('pagamentos').select('valor, status, data_pagamento').eq('status', 'pago').gte('data_pagamento', monthStartStr).in('aluno_id', activeOrg ? safeIds : ids),
+        supabase.from('pagamentos').select('id, status, data_vencimento').neq('status', 'pago').lt('data_vencimento', today).in('aluno_id', activeOrg ? safeIds : ids),
+        ticketsQuery,
       ]);
 
       const leadsHoje = (leadsRes.data || []).filter((l: any) => l.created_at?.startsWith(today)).length;
-      const alunosAtivos = alunosRes.data?.length || 0;
+      const alunosAtivos = alunosAtivosRows.data?.length || 0;
       const receitaMes = (pagosRes.data || []).reduce((s: number, p: any) => s + Number(p.valor || 0), 0);
       const inadimplentes = inadRes.data?.length || 0;
       const ticketsAbertos = ticketsRes.data?.length || 0;
@@ -406,6 +414,7 @@ export default function AgentsHub() {
       const { data, error } = await supabase.functions.invoke('agent-hub-chat', {
         body: {
           agentId: activeAgentId,
+          organizationId: activeOrg?.id || null,
           history: chats[activeAgentId],
           message: text,
           skills: activeSkills,
@@ -431,7 +440,7 @@ export default function AgentsHub() {
   async function runAction(action: string, payload?: Record<string, unknown>) {
     try {
       const { data, error } = await supabase.functions.invoke('agent-hub-chat', {
-        body: { mode: 'action', agentId: activeAgentId, action, payload },
+        body: { mode: 'action', agentId: activeAgentId, organizationId: activeOrg?.id || null, action, payload },
       });
       if (error || !data?.ok) {
         toast.error(data?.error || error?.message || 'Falha na ação');
@@ -760,3 +769,4 @@ export default function AgentsHub() {
     </div>
   );
 }
+

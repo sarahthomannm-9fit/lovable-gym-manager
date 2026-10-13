@@ -45,15 +45,24 @@ Deno.serve(async (req) => {
 
     switch (action) {
       case 'list': {
-        const { data: list, error } = await admin.auth.admin.listUsers();
-        if (error) throw error;
-        const ids = list.users.map((u) => u.id);
-        const { data: roles } = await admin.from('user_roles').select('user_id, role').in('user_id', ids);
+        const allUsers = [];
+        for (let page = 1; ; page++) {
+          const { data: list, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
+          if (error) throw error;
+          allUsers.push(...list.users);
+          if (list.users.length < 1000) break;
+        }
+        const ids = allUsers.map((u) => u.id);
+        const { data: roles, error: rolesError } = ids.length
+          ? await admin.from('user_roles').select('user_id, role').in('user_id', ids)
+          : { data: [], error: null };
+        if (rolesError) throw rolesError;
         const map = new Map((roles || []).map((r: any) => [r.user_id, r.role]));
-        const users = list.users.map((u) => ({
+        const users = allUsers.map((u) => ({
           user_id: u.id,
           email: u.email,
           role: (map.get(u.id) as AppRole) || 'user',
+          active: !u.banned_until || new Date(u.banned_until).getTime() <= Date.now(),
         }));
         return json({ users });
       }
@@ -123,6 +132,8 @@ Deno.serve(async (req) => {
         if (!userId || typeof active !== 'boolean') return json({ error: 'userId e active obrigatórios' }, 400);
         const { error } = await admin.auth.admin.updateUserById(userId, { ban_duration: active ? 'none' : '876000h' });
         if (error) throw error;
+        const { error: profileError } = await admin.from('profiles').update({ ativo: active }).eq('id', userId);
+        if (profileError) throw profileError;
         return json({ success: true });
       }
 
@@ -136,10 +147,15 @@ Deno.serve(async (req) => {
 
         let userId: string;
         const { data: existingList } = await admin.auth.admin.listUsers();
-        const existing = existingList?.users?.find((u) => u.email === email);
+        const normalizedEmail = email.trim().toLowerCase();
+        const existing = existingList?.users?.find((u) => u.email?.toLowerCase() === normalizedEmail);
 
         if (existing) {
           userId = existing.id;
+          const { data: otherLinks, error: linksError } = await admin.from('alunos')
+            .select('id').eq('user_id', userId).neq('id', alunoId).limit(1);
+          if (linksError) throw linksError;
+          if (otherLinks?.length) return json({ error: 'Esta conta já está vinculada a outro aluno' }, 409);
         } else if (password) {
           const { data: created, error: createErr } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
           if (createErr) throw createErr;
@@ -150,12 +166,15 @@ Deno.serve(async (req) => {
           userId = created.user!.id;
         }
 
-        await admin.from('user_roles').delete().eq('user_id', userId);
-        const { error: roleErr } = await admin.from('user_roles').insert({ user_id: userId, role: 'user' });
-        if (roleErr) throw roleErr;
+        if (!existing) {
+          const { error: roleErr } = await admin.from('user_roles').upsert({ user_id: userId, role: 'user' }, { onConflict: 'user_id' });
+          if (roleErr) throw roleErr;
+        }
 
-        const { error: linkErr } = await admin.from('alunos').update({ user_id: userId }).eq('id', alunoId);
+        const { data: linked, error: linkErr } = await admin.from('alunos').update({ user_id: userId })
+          .eq('id', alunoId).is('user_id', null).select('id').maybeSingle();
         if (linkErr) throw linkErr;
+        if (!linked) return json({ error: 'O aluno já foi vinculado por outra operação. Atualize a lista.' }, 409);
 
         let magic_link: string | undefined;
         if (!password) {
@@ -182,3 +201,4 @@ function json(payload: unknown, status = 200) {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 }
+

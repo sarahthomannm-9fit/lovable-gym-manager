@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Building2, Copy, Loader2, Mail, Plus, RefreshCw, Trash2, UserPlus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OnboardingRoteiro, onboardingProgress } from "@/components/admin/OnboardingRoteiro";
+import { OrganizationOperations } from "@/components/admin/OrganizationOperations";
 
 const TIPO_LABELS: Record<string, string> = {
   condominio: "Condomínio",
@@ -27,6 +28,7 @@ interface Organization {
   onboarding_status: string;
   created_at: string;
   metadata?: any;
+  operational_profile?: Record<string, any>;
 }
 
 interface Invite {
@@ -43,6 +45,7 @@ const PAPEL_LABELS: Record<string, string> = {
   sindico: "Síndico",
   professor: "Coach/Professor",
   user: "Morador",
+  corporate: "RH / Gestor",
 };
 
 export default function OrganizationsAdmin() {
@@ -64,7 +67,7 @@ export default function OrganizationsAdmin() {
     setLoading(true);
     const { data, error } = await supabase
       .from("organizations")
-      .select("id, nome, tipo, status, onboarding_status, created_at, metadata")
+      .select("id, nome, tipo, status, onboarding_status, created_at, metadata, operational_profile")
       .order("created_at", { ascending: false });
     if (error) {
       toast.error("Erro ao carregar organizações", { description: error.message });
@@ -96,8 +99,12 @@ export default function OrganizationsAdmin() {
   }, []);
 
   useEffect(() => {
-    if (selectedOrg) loadInvites(selectedOrg);
-  }, [selectedOrg, loadInvites]);
+    if (selectedOrg) {
+      loadInvites(selectedOrg);
+      const organization = organizations.find((item) => item.id === selectedOrg);
+      setInvitePapel(organization?.tipo === 'corporate' ? 'corporate' : organization?.tipo === 'condominio' ? 'sindico' : 'professor');
+    }
+  }, [selectedOrg, loadInvites, organizations]);
 
   const createOrganization = async () => {
     if (!newOrgNome.trim()) {
@@ -177,6 +184,11 @@ export default function OrganizationsAdmin() {
 
   const selectedOrgData = organizations.find((o) => o.id === selectedOrg);
   const orgInvites = selectedOrg ? invites[selectedOrg] ?? [] : [];
+  const inviteRoles = selectedOrgData?.tipo === 'corporate'
+    ? [{ value: 'corporate', label: 'RH / Gestor' }, { value: 'user', label: 'Colaborador' }]
+    : selectedOrgData?.tipo === 'professor' || selectedOrgData?.tipo === 'studio'
+      ? [{ value: 'professor', label: 'Coach/Professor' }, { value: 'user', label: 'Aluno' }]
+      : [{ value: 'sindico', label: 'Síndico' }, { value: 'professor', label: 'Coach/Professor' }, { value: 'user', label: 'Morador' }];
 
   return (
     <div className="container mx-auto max-w-6xl space-y-6 p-6">
@@ -323,9 +335,7 @@ export default function OrganizationsAdmin() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="sindico">Síndico</SelectItem>
-                          <SelectItem value="professor">Coach/Professor</SelectItem>
-                          <SelectItem value="user">Morador</SelectItem>
+                          {inviteRoles.map((role) => <SelectItem key={role.value} value={role.value}>{role.label}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
@@ -355,8 +365,17 @@ export default function OrganizationsAdmin() {
               <TabsList>
                 <TabsTrigger value="convites">Convites</TabsTrigger>
                 <TabsTrigger value="onboarding">Onboarding / Roteiro de visita</TabsTrigger>
+                <TabsTrigger value="operacao">Operação NINE LIVING</TabsTrigger>
               </TabsList>
-              <TabsContent value="onboarding">
+              <TabsContent value="operacao">
+                <OrganizationOperations
+                  key={selectedOrgData.id}
+                  orgId={selectedOrgData.id}
+                  orgName={selectedOrgData.nome}
+                  profile={selectedOrgData.operational_profile}
+                  onProfileSaved={(operational_profile) => setOrganizations((prev) => prev.map((o) => o.id === selectedOrgData.id ? { ...o, operational_profile } : o))}
+                />
+              </TabsContent>              <TabsContent value="onboarding">
                 <OnboardingRoteiro
                   key={selectedOrgData.id}
                   orgId={selectedOrgData.id}
@@ -440,3 +459,6 @@ export default function OrganizationsAdmin() {
     </div>
   );
 }
+
+
+

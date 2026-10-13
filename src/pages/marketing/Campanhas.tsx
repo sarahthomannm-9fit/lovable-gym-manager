@@ -22,16 +22,18 @@ export function Campanhas() {
 
   const handleFinalizeCampaign = async (campaignId: string) => {
     try {
-      const { error } = await supabase
-        .from('campanhas_marketing')
-        .update({ status: 'finalizada' })
-        .eq('id', campaignId);
+      const { error } = await (supabase as any).rpc('transition_campaign', { p_campaign_id: campaignId, p_status: 'finalizada', p_schedule: null, p_external_id: null });
       if (error) throw error;
       toast({ title: "Campanha Finalizada", description: "A campanha foi marcada como finalizada!" });
       refetchCampaigns();
     } catch (error: any) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     }
+  };
+
+  const approveCampaign = async (campaignId: string) => {
+    const { error } = await (supabase as any).rpc('transition_campaign', { p_campaign_id: campaignId, p_status: 'approved', p_schedule: null, p_external_id: null });
+    if (error) toast({ title: 'Erro', description: error.message, variant: 'destructive' }); else { toast({ title: 'Campanha aprovada' }); refetchCampaigns(); }
   };
 
   const handleViewReport = (campaign: Campaign) => {
@@ -151,6 +153,7 @@ export function Campanhas() {
                         <X className="h-4 w-4 mr-1" />Finalizar
                       </Button>
                     )}
+                    {campaign.status === 'draft' && <Button variant="outline" size="sm" onClick={() => approveCampaign(campaign.id)}>Aprovar</Button>}
                     <Button variant="outline" size="sm" onClick={() => handleViewReport(campaign)}>
                       <BarChart className="h-4 w-4 mr-1" />Relatório
                     </Button>
@@ -174,3 +177,4 @@ export function Campanhas() {
     </div>
   );
 }
+

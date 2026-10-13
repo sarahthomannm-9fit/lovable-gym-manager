@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/select';
 import { FileText, Download, RefreshCw, Sparkles, CalendarDays } from 'lucide-react';
 import { toast } from 'sonner';
+import { useOperationalContext } from '@/hooks/useOperationalContext';
 
 type Report = {
   id: string; agent_id: string; report_date: string; summary: string;
@@ -25,6 +26,7 @@ const PERIODOS = [
 ];
 
 export default function RelatoriosAutomaticos() {
+  const { activeOrg } = useOperationalContext();
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +41,7 @@ export default function RelatoriosAutomaticos() {
       let q = supabase.from('agent_reports')
         .select('id, agent_id, report_date, summary, metrics, highlights, created_at')
         .order('report_date', { ascending: false }).limit(200);
+      if (activeOrg) q = q.eq('organization_id', activeOrg.id);
       if (periodo !== 'all') {
         const desde = new Date(Date.now() - Number(periodo) * 86400000).toISOString().slice(0, 10);
         q = q.gte('report_date', desde);
@@ -54,14 +57,16 @@ export default function RelatoriosAutomaticos() {
     }
   };
 
-  useEffect(() => { carregar(); /* eslint-disable-next-line */ }, [agente, periodo]);
+  useEffect(() => { carregar(); /* eslint-disable-next-line */ }, [agente, periodo, activeOrg?.id]);
 
   const [agentes, setAgentes] = useState<string[]>([]);
   useEffect(() => {
-    supabase.from('agent_reports').select('agent_id').limit(500).then(({ data }) => {
+    let query = supabase.from('agent_reports').select('agent_id').limit(500);
+    if (activeOrg) query = query.eq('organization_id', activeOrg.id);
+    query.then(({ data }) => {
       setAgentes([...new Set((data || []).map((d: any) => d.agent_id))].sort());
     });
-  }, []);
+  }, [activeOrg?.id]);
 
   const totais = useMemo(() => ({
     total: reports.length,
@@ -71,12 +76,13 @@ export default function RelatoriosAutomaticos() {
 
   const gerar = async () => {
     setGerando(true);
-    const { error: err } = await supabase.functions.invoke('agent-hub-chat', {
-      body: { agentId: agente === 'todos' ? 'ceo' : agente, mode: 'report' },
+    const { data, error: err } = await supabase.functions.invoke('agent-daily-reports', {
+      body: { organizationId: activeOrg?.id || null },
     });
     setGerando(false);
     if (err) return toast.error('Não foi possível gerar agora. Tente novamente.');
-    toast.success('Relatório solicitado — atualizando histórico');
+    if (!data?.success) return toast.error('Alguns relatórios não foram gerados. Consulte os registros da função.');
+    toast.success('Relatórios gerados — atualizando histórico');
     carregar();
   };
 
@@ -181,3 +187,4 @@ export default function RelatoriosAutomaticos() {
     </div>
   );
 }
+

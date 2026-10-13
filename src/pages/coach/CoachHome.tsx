@@ -55,16 +55,28 @@ export default function CoachHome() {
 
   const carregar = async () => {
     const orgId = activeOrg?.id;
+    if (!orgId || !user?.id) { setAulas([]); setAlunos([]); setTreinos([]); return; }
+    const { data: staff } = await supabase.from('funcionarios').select('id').eq('organization_id', orgId).eq('user_id', user.id).eq('ativo', true).maybeSingle();
+    if (!staff?.id) { setAulas([]); setAlunos([]); setTreinos([]); return; }
     const hoje = iso(new Date());
     const seteDias = iso(new Date(Date.now() + 7 * DAY));
     const inicioHist = iso(new Date(Date.now() - 365 * DAY));
 
     let qa = supabase.from('aulas').select('id, nome, data_aula, horario_inicio, horario_fim, inscritos_atual, capacidade_maxima, status, professor_id')
       .gte('data_aula', iso(new Date(Date.now() - 365 * DAY))).lte('data_aula', seteDias).order('data_aula').order('horario_inicio');
-    if (orgId) qa = qa.eq('organization_id', orgId);
-    let qal = supabase.from('alunos').select('id, nome, status, user_id, plano_id, planos(nome)').order('nome').limit(200);
-    if (orgId) qal = qal.eq('organization_id', orgId);
-    const [{ data: au }, { data: al }] = await Promise.all([qa, qal]);
+    qa = qa.eq('organization_id', orgId).eq('professor_id', staff.id);
+    const [{ data: au }, { data: assignedWorkouts }] = await Promise.all([
+      qa,
+      supabase.from('treinos').select('aluno_id').eq('organization_id', orgId).eq('professor_id', user.id),
+    ]);
+    const classIds = (au || []).map((a) => a.id);
+    const { data: enrolled } = classIds.length
+      ? await supabase.from('aulas_inscritos').select('aluno_id').in('aula_id', classIds)
+      : { data: [] as { aluno_id: string }[] };
+    const portfolioIds = [...new Set([...(assignedWorkouts || []).map((item) => item.aluno_id), ...(enrolled || []).map((item) => item.aluno_id)])];
+    const { data: al } = portfolioIds.length
+      ? await supabase.from('alunos').select('id, nome, status, user_id, plano_id, planos(nome)').eq('organization_id', orgId).in('id', portfolioIds).order('nome').limit(200)
+      : { data: [] as any[] };
     setAulas(au || []);
     const alunosList = (al || []) as any[];
     setAlunos(alunosList);
@@ -74,7 +86,7 @@ export default function CoachHome() {
       setTreinos([]); setCheckins([]); setAnamnesesFila([]); setFeedbacks([]); setExecs([]);
     } else {
       const [{ data: tr }, { data: ck }, { data: an }, { data: fb }] = await Promise.all([
-        supabase.from('treinos').select('id, nome, descricao, data_inicio, data_fim, aluno_id, status, professor_id, created_at, updated_at').in('aluno_id', ids).order('created_at', { ascending: false }).limit(300),
+        supabase.from('treinos').select('id, nome, descricao, data_inicio, data_fim, aluno_id, status, professor_id, created_at, updated_at').in('aluno_id', ids).eq('professor_id', user.id).order('created_at', { ascending: false }).limit(300),
         supabase.from('checkins').select('id, aluno_id, data_checkin, horario_entrada').in('aluno_id', ids).gte('data_checkin', inicioHist).order('horario_entrada', { ascending: false }).limit(1000),
         supabase.from('anamnese_respostas').select('id, aluno_id, tipo, preenchido_em, respostas, status, alunos(nome, email)').in('aluno_id', ids).eq('status', 'preenchido').order('preenchido_em', { ascending: false }).limit(50),
         (supabase as any).from('workout_sessions').select('aluno_id, data, status, feedback').in('aluno_id', ids).not('feedback', 'is', null).order('data', { ascending: false }).limit(10),
@@ -98,7 +110,7 @@ export default function CoachHome() {
     setFilaIACount(count || 0);
   };
 
-  useEffect(() => { carregar(); }, [activeOrg?.id]);
+  useEffect(() => { carregar(); }, [activeOrg?.id, user?.id]);
 
   const hoje = iso(new Date());
   const aulasHoje = aulas.filter((a) => a.data_aula === hoje);
@@ -151,7 +163,7 @@ export default function CoachHome() {
   };
   const presentes = new Set(checkins.filter((c) => c.data_checkin === presencaAula?.data_aula).map((c) => c.aluno_id));
   const marcarPresenca = async (alunoId: string) => {
-    const { error } = await supabase.from('checkins').insert({ aluno_id: alunoId, data_checkin: presencaAula?.data_aula || hoje });
+    const { error } = await (supabase as any).rpc('record_daily_checkin', { p_aluno_id: alunoId, p_date: presencaAula?.data_aula || hoje });
     if (error) return toast.error('Falha ao registrar presença');
     toast.success(`Presença de ${nomeAluno(alunoId)} registrada`);
     carregar();
@@ -447,3 +459,4 @@ export default function CoachHome() {
     </PersonaLayout>
   );
 }
+

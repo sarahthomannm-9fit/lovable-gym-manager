@@ -8,16 +8,26 @@ import { PageShell } from "./warroom/PageShell";
 import { Button } from "@/components/ui/button";
 import { Grid, List, Calendar } from "lucide-react";
 import { useSupabaseGymData } from "@/contexts/SupabaseGymDataContext";
+import { useOperationalContext } from '@/hooks/useOperationalContext';
+import { useSearchParams } from 'react-router-dom';
+import { useFuncionarios } from '@/hooks/useFuncionarios';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type ViewType = "calendar" | "daily" | "packages";
 
 export function SupabaseClasses() {
-  const { classes, addClass, updateClass } = useSupabaseGymData();
-  const [view, setView] = useState<ViewType>("calendar");
+  const { classes: allClasses, addClass, updateClass } = useSupabaseGymData();
+  const { activeOrg } = useOperationalContext();
+  const { getProfessores } = useFuncionarios();
+  const [params] = useSearchParams();
+  const focusedId = params.get('focus');
+  const classes = allClasses.filter((item) => activeOrg?.id && (item as any).organization_id === activeOrg.id);
+  const [view, setView] = useState<ViewType>(focusedId ? 'daily' : "calendar");
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   const handleAddClass = async (classData: any) => {
-    try { await addClass(classData); } catch (error) { console.error('Failed to add class:', error); }
+    if (!activeOrg?.id) throw new Error('Selecione uma organização.');
+    await addClass({ ...classData, organization_id: activeOrg.id });
   };
   const handleConfirmClass = async (id: string) => {
     try { await updateClass(id, { status: 'confirmada' }); } catch (error) { console.error('Failed to confirm class:', error); }
@@ -42,7 +52,8 @@ export function SupabaseClasses() {
     { label: 'SEM INSTRUTOR', value: String(semInstrutor.length), color: semInstrutor.length > 0 ? 'text-[hsl(var(--urgency-critical))]' : undefined },
   ];
 
-  const classItems = classes.map((c, idx) => ({
+  const visibleClasses = focusedId ? classes.filter((item) => item.id === focusedId) : classes;
+  const classItems = visibleClasses.map((c, idx) => ({
     id: idx + 1,
     student: c.nome || 'N/A',
     date: c.data_aula,
@@ -50,7 +61,7 @@ export function SupabaseClasses() {
     type: c.tipo || c.nome,
     status: (c as any).status === 'confirmada' ? 'Confirmada' : (c as any).status === 'cancelada' ? 'Cancelada' : 'Agendada',
   }));
-  const classIdMap = classes.map(c => c.id);
+  const classIdMap = visibleClasses.map(c => c.id);
 
   const renderContent = () => {
     switch (view) {
@@ -84,8 +95,11 @@ export function SupabaseClasses() {
       }
     >
       <div className="mb-4"><AddClassDialog onAddClass={handleAddClass} /></div>
+      {semInstrutor.length > 0 && <div className="mb-4 space-y-2 rounded border p-3"><p className="text-sm font-medium">Aulas sem professor</p>{semInstrutor.map((aula) => <div key={aula.id} className="flex items-center justify-between gap-3 text-sm"><span>{aula.nome} · {aula.data_aula} {aula.horario_inicio}</span><Select onValueChange={async (id) => { try { await updateClass(aula.id, { professor_id: id }); } catch (error) { console.error('Erro ao atribuir professor:', error); } }}><SelectTrigger className="w-52"><SelectValue placeholder="Atribuir professor" /></SelectTrigger><SelectContent>{getProfessores().map((professor) => <SelectItem key={professor.id} value={professor.id}>{professor.nome}</SelectItem>)}</SelectContent></Select></div>)}</div>}
+      {focusedId && <p className="mb-3 text-sm text-muted-foreground">{visibleClasses.length ? `Aula selecionada: ${visibleClasses[0].nome}` : 'Aula não encontrada nesta organização.'}</p>}
       {renderContent()}
-      <ConfirmDialog open={!!cancellingId} onOpenChange={(open) => !open && setCancellingId(null)} title="Cancelar Aula" description="Cancelar esta aula? Alunos serão notificados." onConfirm={handleCancelClass} confirmLabel="Cancelar Aula" variant="destructive" />
+      <ConfirmDialog open={!!cancellingId} onOpenChange={(open) => !open && setCancellingId(null)} title="Cancelar Aula" description="Cancelar esta aula? Avise os alunos inscritos após confirmar." onConfirm={handleCancelClass} confirmLabel="Cancelar Aula" variant="destructive" />
     </PageShell>
   );
 }
+

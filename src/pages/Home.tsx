@@ -65,23 +65,30 @@ export default function Home() {
       if (activeOrg && !isAdmin) alunosQuery = alunosQuery.eq('organization_id', activeOrg.id);
       const { data: alunos, error: e1 } = await alunosQuery;
       if (e1) throw e1;
-      const ids = (alunos || []).map((a: any) => a.id);
-
+      const alunoIds = (alunos || []).map((aluno: any) => aluno.id);
+      const scoped = activeOrg && !isAdmin;
+      const scopedIds = alunoIds.length ? alunoIds : ['00000000-0000-0000-0000-000000000000'];
+      let checkinsQuery = supabase.from('checkins').select('id', { count: 'exact', head: true }).eq('data_checkin', hoje);
+      let aulasQuery = supabase.from('aulas').select('id', { count: 'exact', head: true }).eq('data_aula', hoje);
+      let pagosQuery = supabase.from('pagamentos').select('valor').eq('status', 'pago').gte('data_pagamento', inicioMes);
+      let atrasadosQuery = supabase.from('pagamentos').select('id', { count: 'exact', head: true }).eq('status', 'pendente').lt('data_vencimento', hoje);
+      let avaliacoesQuery = supabase.from('avaliacoes_fisicas').select('id', { count: 'exact', head: true }).lte('proxima_avaliacao', hoje);
+      if (scoped) {
+        checkinsQuery = checkinsQuery.in('aluno_id', scopedIds);
+        aulasQuery = aulasQuery.eq('organization_id', activeOrg.id);
+        pagosQuery = pagosQuery.in('aluno_id', scopedIds);
+        atrasadosQuery = atrasadosQuery.in('aluno_id', scopedIds);
+        avaliacoesQuery = avaliacoesQuery.in('aluno_id', scopedIds);
+      }
       const [checkins, aulas, pagos, atrasados, avaliacoes, notif, eventos] = await Promise.all([
-        supabase.from('checkins').select('id', { count: 'exact', head: true }).eq('data_checkin', hoje),
-        supabase.from('aulas').select('id', { count: 'exact', head: true }).eq('data_aula', hoje),
-        supabase.from('pagamentos').select('valor').eq('status', 'pago').gte('data_pagamento', inicioMes),
-        supabase.from('pagamentos').select('id', { count: 'exact', head: true })
-          .eq('status', 'pendente').lt('data_vencimento', hoje),
-        supabase.from('avaliacoes_fisicas').select('id', { count: 'exact', head: true })
-          .lte('proxima_avaliacao', hoje),
+        checkinsQuery, aulasQuery, pagosQuery, atrasadosQuery, avaliacoesQuery,
         supabase.from('notificacoes').select('id', { count: 'exact', head: true }).eq('status', 'pendente'),
         supabase.from('system_events').select('event_type, entity_type, created_at, metadata')
           .order('created_at', { ascending: false }).limit(8),
       ]);
 
       setResumo({
-        alunosAtivos: (alunos || []).filter((a: any) => a.status === 'ativo').length || ids.length,
+        alunosAtivos: (alunos || []).filter((a: any) => a.status === 'ativo').length,
         checkinsHoje: checkins.count || 0,
         aulasHoje: aulas.count || 0,
         receitaMes: (pagos.data || []).reduce((s: number, p: any) => s + Number(p.valor || 0), 0),
@@ -230,3 +237,4 @@ export default function Home() {
     </div>
   );
 }
+

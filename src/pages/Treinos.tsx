@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSupabaseGymData } from "@/contexts/SupabaseGymDataContext";
 import { cn } from "@/lib/utils";
 import { FilaIATreinos } from "@/components/treinos/FilaIATreinos";
+import { useOperationalContext } from "@/hooks/useOperationalContext";
 
 interface Treino {
   id: string;
@@ -37,11 +38,14 @@ export function Treinos() {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { students } = useSupabaseGymData();
+  const { activeOrg } = useOperationalContext();
 
   const fetchTreinos = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.from('treinos').select(`id, aluno_id, descricao, data_inicio, data_fim, alunos (nome)`).order('data_inicio', { ascending: false });
+      let query = supabase.from('treinos').select(`id, aluno_id, descricao, data_inicio, data_fim, alunos (nome)`).order('data_inicio', { ascending: false });
+      if (activeOrg) query = query.eq('organization_id', activeOrg.id);
+      const { data, error } = await query;
       if (error) throw error;
       setTreinos(data?.map(t => ({ ...t, aluno: t.alunos ? { nome: t.alunos.nome } : undefined })) || []);
     } catch (error) {
@@ -50,18 +54,20 @@ export function Treinos() {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchTreinos(); }, []);
+  useEffect(() => { fetchTreinos(); }, [activeOrg?.id]);
 
   useEffect(() => {
-    supabase.from('treinos_ia_fila').select('id', { count: 'exact', head: true })
-      .eq('status', 'pendente').then(({ count }) => setFilaCount(count || 0));
-  }, []);
+    let query = supabase.from('treinos_ia_fila').select('id', { count: 'exact', head: true }).eq('status', 'pendente');
+    if (activeOrg) query = query.eq('organization_id', activeOrg.id);
+    query.then(({ count }) => setFilaCount(count || 0));
+  }, [activeOrg?.id]);
 
   const hoje = new Date().toISOString().split('T')[0];
   const vencidos = treinos.filter(t => t.data_fim && t.data_fim < hoje).length;
   const vencendo = treinos.filter(t => { const d = Math.ceil((new Date(t.data_fim).getTime() - Date.now()) / 86400000); return d >= 0 && d <= 10; }).length;
   const emDia = treinos.length - vencidos - vencendo;
-  const semTreino = students.filter(s => s.status === 'ativo' && !treinos.some(t => t.aluno_id === s.id)).length;
+  const scopedStudents = activeOrg ? students.filter((student: any) => student.organization_id === activeOrg.id) : students;
+  const semTreino = scopedStudents.filter(s => s.status === 'ativo' && !treinos.some(t => t.aluno_id === s.id)).length;
 
   const shellMetrics = [
     { label: 'TOTAL', value: String(treinos.length) },
@@ -87,7 +93,7 @@ export function Treinos() {
       sub={`${treinos.length} treinos · ${vencidos} vencido(s)`}
       criticals={vencidos > 0 ? vencidos : undefined}
       metrics={shellMetrics}
-      actions={<AddTrainingDialog students={students} onSuccess={fetchTreinos} />}
+      actions={<AddTrainingDialog students={scopedStudents} onSuccess={fetchTreinos} />}
     >
       <Tabs defaultValue={filaCount > 0 ? 'fila-ia' : 'ativos'} className="mt-4">
         <TabsList className="mb-4">
@@ -113,7 +119,7 @@ export function Treinos() {
               <Dumbbell className="h-12 w-12 mx-auto text-muted-foreground" />
               <p className="font-semibold">Nenhum treino cadastrado</p>
               <p className="text-sm text-muted-foreground">Crie o primeiro treino para seus alunos.</p>
-              <AddTrainingDialog students={students} onSuccess={fetchTreinos} trigger={
+              <AddTrainingDialog students={scopedStudents} onSuccess={fetchTreinos} trigger={
                 <Button><Plus className="h-4 w-4 mr-2" />Criar Primeiro Treino</Button>
               } />
             </CardContent></Card>
@@ -146,3 +152,4 @@ export function Treinos() {
     </PageShell>
   );
 }
+

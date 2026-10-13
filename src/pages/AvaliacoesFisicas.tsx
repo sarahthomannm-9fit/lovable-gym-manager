@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAvaliacoesFisicas, AvaliacaoFisica } from '@/hooks/useAvaliacoesFisicas';
 import { useSupabaseGymData } from '@/contexts/SupabaseGymDataContext';
+import { useOperationalContext } from '@/hooks/useOperationalContext';
 import { useFuncionarios } from '@/hooks/useFuncionarios';
 import { 
   Activity, 
@@ -29,7 +30,9 @@ import { ptBR } from 'date-fns/locale';
 
 export function AvaliacoesFisicas() {
   const { avaliacoes, loading, addAvaliacao, getAvaliacoesByAluno } = useAvaliacoesFisicas();
-  const { students } = useSupabaseGymData();
+  const { students: allStudents } = useSupabaseGymData();
+  const { activeOrg } = useOperationalContext();
+  const students = allStudents.filter((student) => activeOrg?.id && student.organization_id === activeOrg.id);
   const { getProfessores } = useFuncionarios();
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -477,3 +480,4 @@ export function AvaliacoesFisicas() {
     </div>
   );
 }
+

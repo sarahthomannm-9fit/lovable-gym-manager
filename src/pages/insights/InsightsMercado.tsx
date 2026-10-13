@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { TrendingUp, Users, DollarSign, Activity } from "lucide-react";
 
 const PERIODOS = [30, 90, 180, 365];
@@ -13,18 +12,29 @@ export default function InsightsMercado() {
   const [alunos, setAlunos] = useState<any[]>([]);
   const [orgs, setOrgs] = useState<any[]>([]);
   const [pagamentos, setPagamentos] = useState<any[]>([]);
-  const [avaliacoes, setAvaliacoes] = useState<any[]>([]);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const since = new Date(Date.now() - periodo * 86400000).toISOString();
     (async () => {
-      const [{ data: a }, { data: o }, { data: p }, { data: av }] = await Promise.all([
+      const readPayments = async () => {
+        const rows: any[] = [];
+        for (let offset = 0; ; offset += 500) {
+          const page = await supabase.from('pagamentos').select('aluno_id, valor, status, data_pagamento').eq('status', 'pago').gte('data_pagamento', since.slice(0, 10)).range(offset, offset + 499);
+          if (page.error) return { data: [], error: page.error };
+          rows.push(...(page.data || []));
+          if (!page.data || page.data.length < 500) break;
+        }
+        return { data: rows, error: null };
+      };
+      const [students, organizations, payments] = await Promise.all([
         supabase.from("alunos").select("id, organization_id, lifecycle_status, valor_mensalidade, created_at"),
         (supabase as any).from("organizations").select("id, tipo"),
-        supabase.from("pagamentos").select("valor, status, data_pagamento").gte("data_pagamento", since.slice(0,10)),
-        supabase.from("avaliacoes_fisicas").select("id, created_at"),
+        readPayments(),
       ]);
-      setAlunos(a || []); setOrgs(o || []); setPagamentos(p || []); setAvaliacoes(av || []);
+      const failure = students.error || organizations.error || payments.error;
+      if (failure) { setError(failure.message); setAlunos([]); setOrgs([]); setPagamentos([]); return; }
+      setError(''); setAlunos(students.data || []); setOrgs(organizations.data || []); setPagamentos(payments.data || []);
     })();
   }, [periodo]);
 
@@ -40,7 +50,8 @@ export default function InsightsMercado() {
   const cancelados = filteredAlunos.filter(a => a.lifecycle_status === 'cancelado').length;
   const churn = filteredAlunos.length ? Math.round((cancelados / filteredAlunos.length) * 100) : 0;
 
-  const receitaPeriodo = pagamentos.filter(p => p.status === 'pago').reduce((s, p) => s + Number(p.valor), 0);
+  const studentIds = new Set(filteredAlunos.map(a => a.id));
+  const receitaPeriodo = pagamentos.filter(p => p.status === 'pago' && studentIds.has(p.aluno_id)).reduce((s, p) => s + Number(p.valor), 0);
 
   return (
     <div className="p-6 space-y-6">
@@ -48,6 +59,7 @@ export default function InsightsMercado() {
         <h1 className="text-2xl font-display font-bold">Insights por Mercado</h1>
         <p className="text-sm text-muted-foreground">BI da assessoria 9FIT segmentado por mercado</p>
       </div>
+      {error && <p role="alert" className="text-sm text-destructive">Falha ao carregar dados: {error}</p>}
 
       <div className="flex flex-wrap gap-2 items-center">
         <span className="text-xs font-mono text-muted-foreground mr-2">Período:</span>
@@ -70,11 +82,11 @@ export default function InsightsMercado() {
       <Card><CardContent className="p-4">
         <div className="text-xs font-mono uppercase text-primary/70 mb-3">Distribuição por mercado</div>
         <div className="space-y-2">
-          {['condominio','corporate','studio','professor'].map(t => {
+          {['condominio','corporate','studio','professor'].filter(t => mercado === 'todos' || mercado === t).map(t => {
             const ids = orgByTipo(t);
-            const count = alunos.filter(a => ids.has(a.organization_id) && a.lifecycle_status === 'ativo').length;
-            const revenue = alunos.filter(a => ids.has(a.organization_id) && a.lifecycle_status === 'ativo').reduce((s,a) => s + Number(a.valor_mensalidade||0), 0);
-            const pct = ativos.length ? Math.round((count / (mercado === 'todos' ? filteredAlunos.filter(a => a.lifecycle_status === 'ativo').length : ativos.length)) * 100) : 0;
+            const count = ativos.filter(a => ids.has(a.organization_id)).length;
+            const revenue = ativos.filter(a => ids.has(a.organization_id)).reduce((s,a) => s + Number(a.valor_mensalidade||0), 0);
+            const pct = ativos.length ? Math.round((count / ativos.length) * 100) : 0;
             return (
               <div key={t} className="space-y-1">
                 <div className="flex justify-between text-sm">
@@ -100,3 +112,4 @@ function Kpi({ icon: Icon, label, value, tone }: any) {
     <div className={`text-2xl font-display font-bold mt-1 ${tone === 'destructive' ? 'text-destructive' : 'text-primary'}`}>{value}</div>
   </CardContent></Card>;
 }
+

@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 
 export interface SupabaseStudent {
   id: string;
+  organization_id?: string | null;
   nome: string;
   email: string;
   telefone?: string;
@@ -165,3 +166,4 @@ export function useSupabaseStudents() {
     refetch: fetchStudents
   };
 }
+

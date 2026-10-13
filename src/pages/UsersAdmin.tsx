@@ -21,6 +21,7 @@ interface UserRow {
   user_id: string;
   email: string;
   role: AppRole;
+  active: boolean;
 }
 
 interface AlunoSemAcesso {
@@ -62,6 +63,7 @@ export function UsersAdmin() {
       toast.error('Erro ao carregar usuários');
     } else {
       setUsers(data?.users || []);
+      setActiveMap(Object.fromEntries((data?.users || []).map((user: UserRow) => [user.user_id, user.active])));
     }
     setLoading(false);
   };
@@ -111,7 +113,15 @@ export function UsersAdmin() {
     setSubmitting(false);
   };
 
-  const handleToggleActive = async (userId: string) => { const next = !(activeMap[userId] ?? true); const { error } = await (supabase as any).rpc('set_user_active', { p_user_id: userId, p_active: next }); if (error) toast.error(error.message); else { setActiveMap((current) => ({ ...current, [userId]: next })); toast.success(next ? 'Usuário reativado.' : 'Usuário desativado.'); } };
+  const handleToggleActive = async (userId: string) => {
+    const next = !(activeMap[userId] ?? true);
+    const { data, error } = await supabase.functions.invoke('manage-users', {
+      body: { action: 'set_user_active', userId, active: next },
+    });
+    if (error || data?.error) return toast.error(data?.error || 'Não foi possível alterar o acesso.');
+    setActiveMap((current) => ({ ...current, [userId]: next }));
+    toast.success(next ? 'Usuário reativado.' : 'Usuário desativado.');
+  };
 
   const handleDelete = async (userId: string, userEmail: string) => {
     if (!confirm(`Excluir ${userEmail}? Essa ação é irreversível.`)) return;
@@ -262,7 +272,7 @@ export function UsersAdmin() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="new-pass" className="text-xs">Senha (mín 6)</Label>
-              <Input id="new-pass" type="text" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <Input id="new-pass" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Permissão</Label>
@@ -375,7 +385,7 @@ export function UsersAdmin() {
               {linkMode === 'password' && (
                 <div className="space-y-1.5">
                   <Label className="text-xs">Senha (mín 6 caracteres)</Label>
-                  <Input type="text" value={linkPassword} onChange={(e) => setLinkPassword(e.target.value)} />
+                  <Input type="password" value={linkPassword} onChange={(e) => setLinkPassword(e.target.value)} />
                 </div>
               )}
 
@@ -392,3 +402,4 @@ export function UsersAdmin() {
     </div>
   );
 }
+

@@ -185,6 +185,7 @@ const App = () => (
                     <Route path="/anamnese/:token" element={<Anamnese />} />
                     <Route path="/entrada" element={<ResidentEntry />} />
                     <Route path="/convite/:token" element={<AcceptInvite />} />
+                    <Route path="/convite-coach/:token" element={<AcceptInvite />} />
                     <Route path="/primeiro-acesso" element={<ProtectedRoute><FirstAccess /></ProtectedRoute>} />
                     <Route path="/select-context" element={<ProtectedRoute><SelectContext /></ProtectedRoute>} />
                     <Route path="/sindico" element={<ProtectedRoute><RoleRoute allow={['sindico','admin']}><SindicoHome /></RoleRoute></ProtectedRoute>} />
@@ -206,17 +207,17 @@ const App = () => (
                     <Route path="/admin/fitpro" element={<AdminOnly><FitProIntegration /></AdminOnly>} />
                     <Route path="/operacao-9fit" element={<StaffOnly><Operacao9FIT /></StaffOnly>} />
                     <Route path="/cfo/leads" element={<AdminOnly><LeadsExtractionPlan /></AdminOnly>} />
-                    <Route path="/pipeline" element={<AdminOnly><PipelineComercial /></AdminOnly>} />
+                    <Route path="/pipeline" element={<StaffOnly><PipelineComercial /></StaffOnly>} />
                     <Route path="/clientes" element={<Protected><Clientes /></Protected>} />
                     <Route path="/contratos" element={<Protected><Contratos /></Protected>} />
                     <Route path="/planos-treino" element={<Protected><PlanosTreino /></Protected>} />
                     <Route path="/studio" element={<ProtectedRoute><RoleRoute allow={['admin','manager','professor']}><MainLayout><StudioHome /></MainLayout></RoleRoute></ProtectedRoute>} />
                     <Route path="/insights" element={<Protected><InsightsMercado /></Protected>} />
-                    <Route path="/coaches" element={<Protected><Funcionarios /></Protected>} />
+                    <Route path="/coaches" element={<StaffOnly><Funcionarios /></StaffOnly>} />
                    <Route path="/" element={<Navigate to="/home" replace />} />
                    <Route path="/home" element={<Protected><Home /></Protected>} />
                    <Route path="/mercados/:tipo" element={<Protected><MercadoLista /></Protected>} />
-                   <Route path="/relatorios/automaticos" element={<StaffOnly><RelatoriosAutomaticos /></StaffOnly>} />
+                    <Route path="/relatorios/automaticos" element={<AdminOnly><RelatoriosAutomaticos /></AdminOnly>} />
 
                     <Route path="/agents" element={<StaffOnly><AgentsHub /></StaffOnly>} />
                     <Route path="/admin/usuarios" element={<AdminOnly><UsersAdmin /></AdminOnly>} />
@@ -228,7 +229,7 @@ const App = () => (
                     <Route path="/painel/pipeline" element={<StaffOnly><Pipeline /></StaffOnly>} />
                     <Route path="/alunos" element={<Protected><SupabaseStudents /></Protected>} />
                     <Route path="/planos" element={<Protected><SupabasePlans /></Protected>} />
-                    <Route path="/aulas" element={<Protected><SupabaseClasses /></Protected>} />
+                    <Route path="/aulas" element={<StaffOnly><SupabaseClasses /></StaffOnly>} />
                     <Route path="/pagamentos" element={<Protected><SupabasePayments /></Protected>} />
                     <Route path="/checkin" element={<Protected><SupabaseCheckIn /></Protected>} />
                     <Route path="/equipamentos" element={<Protected><Equipment /></Protected>} />
@@ -259,9 +260,9 @@ const App = () => (
                     <Route path="/9fit/network" element={<Protected><NetworkDashboard /></Protected>} />
                     <Route path="/9fit/automation" element={<Protected><AutomationDashboard /></Protected>} />
                     <Route path="/9fit/store" element={<Protected><StoreDashboard /></Protected>} />
-                    <Route path="/funcionarios" element={<Protected><Funcionarios /></Protected>} />
-                    <Route path="/avaliacoes" element={<Protected><AvaliacoesFisicas /></Protected>} />
-                    <Route path="/experimentais" element={<Protected><AulasExperimentais /></Protected>} />
+                    <Route path="/funcionarios" element={<StaffOnly><Funcionarios /></StaffOnly>} />
+                    <Route path="/avaliacoes" element={<StaffOnly><AvaliacoesFisicas /></StaffOnly>} />
+                    <Route path="/experimentais" element={<StaffOnly><AulasExperimentais /></StaffOnly>} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </BrowserRouter>
@@ -274,4 +275,5 @@ const App = () => (
 );
 
 export default App;
+
 

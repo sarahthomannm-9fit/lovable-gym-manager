@@ -1,3 +1,4 @@
+import { OperationalDeliveryBoard } from '@/components/OperationalDeliveryBoard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useDataIntegration } from "@/components/DataIntegrationProvider";
@@ -202,6 +203,8 @@ export default function CEODashboard() {
           </CardContent>
         </Card>
       )}
+      <OperationalDeliveryBoard moduleKey="ceo" />
     </div>
   );
 }
+

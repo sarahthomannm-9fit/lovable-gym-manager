@@ -99,16 +99,16 @@ export function EquipmentCard({ equipment, onUpdateEquipment }: EquipmentCardPro
           )}
         </div>
         <div className="flex items-center justify-end space-x-2 pt-2 border-t">
-          <Button variant="outline" size="sm">Editar</Button>
           <Button 
             variant="outline" size="sm"
-            onClick={() => onUpdateEquipment(equipment.id, { status: equipment.status === 'working' ? 'maintenance' : 'working' })}
+            onClick={() => onUpdateEquipment(equipment.id, { status: equipment.status === 'maintenance' ? 'working' : 'maintenance' })}
           >
             <Wrench className="w-4 h-4 mr-1" />
-            {equipment.status === 'working' ? 'Manutenção' : 'Ativar'}
+            {equipment.status === 'maintenance' ? 'Concluir manutenção' : 'Abrir manutenção'}
           </Button>
         </div>
       </CardContent>
     </Card>
   );
 }
+

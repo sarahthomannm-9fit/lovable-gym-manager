@@ -24,7 +24,7 @@ type Ctx = {
   activeOrg: Organization | null;
   activeRole: AppRole | null;
   setActiveOrg: (org: Organization | null) => void;
-  refresh: () => Promise<void>;
+  refresh: (userId?: string) => Promise<void>;
   ensureOrgForPersona: (tipo: Organization['tipo']) => Promise<Organization | null>;
 };
 
@@ -158,7 +158,7 @@ export function OperationalContextProvider({ children }: { children: ReactNode }
   return (
     <OperationalContext.Provider value={{
       loading, isAdmin, primaryRole, memberships, activeOrg, activeRole,
-      setActiveOrg, refresh: () => load(user?.id ?? null), ensureOrgForPersona,
+      setActiveOrg, refresh: (userId?: string) => load(userId ?? user?.id ?? null), ensureOrgForPersona,
     }}>
       {children}
     </OperationalContext.Provider>
@@ -182,4 +182,5 @@ export function routeForRole(role: AppRole | null): string {
     default: return '/select-context';
   }
 }
+
 
