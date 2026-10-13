@@ -43,6 +43,7 @@ const PAPEL_LABELS: Record<string, string> = {
   sindico: "Síndico",
   professor: "Coach/Professor",
   user: "Morador",
+  corporate: "RH / Gestor",
 };
 
 export default function OrganizationsAdmin() {
@@ -96,8 +97,12 @@ export default function OrganizationsAdmin() {
   }, []);
 
   useEffect(() => {
-    if (selectedOrg) loadInvites(selectedOrg);
-  }, [selectedOrg, loadInvites]);
+    if (selectedOrg) {
+      loadInvites(selectedOrg);
+      const organization = organizations.find((item) => item.id === selectedOrg);
+      setInvitePapel(organization?.tipo === 'corporate' ? 'corporate' : organization?.tipo === 'condominio' ? 'sindico' : 'professor');
+    }
+  }, [selectedOrg, loadInvites, organizations]);
 
   const createOrganization = async () => {
     if (!newOrgNome.trim()) {
@@ -177,6 +182,11 @@ export default function OrganizationsAdmin() {
 
   const selectedOrgData = organizations.find((o) => o.id === selectedOrg);
   const orgInvites = selectedOrg ? invites[selectedOrg] ?? [] : [];
+  const inviteRoles = selectedOrgData?.tipo === 'corporate'
+    ? [{ value: 'corporate', label: 'RH / Gestor' }, { value: 'user', label: 'Colaborador' }]
+    : selectedOrgData?.tipo === 'professor' || selectedOrgData?.tipo === 'studio'
+      ? [{ value: 'professor', label: 'Coach/Professor' }, { value: 'user', label: 'Aluno' }]
+      : [{ value: 'sindico', label: 'Síndico' }, { value: 'professor', label: 'Coach/Professor' }, { value: 'user', label: 'Morador' }];
 
   return (
     <div className="container mx-auto max-w-6xl space-y-6 p-6">
@@ -323,9 +333,7 @@ export default function OrganizationsAdmin() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="sindico">Síndico</SelectItem>
-                          <SelectItem value="professor">Coach/Professor</SelectItem>
-                          <SelectItem value="user">Morador</SelectItem>
+                          {inviteRoles.map((role) => <SelectItem key={role.value} value={role.value}>{role.label}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
@@ -440,3 +448,4 @@ export default function OrganizationsAdmin() {
     </div>
   );
 }
+
