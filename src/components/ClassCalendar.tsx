@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Video } from "lucide-react";
 import { useSupabaseGymData } from "@/contexts/SupabaseGymDataContext";
+import { useOperationalContext } from "@/hooks/useOperationalContext";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval, isSameDay, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -21,12 +22,13 @@ interface CalendarClass {
 
 export function ClassCalendar() {
   const { classes, students } = useSupabaseGymData();
+  const { activeOrg } = useOperationalContext();
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [calendarClasses, setCalendarClasses] = useState<CalendarClass[]>([]);
 
   useEffect(() => {
     // Convert Supabase classes to calendar format
-    const convertedClasses = classes.map(classItem => ({
+    const convertedClasses = classes.filter((classItem: any) => !activeOrg || classItem.organization_id === activeOrg.id).map(classItem => ({
       id: classItem.id,
       nome: classItem.nome,
       tipo: classItem.tipo || 'Aula',
@@ -37,7 +39,7 @@ export function ClassCalendar() {
     }));
 
     setCalendarClasses(convertedClasses);
-  }, [classes]);
+  }, [classes, activeOrg?.id]);
 
   const weekStart = startOfWeek(currentWeek, { locale: ptBR });
   const weekEnd = endOfWeek(currentWeek, { locale: ptBR });
@@ -162,3 +164,4 @@ export function ClassCalendar() {
     </div>
   );
 }
+

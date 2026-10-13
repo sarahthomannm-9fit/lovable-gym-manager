@@ -6,9 +6,11 @@ import { Badge } from '@/components/ui/badge';
 import { QrCode, Camera, Search, UserCheck, UserMinus, Clock, RefreshCw } from 'lucide-react';
 import { useFrequencia } from '@/hooks/useFrequencia';
 import { useSupabaseGymData } from '@/contexts/SupabaseGymDataContext';
+import { useOperationalContext } from '@/hooks/useOperationalContext';
 
 export function QRCodeCheckIn() {
   const { students } = useSupabaseGymData();
+  const { activeOrg } = useOperationalContext();
   const { 
     registrarEntrada, 
     registrarSaida, 
@@ -32,7 +34,7 @@ export function QRCodeCheckIn() {
     if (!qrInput.trim()) return;
 
     // QR Code pode conter ID do aluno ou email
-    const aluno = students.find(
+    const aluno = scopedStudents.find(
       s => s.id === qrInput || s.email.toLowerCase() === qrInput.toLowerCase()
     );
 
@@ -72,16 +74,18 @@ export function QRCodeCheckIn() {
     setSearchQuery('');
   };
 
-  const filteredStudents = students.filter(s =>
+  const scopedStudents = activeOrg ? students.filter((student: any) => student.organization_id === activeOrg.id) : students;
+  const scopedStudentIds = new Set(scopedStudents.map((student: any) => student.id));
+  const filteredStudents = scopedStudents.filter(s =>
     s.nome.toLowerCase().includes(searchQuery.toLowerCase()) ||
     s.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const alunosNaAcademia = getAlunosNaAcademia();
-  const frequenciaHoje = getFrequenciaHoje();
+  const alunosNaAcademia = getAlunosNaAcademia().filter((row) => scopedStudentIds.has(row.aluno_id));
+  const frequenciaHoje = getFrequenciaHoje().filter((row) => scopedStudentIds.has(row.aluno_id));
 
   const getAlunoNome = (alunoId: string) => {
-    return students.find(s => s.id === alunoId)?.nome || 'Aluno desconhecido';
+    return scopedStudents.find(s => s.id === alunoId)?.nome || 'Aluno desconhecido';
   };
 
   return (
@@ -151,7 +155,7 @@ export function QRCodeCheckIn() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total Alunos</p>
-                <p className="text-3xl font-bold text-purple-600">{students.length}</p>
+                <p className="text-3xl font-bold text-purple-600">{scopedStudents.length}</p>
               </div>
               <UserMinus className="w-8 h-8 text-purple-500/50" />
             </div>
@@ -274,3 +278,4 @@ export function QRCodeCheckIn() {
     </div>
   );
 }
+

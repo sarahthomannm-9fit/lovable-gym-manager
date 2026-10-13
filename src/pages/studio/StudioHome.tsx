@@ -148,14 +148,14 @@ export function FalarCom9FIT({ orgId }: { orgId: string }) {
   const [tickets, setTickets] = useState<any[]>([]);
 
   const load = async () => {
-    const { data } = await supabase.from("support_tickets").select("*").order("created_at",{ ascending: false }).limit(10);
+    const { data } = await supabase.from("support_tickets").select("*").eq('organization_id', orgId).order("created_at",{ ascending: false }).limit(10);
     setTickets(data || []);
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [orgId]);
 
   const enviar = async () => {
     if (!assunto || !descricao) return;
-    const { error } = await supabase.from("support_tickets").insert({ assunto, descricao, status: 'aberto', prioridade: 'normal' } as any);
+    const { error } = await supabase.from("support_tickets").insert({ organization_id: orgId, assunto, descricao, status: 'aberto', prioridade: 'normal' } as any);
     if (!error) { setAssunto(""); setDescricao(""); load(); }
   };
 
