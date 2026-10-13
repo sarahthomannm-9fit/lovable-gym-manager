@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Building2, Copy, Loader2, Mail, Plus, RefreshCw, Trash2, UserPlus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OnboardingRoteiro, onboardingProgress } from "@/components/admin/OnboardingRoteiro";
+import { OrganizationOperations } from "@/components/admin/OrganizationOperations";
 
 const TIPO_LABELS: Record<string, string> = {
   condominio: "Condomínio",
@@ -27,6 +28,7 @@ interface Organization {
   onboarding_status: string;
   created_at: string;
   metadata?: any;
+  operational_profile?: Record<string, any>;
 }
 
 interface Invite {
@@ -65,7 +67,7 @@ export default function OrganizationsAdmin() {
     setLoading(true);
     const { data, error } = await supabase
       .from("organizations")
-      .select("id, nome, tipo, status, onboarding_status, created_at, metadata")
+      .select("id, nome, tipo, status, onboarding_status, created_at, metadata, operational_profile")
       .order("created_at", { ascending: false });
     if (error) {
       toast.error("Erro ao carregar organizações", { description: error.message });
@@ -363,8 +365,17 @@ export default function OrganizationsAdmin() {
               <TabsList>
                 <TabsTrigger value="convites">Convites</TabsTrigger>
                 <TabsTrigger value="onboarding">Onboarding / Roteiro de visita</TabsTrigger>
+                <TabsTrigger value="operacao">Operação NINE LIVING</TabsTrigger>
               </TabsList>
-              <TabsContent value="onboarding">
+              <TabsContent value="operacao">
+                <OrganizationOperations
+                  key={selectedOrgData.id}
+                  orgId={selectedOrgData.id}
+                  orgName={selectedOrgData.nome}
+                  profile={selectedOrgData.operational_profile}
+                  onProfileSaved={(operational_profile) => setOrganizations((prev) => prev.map((o) => o.id === selectedOrgData.id ? { ...o, operational_profile } : o))}
+                />
+              </TabsContent>              <TabsContent value="onboarding">
                 <OnboardingRoteiro
                   key={selectedOrgData.id}
                   orgId={selectedOrgData.id}
@@ -448,4 +459,6 @@ export default function OrganizationsAdmin() {
     </div>
   );
 }
+
+
 
