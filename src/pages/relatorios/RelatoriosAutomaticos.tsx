@@ -62,7 +62,7 @@ export default function RelatoriosAutomaticos() {
   const [agentes, setAgentes] = useState<string[]>([]);
   useEffect(() => {
     let query = supabase.from('agent_reports').select('agent_id').limit(500);
-    if (activeOrg) query = query.eq('organization_id', activeOrg.id);
+    if (activeOrg) query = (query as any).eq('organization_id', activeOrg.id);
     query.then(({ data }) => {
       setAgentes([...new Set((data || []).map((d: any) => d.agent_id))].sort());
     });
