@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { UserPlus, Shield, ShieldCheck, ShieldAlert, Trash2, KeyRound, Link2, Copy, UserX } from 'lucide-react';
 import { useCurrentUserRole } from '@/hooks/useCurrentUserRole';
 import { Navigate } from 'react-router-dom';
+import { useOperationalContext } from '@/hooks/useOperationalContext';
 
 type AppRole = 'admin' | 'manager' | 'user';
 
@@ -31,6 +32,7 @@ interface AlunoSemAcesso {
 }
 
 export function UsersAdmin() {
+  const { activeOrg } = useOperationalContext();
   const { isAdmin, loading: roleLoading } = useCurrentUserRole();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -73,6 +75,7 @@ export function UsersAdmin() {
     const { data, error } = await supabase
       .from('alunos')
       .select('id, nome, email')
+      .eq('organization_id', activeOrg?.id || '00000000-0000-0000-0000-000000000000')
       .is('user_id', null)
       .order('nome');
     if (error) {
@@ -88,7 +91,7 @@ export function UsersAdmin() {
       fetchUsers();
       fetchAlunosSemAcesso();
     }
-  }, [isAdmin]);
+  }, [isAdmin, activeOrg?.id]);
 
   if (roleLoading) return <div className="p-8 text-muted-foreground">Carregando...</div>;
   if (!isAdmin) return <Navigate to="/painel" replace />;
