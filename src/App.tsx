@@ -185,6 +185,7 @@ const App = () => (
                     <Route path="/anamnese/:token" element={<Anamnese />} />
                     <Route path="/entrada" element={<ResidentEntry />} />
                     <Route path="/convite/:token" element={<AcceptInvite />} />
+                    <Route path="/convite-coach/:token" element={<AcceptInvite />} />
                     <Route path="/primeiro-acesso" element={<ProtectedRoute><FirstAccess /></ProtectedRoute>} />
                     <Route path="/select-context" element={<ProtectedRoute><SelectContext /></ProtectedRoute>} />
                     <Route path="/sindico" element={<ProtectedRoute><RoleRoute allow={['sindico','admin']}><SindicoHome /></RoleRoute></ProtectedRoute>} />

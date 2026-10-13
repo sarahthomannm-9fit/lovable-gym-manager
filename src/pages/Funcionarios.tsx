@@ -23,6 +23,8 @@ import {
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useOperationalContext } from '@/hooks/useOperationalContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast as sonnerToast } from 'sonner';
 
 const cargos = [
   { value: 'professor', label: 'Professor' },
@@ -41,7 +43,7 @@ const especialidadesOptions = [
 
 export function Funcionarios() {
   const { activeOrg } = useOperationalContext();
-  const { funcionarios, loading, addFuncionario, updateFuncionario } = useFuncionarios();
+  const { funcionarios, loading, addFuncionario, updateFuncionario, refetch } = useFuncionarios();
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingFuncionario, setEditingFuncionario] = useState<Funcionario | null>(null);
@@ -122,7 +124,20 @@ export function Funcionarios() {
   };
 
   const handleToggleAtivo = async (funcionario: Funcionario) => {
-    await updateFuncionario(funcionario.id, { ativo: !funcionario.ativo });
+    const reason = funcionario.ativo ? window.prompt('Motivo do desligamento (mínimo 5 caracteres):') : 'Reativação administrativa';
+    if (reason === null) return;
+    const { error } = await (supabase as any).rpc('set_staff_active', { p_funcionario_id: funcionario.id, p_active: !funcionario.ativo, p_reason: reason });
+    if (error) { sonnerToast.error(error.message); return; }
+    await refetch();
+    sonnerToast.success(funcionario.ativo ? 'Coach desativado e acesso à organização removido.' : 'Coach reativado.');
+  };
+
+  const handleInvite = async (funcionario: Funcionario) => {
+    const { data, error } = await (supabase as any).rpc('create_staff_invite', { p_funcionario_id: funcionario.id });
+    if (error) { sonnerToast.error(error.message); return; }
+    const link = `${window.location.origin}/convite-coach/${data.token}?email=${encodeURIComponent(funcionario.email || '')}`;
+    try { await navigator.clipboard.writeText(link); sonnerToast.success('Convite criado. Link copiado para compartilhar com o coach.'); }
+    catch { sonnerToast.info(link); }
   };
 
   const getCargoColor = (cargo: string) => {
@@ -418,7 +433,9 @@ export function Funcionarios() {
                   >
                     {funcionario.ativo ? 'Desativar' : 'Ativar'}
                   </Button>
+                  {funcionario.ativo && !funcionario.user_id && funcionario.email && ['professor','personal'].includes(funcionario.cargo) && <Button size="sm" variant="outline" onClick={() => handleInvite(funcionario)}>Convidar coach</Button>}
                 </div>
+                {funcionario.user_id && <p className="text-xs text-muted-foreground">Conta vinculada</p>}
               </CardContent>
             </Card>
           ))}

@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { useOperationalContext } from '@/hooks/useOperationalContext';
 
 const roleRoute = (role?: string | null) => {
   switch (role) {
@@ -27,6 +28,8 @@ export default function AcceptInvite() {
   const { token } = useParams();
   const navigate = useNavigate();
   const { session, signOut } = useAuth();
+  const { refresh } = useOperationalContext();
+  const isCoachInvite = window.location.pathname.startsWith('/convite-coach/');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -72,9 +75,11 @@ export default function AcceptInvite() {
           }
         }
       }
-      const { data, error } = await (supabase as any).rpc('accept_organization_invite', { p_token: token });
+      if (!activeSession) throw new Error('Sessão não disponível após autenticação.');
+      const { data, error } = await (supabase as any).rpc(isCoachInvite ? 'accept_staff_invite' : 'accept_organization_invite', { p_token: token });
       if (error) throw error;
-      const role = data?.papel || data?.role || data?.app_role;
+      await refresh(activeSession.user.id);
+      const role = isCoachInvite ? 'professor' : data?.papel || data?.role || data?.app_role;
       toast.success('Convite aceito. Seu acesso foi configurado.');
       navigate(roleRoute(role), { replace: true });
     } catch (error: any) {
@@ -89,7 +94,7 @@ export default function AcceptInvite() {
       <CardHeader>
         <p className="text-[10px] font-mono tracking-[0.18em] uppercase text-primary/70">NINE LIVING</p>
         <CardTitle className="font-display text-2xl font-normal">Ativar seu acesso</CardTitle>
-        <p className="text-sm text-muted-foreground">Crie sua conta Nine Living com o e-mail usado no convite. Você será levado automaticamente ao painel da sua persona.</p>
+        <p className="text-sm text-muted-foreground">{isCoachInvite ? 'Ative sua conta de coach com o e-mail cadastrado pela equipe.' : 'Crie sua conta Nine Living com o e-mail usado no convite. Você será levado automaticamente ao painel da sua persona.'}</p>
       </CardHeader>
       <CardContent>
         <form className="space-y-4" onSubmit={accept}>
@@ -103,3 +108,4 @@ export default function AcceptInvite() {
     </Card>
   </div>;
 }
+
