@@ -41,7 +41,7 @@ export default function RelatoriosAutomaticos() {
       let q = supabase.from('agent_reports')
         .select('id, agent_id, report_date, summary, metrics, highlights, created_at')
         .order('report_date', { ascending: false }).limit(200);
-      if (activeOrg) q = q.eq('organization_id', activeOrg.id);
+      if (activeOrg) q = (q as any).eq('organization_id', activeOrg.id);
       if (periodo !== 'all') {
         const desde = new Date(Date.now() - Number(periodo) * 86400000).toISOString().slice(0, 10);
         q = q.gte('report_date', desde);
@@ -62,7 +62,7 @@ export default function RelatoriosAutomaticos() {
   const [agentes, setAgentes] = useState<string[]>([]);
   useEffect(() => {
     let query = supabase.from('agent_reports').select('agent_id').limit(500);
-    if (activeOrg) query = query.eq('organization_id', activeOrg.id);
+    if (activeOrg) query = (query as any).eq('organization_id', activeOrg.id);
     query.then(({ data }) => {
       setAgentes([...new Set((data || []).map((d: any) => d.agent_id))].sort());
     });

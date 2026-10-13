@@ -52,7 +52,7 @@ export function useSupabaseCampaigns() {
     enabled: !!activeOrg?.id,
   });
 
-  const addCampaign = async (campaign: Omit<Campaign, "id" | "created_at" | "updated_at">) => {
+  const addCampaign = async (campaign: Omit<Campaign, 'id' | 'created_at' | 'updated_at' | 'organization_id'>) => {
     console.log("[Campaigns] inserting", campaign);
     const { data: inserted, error } = await supabase
       .from("campanhas_marketing")

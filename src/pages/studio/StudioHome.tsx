@@ -148,7 +148,7 @@ export function FalarCom9FIT({ orgId }: { orgId: string }) {
   const [tickets, setTickets] = useState<any[]>([]);
 
   const load = async () => {
-    const { data } = await supabase.from("support_tickets").select("*").eq('organization_id', orgId).order("created_at",{ ascending: false }).limit(10);
+    const { data } = await (supabase as any).from("support_tickets").select("*").eq('organization_id', orgId).order("created_at",{ ascending: false }).limit(10);
     setTickets(data || []);
   };
   useEffect(() => { load(); }, [orgId]);

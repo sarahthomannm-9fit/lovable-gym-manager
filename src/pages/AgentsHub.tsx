@@ -355,7 +355,7 @@ export default function AgentsHub() {
       let leadsQuery = supabase.from('leads').select('id, created_at', { count: 'exact', head: false });
       let alunosQuery = supabase.from('alunos').select('id, status').eq('status', 'ativo');
       let ticketsQuery = supabase.from('support_tickets').select('id, status, escalated_to_ceo').eq('status', 'open');
-      if (activeOrg) { leadsQuery = leadsQuery.eq('organization_id', activeOrg.id); alunosQuery = alunosQuery.eq('organization_id', activeOrg.id); ticketsQuery = ticketsQuery.eq('organization_id', activeOrg.id); }
+      if (activeOrg) { leadsQuery = (leadsQuery as any).eq('organization_id', activeOrg.id); alunosQuery = (alunosQuery as any).eq('organization_id', activeOrg.id); ticketsQuery = (ticketsQuery as any).eq('organization_id', activeOrg.id); }
       const alunosAtivosRows = await alunosQuery;
       const ids = (alunosAtivosRows.data || []).map((row: any) => row.id);
       const safeIds = ids.length ? ids : ['00000000-0000-0000-0000-000000000000'];
