@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Plus, Dumbbell, UserCheck } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOperationalContext } from "@/hooks/useOperationalContext";
 
 const NIVEL_COLOR: Record<string, string> = {
   iniciante: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30',
@@ -20,6 +21,7 @@ const NIVEL_COLOR: Record<string, string> = {
 
 export default function PlanosTreino() {
   const { user } = useAuth();
+  const { activeOrg } = useOperationalContext();
   const [planos, setPlanos] = useState<any[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [openNew, setOpenNew] = useState(false);
@@ -27,16 +29,18 @@ export default function PlanosTreino() {
   const [filter, setFilter] = useState<string>("todos");
 
   const load = async () => {
-    const { data } = await supabase.from("planos_treino").select("*").order("created_at", { ascending: false });
+    let plansQuery = supabase.from("planos_treino").select("*").order("created_at", { ascending: false });
+    if (activeOrg) plansQuery = plansQuery.eq("organization_id", activeOrg.id);
+    const { data } = await plansQuery;
     setPlanos(data || []);
     if (data?.length) {
-      const { data: ex } = await supabase.from("plano_exercicios").select("plano_treino_id");
+      const { data: ex } = await supabase.from("plano_exercicios").select("plano_treino_id").in("plano_treino_id", data.map((plan: any) => plan.id));
       const map: Record<string, number> = {};
       (ex || []).forEach((e: any) => { map[e.plano_treino_id] = (map[e.plano_treino_id] || 0) + 1; });
       setCounts(map);
     }
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [activeOrg?.id]);
 
   const filtered = planos.filter(p => {
     if (filter === 'meus') return p.professor_id === user?.id;
@@ -89,17 +93,18 @@ export default function PlanosTreino() {
         )}
       </div>
 
-      <NewPlanoDialog open={openNew} onOpenChange={setOpenNew} onCreated={load} userId={user?.id} />
-      <AssignDialog plano={openAssign} onClose={() => setOpenAssign(null)} userId={user?.id} />
+      <NewPlanoDialog open={openNew} onOpenChange={setOpenNew} onCreated={load} userId={user?.id} organizationId={activeOrg?.id} />
+      <AssignDialog plano={openAssign} onClose={() => setOpenAssign(null)} userId={user?.id} organizationId={activeOrg?.id} />
     </div>
   );
 }
 
-function NewPlanoDialog({ open, onOpenChange, onCreated, userId }: any) {
+function NewPlanoDialog({ open, onOpenChange, onCreated, userId, organizationId }: any) {
   const [form, setForm] = useState<any>({ nivel: 'iniciante', objetivo: 'Hipertrofia', semanas: 4, dias_semana: 3, publico: false });
   const save = async () => {
+    if (!organizationId) return toast.error("Selecione uma organização antes de criar o plano");
     if (!form.nome) return toast.error("Informe o nome");
-    const { error } = await supabase.from("planos_treino").insert({ ...form, professor_id: userId });
+    const { error } = await supabase.from("planos_treino").insert({ ...form, organization_id: organizationId, professor_id: userId });
     if (error) return toast.error(error.message);
     toast.success("Plano criado"); onOpenChange(false); setForm({ nivel: 'iniciante', objetivo: 'Hipertrofia', semanas: 4, dias_semana: 3 }); onCreated();
   };
@@ -136,16 +141,17 @@ function NewPlanoDialog({ open, onOpenChange, onCreated, userId }: any) {
   );
 }
 
-function AssignDialog({ plano, onClose, userId }: any) {
+function AssignDialog({ plano, onClose, userId, organizationId }: any) {
   const [alunos, setAlunos] = useState<any[]>([]);
   const [form, setForm] = useState<any>({});
   useEffect(() => {
-    if (plano) supabase.from("alunos").select("id, nome").eq("status","ativo").order("nome").then(({ data }) => setAlunos(data || []));
-  }, [plano]);
+    if (plano && organizationId) supabase.from("alunos").select("id, nome").eq("organization_id", organizationId).eq("status","ativo").order("nome").then(({ data }) => setAlunos(data || []));
+  }, [plano, organizationId]);
   const save = async () => {
     if (!form.aluno_id || !form.data_inicio) return toast.error("Preencha aluno e data");
     const { error } = await supabase.from("treinos").insert({
       aluno_id: form.aluno_id,
+      organization_id: organizationId,
       plano_treino_id: plano.id,
       professor_id: userId,
       nome: plano.nome,
