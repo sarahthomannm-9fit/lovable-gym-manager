@@ -212,7 +212,7 @@ const App = () => (
                     <Route path="/planos-treino" element={<Protected><PlanosTreino /></Protected>} />
                     <Route path="/studio" element={<ProtectedRoute><RoleRoute allow={['admin','manager','professor']}><MainLayout><StudioHome /></MainLayout></RoleRoute></ProtectedRoute>} />
                     <Route path="/insights" element={<Protected><InsightsMercado /></Protected>} />
-                    <Route path="/coaches" element={<Protected><Funcionarios /></Protected>} />
+                    <Route path="/coaches" element={<StaffOnly><Funcionarios /></StaffOnly>} />
                    <Route path="/" element={<Navigate to="/home" replace />} />
                    <Route path="/home" element={<Protected><Home /></Protected>} />
                    <Route path="/mercados/:tipo" element={<Protected><MercadoLista /></Protected>} />
@@ -259,7 +259,7 @@ const App = () => (
                     <Route path="/9fit/network" element={<Protected><NetworkDashboard /></Protected>} />
                     <Route path="/9fit/automation" element={<Protected><AutomationDashboard /></Protected>} />
                     <Route path="/9fit/store" element={<Protected><StoreDashboard /></Protected>} />
-                    <Route path="/funcionarios" element={<Protected><Funcionarios /></Protected>} />
+                    <Route path="/funcionarios" element={<StaffOnly><Funcionarios /></StaffOnly>} />
                     <Route path="/avaliacoes" element={<StaffOnly><AvaliacoesFisicas /></StaffOnly>} />
                     <Route path="/experimentais" element={<StaffOnly><AulasExperimentais /></StaffOnly>} />
                     <Route path="*" element={<NotFound />} />

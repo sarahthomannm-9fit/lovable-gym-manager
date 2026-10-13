@@ -17,12 +17,12 @@ import {
   Briefcase, 
   DollarSign,
   Edit,
-  Trash2,
   UserCheck,
   UserX
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useOperationalContext } from '@/hooks/useOperationalContext';
 
 const cargos = [
   { value: 'professor', label: 'Professor' },
@@ -40,7 +40,8 @@ const especialidadesOptions = [
 ];
 
 export function Funcionarios() {
-  const { funcionarios, loading, addFuncionario, updateFuncionario, deleteFuncionario } = useFuncionarios();
+  const { activeOrg } = useOperationalContext();
+  const { funcionarios, loading, addFuncionario, updateFuncionario } = useFuncionarios();
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingFuncionario, setEditingFuncionario] = useState<Funcionario | null>(null);
@@ -83,14 +84,12 @@ export function Funcionarios() {
       comissao_percentual: formData.comissao_percentual ? parseFloat(formData.comissao_percentual) : null,
     };
 
-    if (editingFuncionario) {
-      await updateFuncionario(editingFuncionario.id, data);
-    } else {
-      await addFuncionario(data);
-    }
-
-    setIsDialogOpen(false);
-    resetForm();
+    try {
+      if (editingFuncionario) await updateFuncionario(editingFuncionario.id, data);
+      else await addFuncionario(data);
+      setIsDialogOpen(false);
+      resetForm();
+    } catch { /* o hook mostra o erro; o formulário permanece aberto */ }
   };
 
   const resetForm = () => {
@@ -151,7 +150,7 @@ export function Funcionarios() {
           if (!open) resetForm();
         }}>
           <DialogTrigger asChild>
-            <Button>
+            <Button disabled={!activeOrg}>
               <Plus className="w-4 h-4 mr-2" />
               Novo Funcionário
             </Button>
@@ -284,6 +283,7 @@ export function Funcionarios() {
         </Dialog>
       </div>
 
+      {!activeOrg && <p className="text-sm text-muted-foreground">Selecione uma organização para gerenciar a equipe.</p>}
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
@@ -418,13 +418,6 @@ export function Funcionarios() {
                   >
                     {funcionario.ativo ? 'Desativar' : 'Ativar'}
                   </Button>
-                  <Button 
-                    size="sm" 
-                    variant="destructive"
-                    onClick={() => deleteFuncionario(funcionario.id)}
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -434,3 +427,4 @@ export function Funcionarios() {
     </div>
   );
 }
+

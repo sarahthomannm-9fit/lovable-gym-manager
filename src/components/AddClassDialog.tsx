@@ -9,12 +9,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { SupabaseClass } from "@/hooks/useSupabaseClasses";
+import { useFuncionarios } from '@/hooks/useFuncionarios';
 
 interface AddClassDialogProps {
   onAddClass: (classData: Omit<SupabaseClass, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
 }
 
 export function AddClassDialog({ onAddClass }: AddClassDialogProps) {
+  const { getProfessores } = useFuncionarios();
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [newClass, setNewClass] = useState({
@@ -25,7 +27,8 @@ export function AddClassDialog({ onAddClass }: AddClassDialogProps) {
     tipo: "",
     descricao: "",
     capacidade_maxima: "20",
-    dia_semana: ""
+    dia_semana: "",
+    professor_id: ""
   });
 
   const { toast } = useToast();
@@ -51,6 +54,7 @@ export function AddClassDialog({ onAddClass }: AddClassDialogProps) {
         descricao: newClass.descricao || undefined,
         capacidade_maxima: parseInt(newClass.capacidade_maxima),
         dia_semana: newClass.dia_semana || undefined,
+        professor_id: newClass.professor_id || undefined,
       };
 
       await onAddClass(classData);
@@ -64,7 +68,8 @@ export function AddClassDialog({ onAddClass }: AddClassDialogProps) {
         tipo: "",
         descricao: "",
         capacidade_maxima: "20",
-        dia_semana: ""
+        dia_semana: "",
+        professor_id: ""
       });
       
       setIsOpen(false);
@@ -149,6 +154,17 @@ export function AddClassDialog({ onAddClass }: AddClassDialogProps) {
           </div>
 
           <div>
+            <Label>Professor responsável</Label>
+            <Select value={newClass.professor_id || 'sem_professor'} onValueChange={(value) => setNewClass({ ...newClass, professor_id: value === 'sem_professor' ? '' : value })}>
+              <SelectTrigger><SelectValue placeholder="Selecione o professor" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="sem_professor">A definir</SelectItem>
+                {getProfessores().map((professor) => <SelectItem key={professor.id} value={professor.id}>{professor.nome}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
             <Label htmlFor="dia_semana">Dia da Semana</Label>
             <Select value={newClass.dia_semana} onValueChange={(value) => setNewClass({ ...newClass, dia_semana: value })}>
               <SelectTrigger>
@@ -200,3 +216,4 @@ export function AddClassDialog({ onAddClass }: AddClassDialogProps) {
     </Dialog>
   );
 }
+
