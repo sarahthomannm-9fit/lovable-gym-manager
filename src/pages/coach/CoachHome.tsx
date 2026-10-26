@@ -1,3 +1,4 @@
+import { SupportTickets } from '@/components/SupportTickets';
 import { useEffect, useMemo, useState } from 'react';
 import { PersonaLayout, PersonaEmptyState } from '@/layouts/PersonaLayout';
 import { useOperationalContext } from '@/hooks/useOperationalContext';
@@ -14,6 +15,7 @@ import { Calendar, Users, UserCheck, Dumbbell, History, ClipboardList, Sparkles,
 import { toast } from 'sonner';
 import { CriarTreinoDialog } from '@/components/CriarTreinoDialog';
 
+const checked=<T extends {error?:unknown}>(result:T):T=>{if(result.error)throw result.error;return result;};
 const DAY = 86400000;
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 const aulaStart = (a: any) => new Date(`${a.data_aula}T${(a.horario_inicio || '00:00').slice(0, 5)}:00`);
@@ -28,6 +30,8 @@ const Vazio = ({ children }: { children: React.ReactNode }) => (
 export default function CoachHome() {
   const { activeOrg, ensureOrgForPersona, isAdmin } = useOperationalContext();
   const { user } = useAuth();
+  const [loadError,setLoadError]=useState('');
+  const [loadingData,setLoadingData]=useState(true);
   const [ready, setReady] = useState(false);
   const [aulas, setAulas] = useState<any[]>([]);
   const [alunos, setAlunos] = useState<any[]>([]);
@@ -36,7 +40,6 @@ export default function CoachHome() {
   const [checkins, setCheckins] = useState<any[]>([]);
   const [anamnesesFila, setAnamnesesFila] = useState<any[]>([]);
   const [filaIACount, setFilaIACount] = useState(0);
-  const [aprovando, setAprovando] = useState<string | null>(null);
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
   const [tab, setTab] = useState('aulas');
   // Dialogs
@@ -51,13 +54,15 @@ export default function CoachHome() {
   const [filtroTreino, setFiltroTreino] = useState<'ativos' | 'inativos' | 'revisao'>('ativos');
   const [periodo, setPeriodo] = useState(30);
 
-  useEffect(() => { ensureOrgForPersona('professor').finally(() => setReady(true)); }, []);
+  useEffect(() => { (activeOrg ? Promise.resolve(activeOrg) : ensureOrgForPersona('condominio')).finally(() => setReady(true)); }, []);
 
   const carregar = async () => {
+    setLoadingData(true);setLoadError('');
+    try{
     const orgId = activeOrg?.id;
     if (!orgId || !user?.id) { setAulas([]); setAlunos([]); setTreinos([]); return; }
-    const { data: staff } = await supabase.from('funcionarios').select('id').eq('organization_id', orgId).eq('user_id', user.id).eq('ativo', true).maybeSingle();
-    if (!staff?.id) { setAulas([]); setAlunos([]); setTreinos([]); return; }
+    const { data: staff } = await supabase.from('funcionarios').select('id').eq('organization_id', orgId).eq('user_id', user.id).eq('ativo', true).maybeSingle().then(checked);
+    if (!staff?.id) throw new Error('Esta conta não possui um profissional ativo vinculado a este condomínio. Solicite o vínculo ao administrador.');
     const hoje = iso(new Date());
     const seteDias = iso(new Date(Date.now() + 7 * DAY));
     const inicioHist = iso(new Date(Date.now() - 365 * DAY));
@@ -65,20 +70,21 @@ export default function CoachHome() {
     let qa = supabase.from('aulas').select('id, nome, data_aula, horario_inicio, horario_fim, inscritos_atual, capacidade_maxima, status, professor_id')
       .gte('data_aula', iso(new Date(Date.now() - 365 * DAY))).lte('data_aula', seteDias).order('data_aula').order('horario_inicio');
     qa = qa.eq('organization_id', orgId).eq('professor_id', staff.id);
-    const [{ data: au }, { data: assignedWorkouts }] = await Promise.all([
-      qa,
-      supabase.from('treinos').select('aluno_id').eq('organization_id', orgId).eq('professor_id', user.id),
+    const [{ data: au }, { data: assignedWorkouts }, { data: onboarded }] = await Promise.all([
+      qa.then(checked),
+      supabase.from('treinos').select('aluno_id').eq('organization_id', orgId).eq('professor_id', user.id).then(checked),
+      supabase.from('student_safety_onboarding').select('aluno_id').eq('organization_id', orgId).then(checked),
     ]);
     const classIds = (au || []).map((a) => a.id);
     const { data: enrolled } = classIds.length
-      ? await supabase.from('aulas_inscritos').select('aluno_id').in('aula_id', classIds)
+      ? await supabase.from('aulas_inscritos').select('aluno_id').in('aula_id', classIds).then(checked)
       : { data: [] as { aluno_id: string }[] };
-    const portfolioIds = [...new Set([...(assignedWorkouts || []).map((item) => item.aluno_id), ...(enrolled || []).map((item) => item.aluno_id)])];
+    const portfolioIds = [...new Set([...(assignedWorkouts || []).map((item) => item.aluno_id), ...(enrolled || []).map((item) => item.aluno_id), ...(onboarded || []).map((item) => item.aluno_id)])];
     const { data: al } = portfolioIds.length
-      ? await supabase.from('alunos').select('id, nome, status, user_id, plano_id, planos(nome)').eq('organization_id', orgId).in('id', portfolioIds).order('nome').limit(200)
+      ? await (supabase as any).rpc('coach_student_roster',{p_org:orgId}).then(checked)
       : { data: [] as any[] };
     setAulas(au || []);
-    const alunosList = (al || []) as any[];
+    const alunosList = ((al || []) as any[]).filter(a=>portfolioIds.includes(a.id));
     setAlunos(alunosList);
     const ids = alunosList.map((a) => a.id);
 
@@ -86,10 +92,10 @@ export default function CoachHome() {
       setTreinos([]); setCheckins([]); setAnamnesesFila([]); setFeedbacks([]); setExecs([]);
     } else {
       const [{ data: tr }, { data: ck }, { data: an }, { data: fb }] = await Promise.all([
-        supabase.from('treinos').select('id, nome, descricao, data_inicio, data_fim, aluno_id, status, professor_id, created_at, updated_at').in('aluno_id', ids).eq('professor_id', user.id).order('created_at', { ascending: false }).limit(300),
-        supabase.from('checkins').select('id, aluno_id, data_checkin, horario_entrada').in('aluno_id', ids).gte('data_checkin', inicioHist).order('horario_entrada', { ascending: false }).limit(1000),
-        supabase.from('anamnese_respostas').select('id, aluno_id, tipo, preenchido_em, respostas, status, alunos(nome, email)').in('aluno_id', ids).eq('status', 'preenchido').order('preenchido_em', { ascending: false }).limit(50),
-        (supabase as any).from('workout_sessions').select('aluno_id, data, status, feedback').in('aluno_id', ids).not('feedback', 'is', null).order('data', { ascending: false }).limit(10),
+        supabase.from('treinos').select('id, nome, descricao, data_inicio, data_fim, aluno_id, plano_treino_id, status, professor_id, created_at, updated_at').in('aluno_id', ids).eq('professor_id', user.id).order('created_at', { ascending: false }).limit(300).then(checked),
+        supabase.from('checkins').select('id, aluno_id, data_checkin, horario_entrada').in('aluno_id', ids).gte('data_checkin', inicioHist).order('horario_entrada', { ascending: false }).limit(1000).then(checked),
+        supabase.from('anamnese_respostas').select('id, aluno_id, tipo, preenchido_em, respostas, status, alunos(nome, email)').in('aluno_id', ids).eq('status', 'preenchido').order('preenchido_em', { ascending: false }).limit(50).then(checked),
+        (supabase as any).from('workout_sessions').select('aluno_id, data, status, feedback').in('aluno_id', ids).not('feedback', 'is', null).order('data', { ascending: false }).limit(10).then(checked),
       ]);
       const trList = (tr || []) as any[];
       setTreinos(trList);
@@ -99,17 +105,18 @@ export default function CoachHome() {
       setAnamnesesFila((an || []).filter((a: any) => !comTreino.has(a.aluno_id)));
       const trIds = trList.map((t) => t.id);
       if (trIds.length) {
-        const { data: ex } = await supabase.from('treino_execucoes').select('treino_id, data_execucao').in('treino_id', trIds).gte('data_execucao', iso(new Date(Date.now() - 14 * DAY)));
+        const { data: ex } = await supabase.from('treino_execucoes').select('treino_id, data_execucao').in('treino_id', trIds).gte('data_execucao', iso(new Date(Date.now() - 14 * DAY))).then(checked);
         setExecs(ex || []);
       } else setExecs([]);
     }
 
     let qf = supabase.from('treinos_ia_fila').select('id', { count: 'exact', head: true }).eq('status', 'pendente');
     if (orgId) qf = qf.eq('organization_id', orgId);
-    const { count } = await qf;
+    const { count } = await qf.then(checked);
     setFilaIACount(count || 0);
+    }catch(e){setLoadError((e as Error).message||'Não foi possível carregar os dados do coach.');setAulas([]);setAlunos([]);setTreinos([]);setCheckins([]);setFeedbacks([]);setAnamnesesFila([]);setExecs([]);}
+    finally{setLoadingData(false);}
   };
-
   useEffect(() => { carregar(); }, [activeOrg?.id, user?.id]);
 
   const hoje = iso(new Date());
@@ -125,7 +132,7 @@ export default function CoachHome() {
   const alunosFiltrados = useMemo(() => alunos.filter((a) => {
     if (busca && !a.nome?.toLowerCase().includes(busca.toLowerCase())) return false;
     const t = treinoAtivoDe(a.id);
-    if (filtroAluno === 'ativos') return a.status === 'ativo';
+    if (filtroAluno === 'ativos') return a.status === 'ativo'&&a.lifecycle_status==='ativo';
     if (filtroAluno === 'pendente') return !t;
     return revisaoVencida(t);
   }), [alunos, treinos, busca, filtroAluno]);
@@ -153,7 +160,7 @@ export default function CoachHome() {
   const notificarAluno = async (alunoId: string, titulo: string, mensagem: string) => {
     const al = alunos.find((a) => a.id === alunoId);
     if (!al?.user_id) return;
-    await supabase.from('notificacoes').insert({ tipo: 'treino', titulo, mensagem, destinatario_tipo: 'aluno', destinatario_id: al.user_id, prioridade: 'normal', status: 'pendente', canal: ['app'] });
+    await supabase.from('notificacoes').insert({ tipo: 'treino', titulo, mensagem, destinatario_tipo: 'aluno', destinatario_id: alunoId, prioridade: 'normal', status: 'pendente', canal: ['app'] });
   };
 
   const abrirPresenca = async (aula: any) => {
@@ -161,59 +168,25 @@ export default function CoachHome() {
     const { data } = await supabase.from('aulas_inscritos').select('id, aluno_id, status').eq('aula_id', aula.id);
     setInscritos(data || []);
   };
-  const presentes = new Set(checkins.filter((c) => c.data_checkin === presencaAula?.data_aula).map((c) => c.aluno_id));
+  const presentes = new Set(inscritos.filter((i) => i.status === 'presente').map((i) => i.aluno_id));
   const marcarPresenca = async (alunoId: string) => {
-    const { error } = await (supabase as any).rpc('record_daily_checkin', { p_aluno_id: alunoId, p_date: presencaAula?.data_aula || hoje });
+    const { error } = await (supabase as any).rpc('mark_class_attendance', { p_aluno_id: alunoId, p_aula_id: presencaAula?.id });
     if (error) return toast.error('Falha ao registrar presença');
     toast.success(`Presença de ${nomeAluno(alunoId)} registrada`);
+    setInscritos(current=>current.map(item=>item.aluno_id===alunoId?{...item,status:'presente'}:item));
     carregar();
   };
 
   const cancelarAula = async (aula: any) => {
     if (!confirm(`Cancelar a aula "${aula.nome}"? Os inscritos verão a aula como cancelada.`)) return;
-    const { error } = await supabase.from('aulas').update({ status: 'cancelada' }).eq('id', aula.id);
+    const { error } = await (supabase as any).rpc('cancel_coach_class',{p_aula:aula.id});
     if (error) return toast.error('Não foi possível cancelar a aula');
     toast.success('Aula cancelada');
     carregar();
   };
 
-  const aprovarAnamnese = async (anamnese: any) => {
-    if (!anamnese.aluno_id) return toast.error('Anamnese sem aluno vinculado');
-    setAprovando(anamnese.id);
-    const nome = anamnese.alunos?.nome || 'aluno';
-    const { error } = await supabase.from('treinos').insert({
-      aluno_id: anamnese.aluno_id, organization_id: activeOrg?.id || null, professor_id: user?.id || null,
-      nome: `Plano inicial 9FIT — ${nome}`,
-      descricao: 'Plano gerado a partir da anamnese e aprovado pelo professor.',
-      data_inicio: hoje, data_fim: iso(new Date(Date.now() + 28 * DAY)), status: 'ativo',
-    });
-    if (!error) {
-      await supabase.from('anamnese_respostas').update({ status: 'aprovado' }).eq('id', anamnese.id);
-      await notificarAluno(anamnese.aluno_id, 'Seu treino está pronto', 'Seu coach criou seu treino. Veja em "Meus treinos".');
-    }
-    setAprovando(null);
-    if (error) return toast.error('Falha ao aprovar treino');
-    toast.success(`Treino de ${nome} criado e aluno notificado`);
-    carregar();
-  };
 
-  const salvarRevisao = async () => {
-    if (!revisao) return;
-    if (!motivo.trim()) return toast.error('Informe o motivo da revisão');
-    const { error } = await supabase.from('treinos').insert({
-      aluno_id: revisao.aluno_id, organization_id: activeOrg?.id || null, professor_id: user?.id || null,
-      plano_treino_id: revisao.plano_treino_id || null,
-      nome: `${revisao.nome || 'Treino'} (revisão)`,
-      descricao: `Motivo da revisão: ${motivo.trim()}\n\n${revisao.descricao || ''}`,
-      data_inicio: hoje, data_fim: iso(new Date(Date.now() + 28 * DAY)), status: 'ativo',
-    });
-    if (error) return toast.error('Não foi possível criar a revisão');
-    await supabase.from('treinos').update({ status: 'revisado' }).eq('id', revisao.id);
-    await notificarAluno(revisao.aluno_id, 'Seu treino foi revisado', `Motivo: ${motivo.trim()}`);
-    toast.success('Nova versão criada. A anterior ficou no histórico.');
-    setRevisao(null); setMotivo('');
-    carregar();
-  };
+  if(!ready || loadingData)return <PersonaLayout title="Meu dia"><div role="status" className="p-6">Carregando agenda e alunos deste condomínio…</div></PersonaLayout>;
 
   if (!activeOrg && ready && !isAdmin) {
     return (
@@ -269,6 +242,8 @@ export default function CoachHome() {
         </CardContent></Card>
       </div>
 
+      {loadError&&<div role="alert" className="mb-4 rounded border border-destructive p-4"><p>{loadError}</p><Button variant="outline" onClick={carregar}>Carregar novamente</Button></div>}
+      {activeOrg&&<details className="mb-4"><summary className="cursor-pointer text-sm">Atendimento de treino e saúde</summary><SupportTickets orgId={activeOrg.id} manage/></details>}
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="mb-4">
           <TabsTrigger value="aulas"><Calendar className="w-3.5 h-3.5 mr-1.5" />Aulas</TabsTrigger>
@@ -313,18 +288,16 @@ export default function CoachHome() {
                   <Card key={a.id} className="bg-card/60 border-border/40">
                     <CardContent className="p-4 space-y-2">
                       <div>
-                        <p className="font-medium">{a.alunos?.nome || 'Aluno'}</p>
+                        <p className="font-medium">{nomeAluno(a.aluno_id)}</p>
                         <p className="text-xs text-muted-foreground">{a.preenchido_em ? new Date(a.preenchido_em).toLocaleDateString('pt-BR') : '—'} · Objetivo: {String(objetivo)}</p>
                         {(r.limitacoes || r.historico) && <p className="text-xs text-muted-foreground line-clamp-2">{String(r.limitacoes || r.historico)}</p>}
                       </div>
                       <div className="flex gap-2 overflow-x-auto">
                         <Button size="sm" variant="outline" className="shrink-0" onClick={() => setAnamneseView(a)}>Revisar anamnese</Button>
-                        <CriarTreinoDialog alunos={[{ id: a.aluno_id, nome: a.alunos?.nome || 'Aluno' }]} organizationId={activeOrg?.id} initialAlunoId={a.aluno_id}
+                        <CriarTreinoDialog alunos={[{ id: a.aluno_id, nome: nomeAluno(a.aluno_id) }]} organizationId={activeOrg?.id} initialAlunoId={a.aluno_id}
                           onCriado={async () => { await supabase.from('anamnese_respostas').update({ status: 'aprovado' }).eq('id', a.id); await notificarAluno(a.aluno_id, 'Seu treino está pronto', 'Veja em "Meus treinos".'); carregar(); }}
                           trigger={<Button size="sm" className="shrink-0">Criar treino</Button>} />
-                        <Button size="sm" variant="ghost" className="shrink-0" disabled={aprovando === a.id} onClick={() => aprovarAnamnese(a)}>
-                          {aprovando === a.id ? 'Criando…' : 'Plano inicial rápido'}
-                        </Button>
+
                       </div>
                     </CardContent>
                   </Card>
@@ -452,11 +425,9 @@ export default function CoachHome() {
         <DialogContent>
           <DialogHeader><DialogTitle>Revisar treino de {revisao && nomeAluno(revisao.aluno_id)}</DialogTitle></DialogHeader>
           <p className="text-xs text-muted-foreground">Uma nova versão será criada. A versão atual fica no histórico.</p>
-          <Textarea placeholder="Motivo da revisão (obrigatório)" value={motivo} onChange={(e) => setMotivo(e.target.value)} />
-          <DialogFooter><Button onClick={salvarRevisao}>Salvar e notificar aluno</Button></DialogFooter>
+          {revisao && <CriarTreinoDialog alunos={[{id:revisao.aluno_id,nome:nomeAluno(revisao.aluno_id)}]} organizationId={activeOrg?.id} initialAlunoId={revisao.aluno_id} initialWorkoutId={revisao.id} trigger={<Button>Abrir editor de revisão</Button>} onCriado={()=>{setRevisao(null);void carregar();}}/>}
         </DialogContent>
       </Dialog>
     </PersonaLayout>
   );
 }
-

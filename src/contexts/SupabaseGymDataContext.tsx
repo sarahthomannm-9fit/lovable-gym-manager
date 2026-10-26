@@ -1,3 +1,4 @@
+import { Button } from '@/components/ui/button';
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useSupabaseStudents, SupabaseStudent } from '@/hooks/useSupabaseStudents';
 import { useSupabasePayments, SupabasePayment } from '@/hooks/useSupabasePayments';
@@ -254,6 +255,7 @@ export function SupabaseGymDataProvider({ children }: { children: ReactNode }) {
 
   return (
     <SupabaseGymDataContext.Provider value={value}>
+      {[studentsHook,paymentsHook,checkInsHook,classesHook,planHistoryHook].some(h=>h.loadError)&&<div role="alert" className="m-3 rounded border border-destructive p-3 text-sm"><p>Não foi possível carregar todos os dados deste contexto. Uma lista vazia pode estar incompleta.</p><Button variant="outline" onClick={()=>{void studentsHook.refetch();void paymentsHook.refetch();void checkInsHook.refetch();void classesHook.refetch();void planHistoryHook.refetch();}}>Carregar novamente</Button></div>}
       {children}
     </SupabaseGymDataContext.Provider>
   );

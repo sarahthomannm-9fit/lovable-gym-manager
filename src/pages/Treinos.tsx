@@ -5,11 +5,11 @@ import { Plus, User, Calendar, Dumbbell, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { TrainingStats } from "@/components/training/TrainingStats";
-import { AddTrainingDialog } from "@/components/training/AddTrainingDialog";
+import { CriarTreinoDialog } from '@/components/CriarTreinoDialog';
 import { PageShell } from "@/components/warroom/PageShell";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useSupabaseGymData } from "@/contexts/SupabaseGymDataContext";
+import { useSupabaseStudents } from "@/hooks/useSupabaseStudents";
 import { cn } from "@/lib/utils";
 import { FilaIATreinos } from "@/components/treinos/FilaIATreinos";
 import { useOperationalContext } from "@/hooks/useOperationalContext";
@@ -37,7 +37,7 @@ export function Treinos() {
   const [treinos, setTreinos] = useState<Treino[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const { students } = useSupabaseGymData();
+  const { students } = useSupabaseStudents();
   const { activeOrg } = useOperationalContext();
 
   const fetchTreinos = async () => {
@@ -85,7 +85,7 @@ export function Treinos() {
     );
   }
 
-  const trainingData = treinos.map(t => ({ id: t.id, studentName: t.aluno?.nome || 'N/A', description: t.descricao || '', startDate: t.data_inicio, endDate: t.data_fim, status: 'valid' as const }));
+  const trainingData = treinos.map(t => ({ id: t.id, studentName: t.aluno?.nome || students.find(s=>s.id===t.aluno_id)?.nome || 'Aluno', description: t.descricao || '', startDate: t.data_inicio, endDate: t.data_fim, status: 'valid' as const }));
 
   return (
     <PageShell
@@ -93,7 +93,7 @@ export function Treinos() {
       sub={`${treinos.length} treinos · ${vencidos} vencido(s)`}
       criticals={vencidos > 0 ? vencidos : undefined}
       metrics={shellMetrics}
-      actions={<AddTrainingDialog students={scopedStudents} onSuccess={fetchTreinos} />}
+      actions={<CriarTreinoDialog alunos={scopedStudents} organizationId={activeOrg?.id} onCriado={fetchTreinos} />}
     >
       <Tabs defaultValue={filaCount > 0 ? 'fila-ia' : 'ativos'} className="mt-4">
         <TabsList className="mb-4">
@@ -119,7 +119,7 @@ export function Treinos() {
               <Dumbbell className="h-12 w-12 mx-auto text-muted-foreground" />
               <p className="font-semibold">Nenhum treino cadastrado</p>
               <p className="text-sm text-muted-foreground">Crie o primeiro treino para seus alunos.</p>
-              <AddTrainingDialog students={scopedStudents} onSuccess={fetchTreinos} trigger={
+              <CriarTreinoDialog alunos={scopedStudents} organizationId={activeOrg?.id} onCriado={fetchTreinos} trigger={
                 <Button><Plus className="h-4 w-4 mr-2" />Criar Primeiro Treino</Button>
               } />
             </CardContent></Card>
@@ -135,7 +135,7 @@ export function Treinos() {
                         <Badge variant={cls.variant} className="text-[10px] shrink-0">{cls.status}</Badge>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <User className="h-3 w-3" /><span>{treino.aluno?.nome || 'N/A'}</span>
+                        <User className="h-3 w-3" /><span>{treino.aluno?.nome || students.find(s=>s.id===treino.aluno_id)?.nome || 'Aluno'}</span>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
                         <Calendar className="h-3 w-3" />
@@ -152,4 +152,3 @@ export function Treinos() {
     </PageShell>
   );
 }
-

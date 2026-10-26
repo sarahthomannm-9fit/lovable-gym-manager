@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { CalendarDays, Clock, MapPin } from 'lucide-react';
 
@@ -59,6 +60,7 @@ export function ProximoEventoCard({ eventos, accent }: ProximoEventoCardProps) {
           </div>
         </div>
 
+        <Link className="inline-block mt-4 text-sm text-primary underline" to={"/morador/eventos?event="+encodeURIComponent(proximo.id)}>Ver evento e participar</Link>
         {outros.length > 0 && (
           <ul className="mt-4 pt-4 border-t border-border/30 space-y-2">
             {outros.map((e) => (

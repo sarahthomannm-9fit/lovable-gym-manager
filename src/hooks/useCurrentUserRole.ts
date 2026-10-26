@@ -1,3 +1,4 @@
+import { pickPrimaryRole } from '@/lib/access';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -25,15 +26,14 @@ export function useCurrentUserRole(): UserRoleState {
         const { data, error } = await supabase
           .from('user_roles')
           .select('role')
-          .eq('user_id', uid)
-          .maybeSingle();
+          .eq('user_id', uid);
 
         if (mounted) {
           if (error) {
             console.error('Error fetching role:', error);
             setRole(null);
           } else {
-            setRole(data?.role ?? null);
+            setRole(pickPrimaryRole((data || []).map(row=>row.role)) as AppRole | null);
           }
           setLoading(false);
         }

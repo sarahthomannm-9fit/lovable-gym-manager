@@ -55,6 +55,7 @@ export function usePersonaDashboard<T = any>(persona: Persona, id: string | null
       return;
     }
     setLoading(true);
+    setData(null);
     setError(null);
     const { fn, arg } = RPC_BY_PERSONA[persona];
     const { data: res, error: err } = await (supabase as any).rpc(fn, { [arg]: id });
@@ -68,7 +69,7 @@ export function usePersonaDashboard<T = any>(persona: Persona, id: string | null
     setLoading(false);
   }, [persona, id]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); return()=>{reqRef.current++;}; }, [load]);
 
   return { data, loading, error, refresh: load };
 }

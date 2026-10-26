@@ -75,6 +75,7 @@ export default function RelatoriosAutomaticos() {
   }), [reports]);
 
   const gerar = async () => {
+    if(!activeOrg)return toast.error('Selecione um condomínio para gerar o relatório.');
     setGerando(true);
     const { data, error: err } = await supabase.functions.invoke('agent-daily-reports', {
       body: { organizationId: activeOrg?.id || null },
@@ -187,4 +188,3 @@ export default function RelatoriosAutomaticos() {
     </div>
   );
 }
-

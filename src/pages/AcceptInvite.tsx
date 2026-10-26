@@ -81,7 +81,7 @@ export default function AcceptInvite() {
       await refresh(activeSession.user.id);
       const role = isCoachInvite ? 'professor' : data?.papel || data?.role || data?.app_role;
       toast.success('Convite aceito. Seu acesso foi configurado.');
-      navigate(roleRoute(role), { replace: true });
+      navigate(role === 'user' && data?.organization_id ? `/morador/onboarding?organization=${data.organization_id}` : roleRoute(role), { replace: true });
     } catch (error: any) {
       toast.error(error?.message || 'Não foi possível concluir o convite.');
     } finally {
@@ -108,4 +108,3 @@ export default function AcceptInvite() {
     </Card>
   </div>;
 }
-

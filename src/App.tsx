@@ -1,8 +1,16 @@
+import { PersonaLayout } from '@/layouts/PersonaLayout';
+import { FeatureGate } from '@/components/FeatureGate';
+import { EnvironmentBadge } from '@/components/EnvironmentBadge';
+import { useState } from 'react';
+import { contextKey } from '@/lib/tenant';
+import { useOperationalContext } from '@/hooks/useOperationalContext';
+import Requests from './pages/admin/Requests';
+import VinculosOrfaos from './pages/admin/VinculosOrfaos';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { SupabaseGymDataProvider } from "@/contexts/SupabaseGymDataContext";
 import { DataIntegrationProvider } from "@/components/DataIntegrationProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -126,7 +134,23 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => (
 
 const Protected = ({ children }: { children: React.ReactNode }) => (
   <ProtectedRoute>
-    <MainLayout>{children}</MainLayout>
+    <RoleRoute allow={['admin', 'manager']}>
+      <MainLayout>{children}</MainLayout>
+    </RoleRoute>
+  </ProtectedRoute>
+);
+
+const TrainingLayout=({children}:{children:React.ReactNode})=>{
+  const {activeRole}=useOperationalContext();
+  const {pathname}=useLocation();
+  return activeRole==='professor'?<PersonaLayout title={pathname==='/planos-treino'?'Planos de treino':'Treinos'}>{children}</PersonaLayout>:<MainLayout>{children}</MainLayout>;
+};
+
+const TrainingAccess = ({ children }: { children: React.ReactNode }) => (
+  <ProtectedRoute>
+    <RoleRoute allow={['admin', 'manager', 'professor']}>
+      <TrainingLayout>{children}</TrainingLayout>
+    </RoleRoute>
   </ProtectedRoute>
 );
 
@@ -149,25 +173,23 @@ const StaffOnly = ({ children }: { children: React.ReactNode }) => (
 );
 
 
+const TenantDataProviders = ({ children,legacy }: { children: React.ReactNode;legacy:boolean }) => {
+  const [tenantQueryClient]=useState(()=>new QueryClient({defaultOptions:{queries:{retry:1,refetchOnWindowFocus:false}}}));
+  const content=legacy?<SupabaseGymDataProvider><DataIntegrationProvider><DemoModeProvider>{children}</DemoModeProvider></DataIntegrationProvider></SupabaseGymDataProvider>:children;
+  return <QueryClientProvider client={tenantQueryClient}>{content}</QueryClientProvider>;
+};
+
 const AuthenticatedDataProviders = ({ children }: { children: React.ReactNode }) => {
-  const { user } = useAuth();
-
-  // Keyed and gated on user id (not the whole session object) so that a
-  // token refresh — which produces a new `session` object for the *same*
-  // user — doesn't remount SupabaseGymDataProvider and its child hooks.
-  // Before this, every session object change re-triggered the full set of
-  // student/payment/plan/class/etc fetches from scratch, which is why the
-  // Supabase logs showed each of those queries firing 2-3x back to back
-  // right after login.
-  if (!user) return <>{children}</>;
-
-  return (
-    <SupabaseGymDataProvider key={user.id}>
-      <DataIntegrationProvider>
-        <DemoModeProvider>{children}</DemoModeProvider>
-      </DataIntegrationProvider>
-    </SupabaseGymDataProvider>
-  );
+  const {user}=useAuth();
+  const {activeOrg,activeRole,isAdmin,memberships,loading}=useOperationalContext();
+  const {pathname}=useLocation();
+  const personaSurface=['/morador','/coach','/sindico','/corp','/entrada','/convite','/select-context','/login','/forgot-password','/reset-password','/anamnese','/primeiro-acesso'].some(path=>pathname.startsWith(path));
+  const roles=memberships.filter(m=>m.organization_id===activeOrg?.id).map(m=>m.papel);
+  const coachTraining=activeRole==='professor'&&['/treinos','/planos-treino'].includes(pathname);
+  const legacy=!personaSurface&&!coachTraining&&(isAdmin||roles.includes('manager'));
+  if(!user)return <>{children}</>;
+  if(loading)return <div role="status" className="p-6">Carregando acesso…</div>;
+  return <TenantDataProviders legacy={legacy} key={contextKey(user.id,activeOrg?.id,activeRole)+':'+legacy}>{children}</TenantDataProviders>;
 };
 
 const App = () => (
@@ -175,11 +197,12 @@ const App = () => (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <OperationalContextProvider>
-          <AuthenticatedDataProviders>
+          <BrowserRouter><AuthenticatedDataProviders>
               <TooltipProvider>
                 <Toaster />
                 <Sonner />
-                <BrowserRouter>
+
+                  <EnvironmentBadge/>
                   <Routes>
                     <Route path="/login" element={<Login />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -196,14 +219,17 @@ const App = () => (
                     <Route path="/sindico/comunicados" element={<ProtectedRoute><RoleRoute allow={['sindico','admin']}><Announcements /></RoleRoute></ProtectedRoute>} />
                     <Route path="/coach" element={<ProtectedRoute><RoleRoute allow={['professor','admin']}><CoachHome /></RoleRoute></ProtectedRoute>} />
                     <Route path="/coach/revisoes" element={<ProtectedRoute><RoleRoute allow={['professor','admin']}><ReviewQueue /></RoleRoute></ProtectedRoute>} />
-                    <Route path="/corp" element={<ProtectedRoute><RoleRoute allow={['corporate','admin']}><CorpHome /></RoleRoute></ProtectedRoute>} />
+                    <Route path="/corp" element={<ProtectedRoute><RoleRoute allow={['corporate','admin']}><FeatureGate feature="corporate"><CorpHome /></FeatureGate></RoleRoute></ProtectedRoute>} />
                     <Route path="/morador" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MoradorHome /></RoleRoute></ProtectedRoute>} />
-                    <Route path="/morador/onboarding" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><OnboardingMorador /></RoleRoute></ProtectedRoute>} />
+                    <Route path="/morador/onboarding" element={<ProtectedRoute><OnboardingMorador /></ProtectedRoute>} />
                     <Route path="/morador/eventos" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><Events /></RoleRoute></ProtectedRoute>} />
                     <Route path="/morador/perfil" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MoradorProfile /></RoleRoute></ProtectedRoute>} />
                     <Route path="/morador/agenda" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MoradorAgenda /></RoleRoute></ProtectedRoute>} />
-                    <Route path="/morador/staff" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MoradorStaff /></RoleRoute></ProtectedRoute>} />
+                    <Route path="/morador/staff" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><FeatureGate feature="staff"><MoradorStaff /></FeatureGate></RoleRoute></ProtectedRoute>} />
                     <Route path="/morador/operacao" element={<ProtectedRoute><RoleRoute allow={['user','admin']}><MoradorOperacao /></RoleRoute></ProtectedRoute>} />
+                    <Route path="/admin" element={<AdminOnly><Navigate to="/admin/organizacoes" replace /></AdminOnly>} />
+                    <Route path="/admin/solicitacoes" element={<AdminOnly><Requests /></AdminOnly>} />
+                    <Route path="/admin/vinculos" element={<AdminOnly><VinculosOrfaos /></AdminOnly>} />
                     <Route path="/admin/organizacoes" element={<AdminOnly><OrganizationsAdmin /></AdminOnly>} />
                     <Route path="/admin/auditoria-prescricoes" element={<AdminOnly><PrescriptionAudit /></AdminOnly>} />
                     <Route path="/admin/auditoria-acessos" element={<AdminOnly><AccessAudit /></AdminOnly>} />
@@ -214,14 +240,14 @@ const App = () => (
                     <Route path="/pipeline" element={<StaffOnly><PipelineComercial /></StaffOnly>} />
                     <Route path="/clientes" element={<Protected><Clientes /></Protected>} />
                     <Route path="/contratos" element={<Protected><Contratos /></Protected>} />
-                    <Route path="/planos-treino" element={<Protected><PlanosTreino /></Protected>} />
-                    <Route path="/studio" element={<ProtectedRoute><RoleRoute allow={['admin','manager','professor']}><MainLayout><StudioHome /></MainLayout></RoleRoute></ProtectedRoute>} />
+                    <Route path="/planos-treino" element={<TrainingAccess><PlanosTreino /></TrainingAccess>} />
+                    <Route path="/studio" element={<ProtectedRoute><RoleRoute allow={['admin','manager']}><MainLayout><StudioHome /></MainLayout></RoleRoute></ProtectedRoute>} />
                     <Route path="/insights" element={<Protected><InsightsMercado /></Protected>} />
                     <Route path="/coaches" element={<StaffOnly><Funcionarios /></StaffOnly>} />
                    <Route path="/" element={<Navigate to="/home" replace />} />
                    <Route path="/home" element={<Protected><Home /></Protected>} />
                    <Route path="/mercados/:tipo" element={<Protected><MercadoLista /></Protected>} />
-                    <Route path="/relatorios/automaticos" element={<AdminOnly><RelatoriosAutomaticos /></AdminOnly>} />
+                    <Route path="/relatorios/automaticos" element={<AdminOnly><FeatureGate feature="ai_reports"><RelatoriosAutomaticos /></FeatureGate></AdminOnly>} />
 
                     <Route path="/agents" element={<StaffOnly><AgentsHub /></StaffOnly>} />
                     <Route path="/admin/usuarios" element={<AdminOnly><UsersAdmin /></AdminOnly>} />
@@ -237,7 +263,7 @@ const App = () => (
                     <Route path="/pagamentos" element={<Protected><SupabasePayments /></Protected>} />
                     <Route path="/checkin" element={<Protected><SupabaseCheckIn /></Protected>} />
                     <Route path="/equipamentos" element={<Protected><Equipment /></Protected>} />
-                    <Route path="/treinos" element={<Protected><Treinos /></Protected>} />
+                    <Route path="/treinos" element={<TrainingAccess><Treinos /></TrainingAccess>} />
                     <Route path="/relatorios" element={<StaffOnly><Relatorios /></StaffOnly>} />
                     <Route path="/relatorios/pagamentos" element={<StaffOnly><FluxoPagamentos /></StaffOnly>} />
                     <Route path="/relatorios/recebimentos" element={<StaffOnly><FluxoRecebimentos /></StaffOnly>} />
@@ -269,9 +295,9 @@ const App = () => (
                     <Route path="/experimentais" element={<StaffOnly><AulasExperimentais /></StaffOnly>} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
-                </BrowserRouter>
+
               </TooltipProvider>
-          </AuthenticatedDataProviders>
+          </AuthenticatedDataProviders></BrowserRouter>
         </OperationalContextProvider>
       </AuthProvider>
     </QueryClientProvider>
@@ -279,9 +305,3 @@ const App = () => (
 );
 
 export default App;
-
-
-
-
-
-

@@ -79,7 +79,7 @@ export function AppSidebar() {
   const { role: storedRole } = useCurrentUserRole();
   const { activeRole, primaryRole } = useOperationalContext();
   const residentSurface = location.pathname.startsWith('/morador');
-  const role = residentSurface ? 'user' : (activeRole ?? storedRole ?? primaryRole);
+  const role = residentSurface ? 'user' : activeRole;
 const { signOut, user } = useAuth();
   const { pagamentos, alunos, checkins, leads, aulas } = useDataIntegration();
 
@@ -147,9 +147,9 @@ const { signOut, user } = useAuth();
     {
       category: "ASSESSORIA ESPORTIVA",
       items: [
-        { title: "Treinos", icon: Dumbbell, path: "/treinos" },
-        { title: "Planos de treino", icon: Dumbbell, path: "/planos-treino" },
-        { title: "Studio", icon: Sparkles, path: "/studio", roles: ['admin', 'manager', 'professor'] },
+        { title: "Treinos", icon: Dumbbell, path: "/treinos", roles: ['admin','manager','professor'] },
+        { title: "Planos de treino", icon: Dumbbell, path: "/planos-treino", roles: ['admin','manager','professor'] },
+        { title: "Studio", icon: Sparkles, path: "/studio", roles: ['admin', 'manager'] },
         { title: "Avaliações físicas", icon: Activity, path: "/avaliacoes", roles: ['admin', 'manager'] },
         { title: "Aulas", icon: Calendar, path: "/aulas", roles: ['admin', 'manager'], badge: badges.aulasSemInst || undefined, badgeColor: 'bg-destructive' },
         { title: "Aulas experimentais", icon: UserCheck, path: "/experimentais", roles: ['admin', 'manager'] },
@@ -218,6 +218,10 @@ const { signOut, user } = useAuth();
       roles: ['admin'],
       items: [
         { title: "Usuários", icon: Shield, path: "/admin/usuarios", roles: ['admin'] },
+        { title: "Solicitações e suporte", icon: MessageSquare, path: "/admin/solicitacoes", roles: ['admin'] },
+        { title: "Vínculos pendentes", icon: Users, path: "/admin/vinculos", roles: ['admin'] },
+        { title: "Aprovações", icon: ClipboardCheck, path: "/admin/aprovacoes-workflows", roles: ['admin'] },
+        { title: "Integração FitPro", icon: Network, path: "/admin/fitpro", roles: ['admin'] },
         { title: "Organizações", icon: Network, path: "/admin/organizacoes", roles: ['admin'] },
         { title: "Auditoria de prescrições", icon: ClipboardCheck, path: "/admin/auditoria-prescricoes", roles: ['admin'] },
         { title: "Auditoria de acessos", icon: Shield, path: "/admin/auditoria-acessos", roles: ['admin'] },
@@ -243,8 +247,8 @@ const { signOut, user } = useAuth();
 
 
   const canSee = (roles?: AppRole[]) => {
-    if (!roles) return true;
-    if (!role) return true;
+    if (!roles) return role === 'admin' || role === 'manager';
+    if (!role) return false;
     return roles.includes(role);
   };
 
@@ -269,7 +273,7 @@ const { signOut, user } = useAuth();
       </SidebarHeader>
       <SidebarContent>
         {menuItems
-          .filter(cat => canSee(cat.roles))
+          .filter(cat => (!cat.roles || canSee(cat.roles)) && cat.items.some(item=>canSee(item.roles)))
           .map((category) => {
             const visibleItems = category.items.filter(item => canSee(item.roles));
             if (visibleItems.length === 0) return null;
@@ -332,4 +336,3 @@ const { signOut, user } = useAuth();
     </Sidebar>
   );
 }
-

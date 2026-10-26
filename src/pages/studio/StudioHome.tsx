@@ -155,7 +155,7 @@ export function FalarCom9FIT({ orgId }: { orgId: string }) {
 
   const enviar = async () => {
     if (!assunto || !descricao) return;
-    const { error } = await supabase.from("support_tickets").insert({ organization_id: orgId, assunto, descricao, status: 'aberto', prioridade: 'normal' } as any);
+    const { error } = await supabase.from("support_tickets").insert({ organization_id: orgId, created_by: (await supabase.auth.getUser()).data.user?.id, message: assunto.trim() + ': ' + descricao.trim(), category: 'studio', status: 'open' });
     if (!error) { setAssunto(""); setDescricao(""); load(); }
   };
 
@@ -168,12 +168,11 @@ export function FalarCom9FIT({ orgId }: { orgId: string }) {
         <div className="text-xs font-mono uppercase text-primary/70">Meus tickets</div>
         {tickets.map(t => (
           <div key={t.id} className="text-sm border border-border/40 rounded p-2">
-            <div className="flex justify-between"><span className="font-semibold">{t.assunto}</span><Badge variant="outline">{t.status}</Badge></div>
-            <div className="text-xs text-muted-foreground mt-1">{t.descricao}</div>
+            <div className="flex justify-between"><span className="font-semibold">{t.category}</span><Badge variant="outline">{t.status}</Badge></div>
+            <div className="text-xs text-muted-foreground mt-1">{t.message}</div>
           </div>
         ))}
       </div>
     </CardContent></Card>
   );
 }
-

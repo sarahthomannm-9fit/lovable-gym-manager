@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -31,6 +31,16 @@ Deno.serve(async (req) => {
     const { data: role, error: roleError } = await supabase.from('user_roles')
       .select('role').eq('user_id', auth.user.id).eq('role', 'admin').maybeSingle();
     if (roleError || !role) return json({ error: 'Acesso restrito a administrador' }, 403);
+    const {organizationId}=await req.json().catch(()=>({}));
+    if(typeof organizationId!=='string'||!/^[0-9a-f-]{36}$/i.test(organizationId))return json({error:'Selecione o condomínio'},400);
+    const {data:organization}=await supabase.from('organizations').select('id,metadata').eq('id',organizationId).single();
+    if(!organization)return json({error:'Condomínio inválido'},400);
+    if(organization.metadata?.features?.ai_reports!==true)return json({error:'Relatórios de IA ainda não ativados neste condomínio'},403);
+    const {data:studentRows,error:studentError}=await supabase.from('alunos').select('id').eq('organization_id',organizationId);
+    if(studentError)throw studentError;
+    const studentIds=(studentRows||[]).map(row=>row.id);
+    const scopedIds=studentIds.length?studentIds:['00000000-0000-0000-0000-000000000000'];
+    if(Deno.env.get('APP_ENV')==='staging'&&!Deno.env.get('AI_API_URL'))return json({error:'Configure AI_API_URL segregada para staging'},503);
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) return json({ error: 'LOVABLE_API_KEY ausente' }, 500);
 
@@ -39,13 +49,15 @@ Deno.serve(async (req) => {
 
     // Collect metrics
     const [leadsRes, alunosRes, pagamentosRes, ticketsRes, draftsRes] = await Promise.all([
-      supabase.from('leads').select('id, status, created_at, score'),
-      supabase.from('alunos').select('id, status, lifecycle_status, data_matricula, created_at'),
-      supabase.from('pagamentos').select('id, status, valor, data_vencimento, data_pagamento'),
-      supabase.from('support_tickets').select('id, status, escalated_to_ceo, created_at, resolved_at'),
-      supabase.from('content_drafts').select('id, status, type, created_at, approved_at'),
+      supabase.from('leads').select('id, status, created_at, score').eq('organization_id',organizationId),
+      supabase.from('alunos').select('id, status, lifecycle_status, data_matricula, created_at').eq('organization_id',organizationId),
+      supabase.from('pagamentos').select('id, status, valor, data_vencimento, data_pagamento').in('aluno_id',scopedIds),
+      supabase.from('support_tickets').select('id, status, escalated_to_ceo, created_at, resolved_at').eq('organization_id',organizationId),
+      supabase.from('content_drafts').select('id, status, type, created_at, approved_at').eq('organization_id',organizationId),
     ]);
 
+    const queryError=[leadsRes,alunosRes,pagamentosRes,ticketsRes,draftsRes].find(result=>result.error)?.error;
+    if(queryError)throw queryError;
     const leads = leadsRes.data || [];
     const alunos = alunosRes.data || [];
     const pagamentos = pagamentosRes.data || [];
@@ -86,7 +98,7 @@ Deno.serve(async (req) => {
     const results: any[] = [];
     for (const agent of AGENTS) {
       const metrics = metricsByAgent[agent];
-      const aiResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      const aiResp = await fetch(Deno.env.get('AI_API_URL')||'https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${LOVABLE_API_KEY}`,
@@ -111,12 +123,13 @@ Deno.serve(async (req) => {
       }
 
       const { error } = await supabase.from('agent_reports').upsert({
+        organization_id:organizationId,
         agent_id: agent,
         report_date: today,
         summary,
         metrics,
         highlights: [],
-      }, { onConflict: 'agent_id,report_date' });
+      }, { onConflict: 'organization_id,agent_id,report_date' });
       if (error) console.error(`Save report ${agent} error:`, error);
       results.push({ agent, ok: !error });
     }
@@ -134,4 +147,3 @@ function json(payload: unknown, status = 200) {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 }
-

@@ -10,6 +10,7 @@ import {
   LogOut, ArrowLeftRight, Building2, GraduationCap, Briefcase, User,
   LayoutDashboard, Bot, Network,
   ClipboardCheck,
+  Calendar, Dumbbell, MessageSquare,
 } from 'lucide-react';
 
 const ICONS: Record<string, any> = {
@@ -42,31 +43,45 @@ export function PersonaLayout({
   const Icon = ICONS[activeRole as string] || Building2;
 
   // Org options visible to user: memberships + (admin only) any saved active org
+  const coachSurface=location.pathname.startsWith('/coach')||(activeRole==='professor'&&['/treinos','/planos-treino'].includes(location.pathname));
+  const surfaceRole=location.pathname.startsWith('/sindico')?'sindico':coachSurface?'professor':location.pathname.startsWith('/morador')?'user':location.pathname.startsWith('/corp')?'corporate':null;
   const orgOptions = Array.from(
-    new Map(memberships.map((m) => [m.organization.id, m.organization])).values(),
+    new Map(memberships.filter(m=>isAdmin||!surfaceRole||m.papel===surfaceRole).map((m) => [m.organization.id, m.organization])).values(),
   );
   if (activeOrg && !orgOptions.find((o) => o.id === activeOrg.id)) orgOptions.unshift(activeOrg);
 
+  const previewSurface=isAdmin && ['/morador','/coach','/sindico','/corp'].some(path=>location.pathname===path||location.pathname.startsWith(path+'/'));
   const residentSurface = location.pathname.startsWith('/morador');
-  const adminLinks: NavLink[] = isAdmin && !residentSurface
+  const adminLinks: NavLink[] = isAdmin && location.pathname.startsWith('/admin')
     ? [
         { label: 'Painel admin', path: '/painel', icon: LayoutDashboard, accent: 'hsl(var(--primary))' },
         { label: 'Operação 9FIT', path: '/operacao-9fit', icon: ClipboardCheck, accent: 'hsl(var(--primary))' },
         { label: 'Hub Agentes', path: '/agents', icon: Bot, accent: 'hsl(var(--primary))' },
         { label: 'Organizações', path: '/admin/organizacoes', icon: Network, accent: 'hsl(var(--primary))' },
+        { label: 'Solicitações', path: '/admin/solicitacoes', icon: MessageSquare, accent },
+        { label: 'Usuários', path: '/admin/usuarios', icon: User, accent },
+        { label: 'Aprovações', path: '/admin/aprovacoes-workflows', icon: ClipboardCheck, accent },
       ]
     : [];
 
   // Persona links visible: admin sees all; non-admin sees only those matching memberships
-  const visiblePersonas = isAdmin && !residentSurface
-    ? PERSONA_LINKS
-    : PERSONA_LINKS.filter((p) => {
-        if (p.path === '/morador') return true;
-        const tipo = p.path === '/sindico' ? 'condominio'
-          : p.path === '/coach' ? 'professor'
-          : p.path === '/corp' ? 'corporate' : null;
-        return tipo && memberships.some((m) => m.organization.tipo === tipo);
-      });
+  const visiblePersonas = PERSONA_LINKS.filter(link=>location.pathname===link.path || location.pathname.startsWith(link.path+'/') || (coachSurface&&link.path==='/coach'));
+
+  const sectionLinks: NavLink[] = residentSurface ? [
+    { label: 'Eventos', path: '/morador/eventos', icon: Calendar, accent },
+    { label: 'Agenda', path: '/morador/agenda', icon: Calendar, accent },
+    { label: 'Reservas e serviços', path: '/morador/operacao', icon: Building2, accent },
+    { label: 'Profissionais', path: '/morador/staff', icon: GraduationCap, accent },
+    { label: 'Perfil', path: '/morador/perfil', icon: User, accent },
+  ] : location.pathname.startsWith('/sindico') ? [
+    { label: 'Comunicados', path: '/sindico/comunicados', icon: MessageSquare, accent },
+    { label: 'Health Day', path: '/sindico/health-day', icon: Calendar, accent },
+    { label: 'Áreas e serviços', path: '/sindico/operacao', icon: Building2, accent },
+  ] : coachSurface ? [
+    { label: 'Revisões de segurança', path: '/coach/revisoes', icon: ClipboardCheck, accent },
+    { label: 'Treinos', path: '/treinos', icon: Dumbbell, accent },
+    { label: 'Planos de treino', path: '/planos-treino', icon: Dumbbell, accent },
+  ] : [];
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -79,7 +94,7 @@ export function PersonaLayout({
             </div>
             <div className="min-w-0">
               <p className="block text-[10px] leading-none font-mono tracking-[0.18em] uppercase text-primary/70 mb-1">NINE LIVING</p>
-              <h1 className="block font-display text-xl leading-tight font-normal truncate">{title}</h1>
+              {previewSurface&&<p className="text-xs text-amber-600">Pré-visualização administrativa desta persona</p>}<h1 className="block font-display text-xl leading-tight font-normal truncate">{title}</h1>
               {(activeOrg || subtitle) && (
                 <p className="text-xs text-muted-foreground truncate">
                   {activeOrg?.nome || subtitle}
@@ -119,7 +134,7 @@ export function PersonaLayout({
         {/* Nav strip */}
         <div className="border-t border-border/20 bg-background/40">
           <div className="max-w-6xl mx-auto px-4 py-1.5 flex items-center gap-1 overflow-x-auto">
-            {[...visiblePersonas, ...adminLinks].map((l) => {
+            {[...visiblePersonas, ...sectionLinks, ...adminLinks].map((l) => {
               const I = l.icon;
               const active = location.pathname === l.path;
               return (

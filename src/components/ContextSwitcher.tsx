@@ -10,20 +10,20 @@ import {
 import { Building2, GraduationCap, Briefcase, User, ChevronDown, LogOut, ArrowLeftRight, Sparkles } from 'lucide-react';
 
 const PERSONAS = [
-  { label: 'Síndico', path: '/sindico', icon: Building2 },
-  { label: 'Coach', path: '/coach', icon: GraduationCap },
-  { label: 'Corporativo', path: '/corp', icon: Briefcase },
-  { label: 'Morador', path: '/morador', icon: User },
-  { label: 'Studio', path: '/studio', icon: Sparkles, roles: ['admin', 'manager', 'professor'] },
+  { label: 'Síndico', path: '/sindico', icon: Building2, roles:['sindico'] },
+  { label: 'Coach', path: '/coach', icon: GraduationCap, roles:['professor'] },
+  { label: 'Corporativo', path: '/corp', icon: Briefcase, roles:['corporate'] },
+  { label: 'Morador', path: '/morador', icon: User, roles:['user'] },
+  { label: 'Studio', path: '/studio', icon: Sparkles, roles: ['admin', 'manager'] },
 ];
 
 /** Seletor de contexto no topo: Usuário → Organização → Persona (troca sem logout) */
 export function ContextSwitcher() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const { activeOrg, memberships, setActiveOrg, isAdmin, primaryRole } = useOperationalContext();
+  const { activeOrg, memberships, setActiveOrg, isAdmin, activeRole } = useOperationalContext();
 
-  const orgs = Array.from(new Map(memberships.map((m) => [m.organization.id, m.organization])).values());
+  const orgs = Array.from(new Map(memberships.filter(m=>isAdmin||m.papel===activeRole).map((m) => [m.organization.id, m.organization])).values());
   if (activeOrg && !orgs.find((o) => o.id === activeOrg.id)) orgs.unshift(activeOrg as any);
 
   const nome = (user?.user_metadata as any)?.nome || user?.email?.split('@')[0] || 'Usuário';
@@ -31,8 +31,7 @@ export function ContextSwitcher() {
   const canSeePersona = (roles?: string[]) => {
     if (!roles) return true;
     if (isAdmin) return true;
-    if (!primaryRole) return true;
-    return roles.includes(primaryRole);
+    return !!activeOrg && !!activeRole && roles.includes(activeRole);
   };
 
   return (
@@ -44,7 +43,7 @@ export function ContextSwitcher() {
             <span className="font-medium">{nome}</span>
             <span className="text-muted-foreground">/</span>
             <span className="text-muted-foreground truncate max-w-[160px]">{activeOrg?.nome || 'Todos os contextos'}</span>
-            {primaryRole && <span className="text-muted-foreground">/ {primaryRole}</span>}
+            {activeRole && <span className="text-muted-foreground">/ {activeRole}</span>}
             <ChevronDown className="w-3.5 h-3.5 opacity-60" />
           </Button>
         </DropdownMenuTrigger>
@@ -59,7 +58,7 @@ export function ContextSwitcher() {
           <DropdownMenuSeparator />
           <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Persona</DropdownMenuLabel>
           {PERSONAS.filter((p) => canSeePersona((p as any).roles)).map((p) => (
-            <DropdownMenuItem key={p.path} className="text-xs" onClick={() => navigate(p.path)}>
+            <DropdownMenuItem key={p.path} className="text-xs" onClick={() => {if(activeOrg&&p.roles?.[0])setActiveOrg(activeOrg,p.roles[0] as any);navigate(p.path);}}>
               <p.icon className="w-3.5 h-3.5 mr-2" /> {p.label}
             </DropdownMenuItem>
           ))}

@@ -52,8 +52,8 @@ export function useSupabaseCampaigns() {
     enabled: !!activeOrg?.id,
   });
 
-  const addCampaign = async (campaign: Omit<Campaign, "id" | "created_at" | "updated_at">) => {
-    console.log("[Campaigns] inserting", campaign);
+  const addCampaign = async (campaign: Omit<Campaign, "id" | "created_at" | "updated_at" | "organization_id">) => {
+    if (!activeOrg?.id) throw new Error('Selecione uma organização.');
     const { data: inserted, error } = await supabase
       .from("campanhas_marketing")
       .insert({ ...campaign, organization_id: activeOrg?.id, status: campaign.status || 'draft' })
@@ -72,4 +72,3 @@ export function useSupabaseCampaigns() {
     addCampaign,
   };
 }
-

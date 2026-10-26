@@ -19,22 +19,21 @@ const PAPEL_LABEL: Record<string, string> = {
 
 const ADMIN_PREVIEWS = [
   { label: 'Síndico (preview)', tipo: 'condominio' as const, route: '/sindico', icon: Building2, accent: '#60A5FA' },
-  { label: 'Professor (preview)', tipo: 'professor' as const, route: '/coach', icon: GraduationCap, accent: 'hsl(var(--primary))' },
+  { label: 'Professor (preview)', tipo: 'condominio' as const, route: '/coach', icon: GraduationCap, accent: 'hsl(var(--primary))' },
   { label: 'Corporativo (preview)', tipo: 'corporate' as const, route: '/corp', icon: Briefcase, accent: '#A78BFA' },
   { label: 'Morador / Aluno (preview)', tipo: null, route: '/morador', icon: User, accent: '#F472B6' },
 ];
 
 export default function SelectContext() {
-  const { loading, isAdmin, memberships, setActiveOrg } = useOperationalContext();
+  const { loading, isAdmin, memberships, activeOrg, setActiveOrg, error, refresh } = useOperationalContext();
   const { signOut } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (loading) return;
-    if (!isAdmin && memberships.length === 0) navigate('/morador');
-    else if (!isAdmin && memberships.length === 1) {
+    if (!error && !isAdmin && memberships.length === 1) {
       const m = memberships[0];
-      setActiveOrg(m.organization);
+      setActiveOrg(m.organization,m.papel);
       navigate(routeForRole(m.papel));
     }
   }, [loading, isAdmin, memberships, navigate, setActiveOrg]);
@@ -43,22 +42,15 @@ export default function SelectContext() {
     return <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--background))] text-muted-foreground">Carregando…</div>;
   }
 
+  if(error)return <div role="alert" className="p-6"><p>{error}</p><Button onClick={()=>refresh()}>Carregar acessos novamente</Button></div>;
+
   const entrarComoPreview = async (tipo: string | null, route: string) => {
-    if (tipo) {
-      // Buscar primeira org desse tipo entre memberships (admin pode não ter membership)
-      const m = memberships.find(x => x.organization.tipo === tipo);
-      if (m) setActiveOrg(m.organization);
-      else {
-        // Buscar qualquer org real no banco
-        const { supabase } = await import('@/integrations/supabase/client');
-        const { data } = await (supabase as any).from('organizations')
-          .select('id, nome, tipo, status').eq('tipo', tipo).limit(1).maybeSingle();
-        if (data) setActiveOrg(data);
-        else setActiveOrg(null);
-      }
-    } else {
-      setActiveOrg(null);
-    }
+    if(!activeOrg)return;
+    // Preview preserves the organization explicitly chosen by the administrator.
+    if(tipo && activeOrg.tipo!==tipo)return;
+
+    const role=route==='/sindico'?'sindico':route==='/coach'?'professor':route==='/morador'?'user':'corporate';
+    setActiveOrg(activeOrg,role);
     navigate(route);
   };
 
@@ -96,7 +88,7 @@ export default function SelectContext() {
             return (
               <Card key={m.organization_id + m.papel}
                     className="bg-card/60 hover:bg-card cursor-pointer transition border-border/40"
-                    onClick={() => { setActiveOrg(m.organization); navigate(routeForRole(m.papel)); }}>
+                    onClick={() => { setActiveOrg(m.organization,m.papel); navigate(routeForRole(m.papel)); }}>
                 <CardContent className="p-5 flex items-start gap-3">
                   <div className="w-10 h-10 rounded-sm flex items-center justify-center"
                        style={{ backgroundColor: `${meta.accent}1A`, color: meta.accent }}>
@@ -131,7 +123,7 @@ export default function SelectContext() {
                 const Icon = p.icon;
                 return (
                   <Card key={p.label}
-                        className="bg-card/40 hover:bg-card cursor-pointer transition border-border/30"
+                        className={`bg-card/40 transition border-border/30 ${!activeOrg || (p.tipo && activeOrg.tipo!==p.tipo)?'opacity-40':'hover:bg-card cursor-pointer'}`}
                         onClick={() => entrarComoPreview(p.tipo, p.route)}>
                     <CardContent className="p-4 flex items-center gap-3">
                       <div className="w-9 h-9 rounded-sm flex items-center justify-center"
@@ -145,7 +137,7 @@ export default function SelectContext() {
               })}
             </div>
             <p className="text-[11px] text-muted-foreground mt-2">
-              Modo preview do admin: usa a primeira org disponível do tipo correspondente.
+              Selecione primeiro um condomínio nos cartões acima. O preview preserva a organização escolhida e não substitui uma conta real da persona.
             </p>
           </div>
         )}

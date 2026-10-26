@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useOperationalContext } from '@/hooks/useOperationalContext';
 
 export interface Notificacao {
   id: string;
@@ -25,6 +26,7 @@ export interface Notificacao {
 export type NotificacaoInput = Omit<Notificacao, 'id' | 'created_at' | 'data_envio' | 'data_leitura'>;
 
 export function useNotificacoes() {
+  const { activeOrg } = useOperationalContext();
   const [notificacoes, setNotificacoes] = useState<Notificacao[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -32,9 +34,17 @@ export function useNotificacoes() {
   const fetchNotificacoes = useCallback(async () => {
     try {
       setLoading(true);
+      setNotificacoes([]);
+      if (!activeOrg?.id) return;
+      const { data: students, error: studentError } = await supabase.from('alunos').select('id').eq('organization_id', activeOrg.id);
+      if (studentError) throw studentError;
+      const studentIds = (students || []).map(student => student.id);
+      if (!studentIds.length) return;
       const { data, error } = await supabase
         .from('notificacoes')
         .select('*')
+        .eq('destinatario_tipo', 'aluno')
+        .in('destinatario_id', studentIds)
         .order('created_at', { ascending: false })
         .limit(100);
 
@@ -45,7 +55,7 @@ export function useNotificacoes() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [activeOrg?.id]);
 
   const createNotificacao = useCallback(async (notificacao: NotificacaoInput) => {
     try {

@@ -36,6 +36,7 @@ const ENDPOINTS = [
 export default function FitProIntegration() {
   const [conn, setConn] = useState<Connection | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
+  const [loadError, setLoadError] = useState('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [rawKey, setRawKey] = useState<string | null>(null);
@@ -43,10 +44,10 @@ export default function FitProIntegration() {
   const fnBase = `https://jobytedbdptuncvobarw.supabase.co/functions/v1/fitmanager-api`;
 
   async function load() {
-    setLoading(true);
+    setLoading(true);setLoadError('');
     const { data: user } = await supabase.auth.getUser();
     if (!user.user) { setLoading(false); return; }
-    const { data: c } = await supabase
+    const { data: c, error: connectionError } = await supabase
       .from('fitmanager_connections' as any)
       .select('id, api_key_prefix, status, last_sync_at, created_at')
       .eq('professor_id', user.user.id)
@@ -54,15 +55,17 @@ export default function FitProIntegration() {
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
+    if(connectionError){setLoadError(connectionError.message);setLoading(false);return;}
     setConn((c as any) ?? null);
 
     if (c) {
-      const { data: ev } = await supabase
+      const { data: ev, error: eventsError } = await supabase
         .from('fitmanager_events' as any)
         .select('id, event_type, payload, created_at')
         .eq('connection_id', (c as any).id)
         .order('created_at', { ascending: false })
         .limit(20);
+      if(eventsError)setLoadError(eventsError.message);
       setEvents(((ev as any) ?? []) as Event[]);
     } else {
       setEvents([]);
@@ -76,7 +79,7 @@ export default function FitProIntegration() {
     setBusy(true);
     try {
       const { data, error } = await supabase.functions.invoke('fitmanager-api-key', { body: { action } });
-      if (error) throw error;
+      if (error || data?.error) throw error || new Error(data.error);
       if ((data as any)?.api_key) {
         setRawKey((data as any).api_key);
         toast.success('API Key gerada. Copie agora — ela não será exibida novamente.');
@@ -106,6 +109,7 @@ export default function FitProIntegration() {
         </div>
       </header>
 
+      <div className="flex gap-2"><Button variant="outline" disabled={loading} onClick={load}>Atualizar integração</Button>{loadError&&<p role="alert">{loadError}</p>}</div>
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><KeyRound className="h-5 w-5" /> Sua API Key</CardTitle>

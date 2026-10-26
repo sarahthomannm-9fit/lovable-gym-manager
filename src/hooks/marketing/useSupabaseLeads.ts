@@ -22,7 +22,7 @@ export interface Lead {
 export function useSupabaseLeads() {
   const { activeOrg } = useOperationalContext();
   const fetchLeads = async (): Promise<Lead[]> => {
-    console.log("[Leads] fetching from Supabase");
+
     if (!activeOrg?.id) return [];
     const { data, error } = await supabase
       .from("leads")
@@ -40,7 +40,7 @@ export function useSupabaseLeads() {
   });
 
   const addLead = async (lead: Omit<Lead, "id" | "created_at" | "updated_at">) => {
-    console.log("[Leads] inserting", lead);
+
     if (!activeOrg?.id) throw new Error('Selecione uma organização.');
     const { data: inserted, error } = await (supabase as any).rpc('capture_lead', { p_organization_id:activeOrg.id, p_nome:lead.nome, p_email:lead.email, p_telefone:lead.telefone, p_fonte:lead.fonte, p_consent:lead.consent_marketing, p_source_detail:null, p_campaign_id:null });
     if (error) throw error;

@@ -12,14 +12,14 @@ import { WEEKDAYS, localDate, validateWorkout, publicationPayload, type WorkoutD
 type LibraryExercise = { id: string; nome: string; grupo_muscular: string | null; equipamento: string | null; restricoes_incompativeis?: string[] | null };
 interface Props {
   alunos: { id: string; nome: string }[]; organizationId?: string | null; onCriado: () => void;
-  trigger?: ReactNode; initialAlunoId?: string;
+  trigger?: ReactNode; initialAlunoId?: string; initialWorkoutId?: string; initialPlanId?: string;
 }
 const newDraft = (aluno = ''): WorkoutDraft => ({ requestId: crypto.randomUUID(), aluno_id: aluno, nome: '', objetivo: '', nivel: 'iniciante', data_inicio: localDate(), semanas: 4, exercicios: [] });
 const selectClass = 'w-full rounded-md border border-input bg-background px-3 py-2 text-sm';
 
-export function CriarTreinoDialog({ alunos, organizationId, onCriado, trigger, initialAlunoId }: Props) {
+export function CriarTreinoDialog({ alunos, organizationId, onCriado, trigger, initialAlunoId, initialWorkoutId, initialPlanId }: Props) {
   const { user } = useAuth();
-  const storageKey = `9fit:workout-draft:${user?.id}:${organizationId || 'global'}:${initialAlunoId || 'new'}`;
+  const storageKey = `9fit:workout-draft:${user?.id}:${organizationId || 'global'}:${initialAlunoId || 'new'}:${initialWorkoutId || initialPlanId || 'new'}`;
   const [open, setOpen] = useState(false);
   const [review, setReview] = useState(false);
   const [draft, setDraft] = useState<WorkoutDraft>(() => newDraft(initialAlunoId));
@@ -36,7 +36,30 @@ export function CriarTreinoDialog({ alunos, organizationId, onCriado, trigger, i
   const [saving, setSaving] = useState(false);
   const busy = useRef(false);
   const [error, setError] = useState('');
+  const [revisionReason,setRevisionReason] = useState('');
+  const [loadingExisting,setLoadingExisting] = useState(false);
   const [substitutions, setSubstitutions] = useState<Record<string, { id: string; substitute_exercise_id: string; motivo: string }[]>>({});
+
+  useEffect(() => {
+    if (!open || !draft.aluno_id || !organizationId) return;
+    let current = true;
+    setSafetyStatus('desconhecido');
+    setStudentRestrictions([]);
+    setApprovedEquipment([]);
+    setInfrastructureError('');
+    void Promise.all([
+      supabase.from('student_safety_onboarding').select('risco, restricoes, lesoes_atuais').eq('aluno_id', draft.aluno_id).eq('organization_id', organizationId).maybeSingle(),
+      supabase.from('organization_facilities').select('nome').eq('organization_id', organizationId).eq('status', 'aprovado'),
+    ]).then(([safety, facilities]) => {
+      if (!current) return;
+      if (safety.error) setSafetyStatus('desconhecido');
+      else setSafetyStatus(!safety.data ? 'pendente' : safety.data.risco === 'baixo' ? 'liberado' : safety.data.risco === 'bloqueado' ? 'bloqueado' : 'pendente');
+      setStudentRestrictions([...(safety.data?.restricoes || []), ...(safety.data?.lesoes_atuais || [])]);
+      setApprovedEquipment((facilities.data || []).map((item) => item.nome));
+      if (facilities.error || !facilities.data?.length) setInfrastructureError('Inventário aprovado indisponível para este condomínio.');
+    }).catch(() => { if (current) setSafetyStatus('desconhecido'); });
+    return () => { current = false; };
+  }, [open, draft.aluno_id, organizationId]);
 
   const loadLibrary = async () => {
     setLoading(true); setLibraryError('');
@@ -47,7 +70,7 @@ export function CriarTreinoDialog({ alunos, organizationId, onCriado, trigger, i
       if (error) throw error;
       const equipment = approvedEquipment.map((item) => item.toLocaleLowerCase());
       const available = ((data || []) as LibraryExercise[]).filter((exercise) => {
-        const equipmentOk = !exercise.equipamento || equipment.length === 0 || equipment.some((item) => item.includes(String(exercise.equipamento).toLocaleLowerCase()) || String(exercise.equipamento).toLocaleLowerCase().includes(item));
+        const equipmentOk = !exercise.equipamento || ['nenhum','peso corporal','livre','sem equipamento'].includes(exercise.equipamento.toLocaleLowerCase().trim()) || equipment.some((item) => item.includes(String(exercise.equipamento).toLocaleLowerCase()) || String(exercise.equipamento).toLocaleLowerCase().includes(item));
         const restrictions = (exercise.restricoes_incompativeis || []).map((item) => item.toLocaleLowerCase());
         const safe = !restrictions.some((blocked) => studentRestrictions.some((declared) => declared.includes(blocked) || blocked.includes(declared)));
         return equipmentOk && safe;
@@ -55,6 +78,22 @@ export function CriarTreinoDialog({ alunos, organizationId, onCriado, trigger, i
       setLibrary(available);
     } catch { setLibraryError('Não foi possível carregar a biblioteca.'); }
     finally { setLoading(false); }
+  };
+  useEffect(() => {
+    if (open) void loadLibrary();
+  }, [open, approvedEquipment, studentRestrictions]);
+  const loadExisting = async () => {
+    if (!initialWorkoutId && !initialPlanId) return;
+    setLoadingExisting(true);
+    try {
+      let workout:{aluno_id:string;nome:string|null;descricao:string|null;plano_treino_id:string|null}={aluno_id:initialAlunoId||'',nome:'Treino',descricao:'',plano_treino_id:initialPlanId||null};
+      if(initialWorkoutId){const {data,error}=await supabase.from('treinos').select('aluno_id,nome,descricao,plano_treino_id').eq('id',initialWorkoutId).single();if(error||!data.plano_treino_id)throw error||new Error('Treino anterior sem plano vinculado.');workout=data;}
+      else {const {data,error}=await supabase.from('planos_treino').select('nome,objetivo').eq('id',initialPlanId!).single();if(error)throw error;workout={...workout,nome:data.nome,descricao:data.objetivo};}
+      const { data: exercises, error: exerciseError } = await supabase.from('plano_exercicios').select('*,exercicios_biblioteca(nome)').eq('plano_treino_id',workout.plano_treino_id).eq('semana',1).order('ordem');
+      if (exerciseError) throw exerciseError;
+      setDraft({ ...newDraft(workout.aluno_id), nome:(workout.nome || 'Treino')+(initialWorkoutId?' — revisão':''),objetivo:workout.descricao || '',exercicios:(exercises || []).map(ex=>({key:crypto.randomUUID(),exercicio_id:ex.exercicio_id,nome:ex.exercicios_biblioteca?.nome || 'Exercício',dia_semana:ex.dia_semana,series:ex.series,repeticoes:ex.repeticoes,carga_kg:ex.carga_kg==null?'':String(ex.carga_kg),descanso_seg:ex.descanso_seg || 0,observacoes:ex.observacoes || ''})) });
+    } catch(e) { setError((e as Error).message || 'Falha ao carregar treino anterior.'); }
+    finally { setLoadingExisting(false); }
   };
   const changeOpen = (value: boolean) => {
     if (busy.current) return;
@@ -65,6 +104,7 @@ export function CriarTreinoDialog({ alunos, organizationId, onCriado, trigger, i
         if (saved?.requestId && Array.isArray(saved.exercicios)) restored = saved;
       } catch { /* A malformed local draft must not prevent opening the editor. */ }
       setDraft(restored); setReview(false); setError(''); void loadLibrary();
+      if ((initialWorkoutId||initialPlanId) && restored.exercicios.length===0) void loadExisting();
     }
     setOpen(value);
   };
@@ -82,13 +122,15 @@ export function CriarTreinoDialog({ alunos, organizationId, onCriado, trigger, i
     [next[index], next[target]] = [next[target], next[index]]; patch({ exercicios: next });
   };
   const publish = async () => {
-    if (busy.current) return;
+    if (busy.current || loadingExisting) return;
+    if (initialWorkoutId && revisionReason.trim().length<3) return setError('Informe o motivo da revisão.');
+    if (safetyStatus !== 'liberado') return setError('Conclua a avaliação de segurança antes de publicar.');
     const validation = validateWorkout(draft);
     if (validation) return setError(validation);
     if (!alunos.some(a => a.id === draft.aluno_id)) return setError('O aluno não está mais disponível neste contexto.');
     busy.current = true; setSaving(true); setError('');
     try {
-      const { error } = await (supabase as any).rpc('publish_workout', { p_request_id: draft.requestId, p_payload: publicationPayload(draft) });
+      const { error } = await (supabase as any).rpc(initialWorkoutId ? 'revise_workout' : 'publish_workout', { ...(initialWorkoutId ? {p_original:initialWorkoutId,p_reason:revisionReason.trim()} : {}), p_request_id: draft.requestId, p_payload: publicationPayload(draft) });
       if (error) throw error;
       try { localStorage.removeItem(storageKey); } catch { /* Publication already succeeded. */ }
       setOpen(false); setDraft(newDraft(initialAlunoId));
@@ -107,14 +149,16 @@ export function CriarTreinoDialog({ alunos, organizationId, onCriado, trigger, i
       {error && <div role="alert" className="rounded border border-destructive p-3 text-sm">{error}</div>}
       {infrastructureError && <div role="alert" className="rounded border border-amber-500 p-3 text-sm text-amber-700">{infrastructureError} Aprove o inventário antes de publicar um protocolo. Exercícios sem equipamento ou compatíveis com o inventário aprovado permanecem disponíveis.</div>}
       {draft.aluno_id && <div className={`rounded border p-3 text-sm ${safetyStatus === 'liberado' ? 'border-emerald-500 text-emerald-700' : 'border-amber-500 text-amber-700'}`}>Segurança do aluno: <strong>{safetyStatus === 'liberado' ? 'liberada' : safetyStatus === 'bloqueado' ? 'bloqueada' : 'aguardando avaliação'}</strong></div>}
-      <fieldset disabled={saving} className="space-y-4 min-w-0">
+      {initialWorkoutId && <label className="block text-sm">Motivo da revisão<Textarea value={revisionReason} onChange={e=>setRevisionReason(e.target.value)} disabled={saving}/><Button variant="outline" size="sm" disabled={saving||loadingExisting} onClick={loadExisting}>Recarregar exercícios do treino anterior</Button></label>}
+      {loadingExisting && <p role="status">Carregando exercícios anteriores…</p>}
+      <fieldset disabled={saving || loadingExisting} className="space-y-4 min-w-0">
       {!review ? <>
         <label className="block text-sm">Aluno<select className={selectClass} value={draft.aluno_id} onChange={e => patch({ aluno_id: e.target.value })}><option value="">Escolha o aluno</option>{alunos.map(a => <option key={a.id} value={a.id}>{a.nome}</option>)}</select></label>
-        <div className="grid sm:grid-cols-2 gap-3"><label>Começar por protocolo<select className="w-full rounded-md border bg-background px-3 py-2 text-sm" onChange={(e) => { const template = templates.find((item) => item.id === e.target.value); if (template) { const seeded = library.slice(0, Math.min(6, library.length)).map((exercise: LibraryExercise, index: number) => ({ key: crypto.randomUUID(), exercicio_id: exercise.id, nome: exercise.nome, dia_semana: [1, 3, 5][index % 3], series: 3, repeticoes: '12', carga_kg: '', descanso_seg: 60, observacoes: '' })); setDraft((current) => ({ ...current, nome: template.nome, objetivo: template.objetivo, nivel: template.nivel, semanas: Math.max(1, template.sessoes_semana), exercicios: seeded })); } }}><option value="">Montar do zero</option>{templates.map((template) => <option key={template.id} value={template.id}>{template.nome} · {template.objetivo}</option>)}</select></label></div><div className="grid sm:grid-cols-2 gap-3">
+        <div className="grid sm:grid-cols-2 gap-3">
           <label>Nome do treino<Input value={draft.nome} onChange={e => patch({ nome: e.target.value })} /></label>
           <label>Objetivo<Input value={draft.objetivo} onChange={e => patch({ objetivo: e.target.value })} /></label>
           <label>Início<Input type="date" value={draft.data_inicio} onChange={e => patch({ data_inicio: e.target.value })} /></label>
-          <label>Semanas<Input type="number" min={1} max={52} value={draft.semanas} onChange={e => patch({ semanas: Number(e.target.value) })} /></label>
+          <label>Semanas<Input type="number" min={4} max={12} value={draft.semanas} onChange={e => patch({ semanas: Number(e.target.value) })} /></label>
           <label>Nível<select className={selectClass} value={draft.nivel} onChange={e => patch({ nivel: e.target.value })}>{['iniciante','intermediario','avancado'].map(n => <option key={n}>{n}</option>)}</select></label>
         </div>
         <section className="rounded border p-3 space-y-2" aria-label="Biblioteca de exercícios">
@@ -148,7 +192,7 @@ export function CriarTreinoDialog({ alunos, organizationId, onCriado, trigger, i
       <DialogFooter className="gap-2">
         <Button variant="ghost" disabled={saving} onClick={() => { try { localStorage.removeItem(storageKey); } catch { /* local storage unavailable */ } setDraft(newDraft(initialAlunoId)); setOpen(false); }}>Descartar rascunho</Button>
         <Button variant="outline" disabled={saving} onClick={() => review ? setReview(false) : changeOpen(false)}>{review ? 'Voltar e editar' : 'Salvar e fechar'}</Button>
-        <Button disabled={saving} onClick={() => { if (review) void publish(); else { const err = validateWorkout(draft); if (err) setError(err); else setReview(true); } }}>{saving ? 'Publicando…' : review ? 'Publicar no app do aluno' : 'Revisar treino'}</Button>
+        <Button disabled={saving || loadingExisting} onClick={() => { if (review) void publish(); else { const err = validateWorkout(draft); if (err) setError(err); else setReview(true); } }}>{saving ? 'Publicando…' : review ? 'Publicar no app do aluno' : 'Revisar treino'}</Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>;

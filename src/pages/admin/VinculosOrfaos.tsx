@@ -24,7 +24,6 @@ type Organization = {
 
 const PAPEIS_DISPONIVEIS = [
   { value: 'sindico', label: 'Síndico' },
-  { value: 'comite', label: 'Comitê' },
   { value: 'professor', label: 'Professor/Coach' },
   { value: 'corporate', label: 'Corporativo' },
   { value: 'user', label: 'Usuário/Morador' },
@@ -86,18 +85,14 @@ export default function VinculosOrfaos() {
 
     setVinculando(orfao.id);
     try {
-      const { error } = await supabase.from('organization_members').insert([{
-        user_id: orfao.user_id,
-        organization_id: orgId,
-        papel: papel as any,
-      }]);
+      const { error } = await (supabase as any).rpc('assign_organization_member',{p_org:orgId,p_user:orfao.user_id,p_role:papel,p_remove:false});
 
       if (error) {
         toast.error(`Falha: ${error.message}`);
       } else {
         toast.success(`Usuário vinculado a ${papel}`);
-        setSelectedOrg(s => { delete s[orfao.id]; return s; });
-        setSelectedPapel(s => { delete s[orfao.id]; return s; });
+        setSelectedOrg(s => { const next={...s};delete next[orfao.id];return next; });
+        setSelectedPapel(s => { const next={...s};delete next[orfao.id];return next; });
         carregar();
       }
     } catch (err: any) {

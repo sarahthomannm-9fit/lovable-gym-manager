@@ -86,7 +86,10 @@ export function DataIntegrationProvider({ children }: { children: React.ReactNod
   const [treinosRaw, setTreinos] = useState<any[]>([]);
   useEffect(() => {
     import('@/integrations/supabase/client').then(({ supabase }) => {
-      supabase.from('treinos').select('*').order('created_at', { ascending: false }).then(({ data }) => {
+      let query=supabase.from('treinos').select('*').order('created_at', { ascending: false });
+      if(activeOrg)query=query.eq('organization_id',activeOrg.id);
+      else if(!isAdmin){setTreinos([]);return;}
+      query.then(({ data }) => {
         setTreinos(data || []);
       });
     });

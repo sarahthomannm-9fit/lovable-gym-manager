@@ -45,7 +45,7 @@ export function ResetPassword() {
       toast.error('Erro ao atualizar senha: ' + error.message);
     } else {
       toast.success('Senha atualizada com sucesso!');
-      setTimeout(() => navigate('/painel'), 800);
+      navigate('/select-context', { replace: true });
     }
     setLoading(false);
   };

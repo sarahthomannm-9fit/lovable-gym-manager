@@ -1,3 +1,5 @@
+import { useOperationalContext } from './useOperationalContext';
+import { useTenantGuard } from './useTenantGuard';
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,18 +23,25 @@ export function useSupabasePayments() {
   const [payments, setPayments] = useState<SupabasePayment[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const {activeOrg,isAdmin}=useOperationalContext();
+  const {requireOrganization,requireStudent}=useTenantGuard();
+  const [loadError,setLoadError]=useState('');
 
   const fetchPayments = async () => {
     try {
-      setLoading(true);
-      const { data, error } = await supabase
+      setLoading(true);setLoadError('');
+      if(!activeOrg&&!isAdmin){setPayments([]);return;}
+      let query = supabase
         .from('pagamentos')
-        .select('*')
+        .select('*,alunos!inner(organization_id)')
         .order('created_at', { ascending: false });
+      if(activeOrg)query=query.eq('alunos.organization_id',activeOrg.id);
+      const {data,error}=await query;
 
       if (error) throw error;
       setPayments(data || []);
     } catch (error) {
+      setPayments([]);setLoadError((error as Error).message||'Falha ao carregar dados deste condomínio.');
       console.error('Error fetching payments:', error);
       toast({
         title: "Erro",
@@ -46,6 +55,7 @@ export function useSupabasePayments() {
 
   const addPayment = async (paymentData: Omit<SupabasePayment, 'id' | 'created_at' | 'updated_at'>) => {
     try {
+      await requireStudent(paymentData.aluno_id);
       const { data, error } = await supabase
         .from('pagamentos')
         .insert([paymentData])
@@ -74,6 +84,9 @@ export function useSupabasePayments() {
 
   const updatePayment = async (id: string, updates: Partial<SupabasePayment>) => {
     try {
+      const current=payments.find(row=>row.id===id);
+      await requireStudent(current?.aluno_id);
+      if(updates.aluno_id&&updates.aluno_id!==current?.aluno_id)throw new Error('Não é permitido transferir este registro.');
       const { data, error } = await supabase
         .from('pagamentos')
         .update(updates)
@@ -108,6 +121,7 @@ export function useSupabasePayments() {
   return {
     payments,
     loading,
+    loadError,
     addPayment,
     updatePayment,
     refetch: fetchPayments

@@ -1,3 +1,5 @@
+import { useOperationalContext } from './useOperationalContext';
+import { useTenantGuard } from './useTenantGuard';
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,6 +15,7 @@ export interface SupabaseStudent {
   data_nascimento?: string;
   tipo?: 'presencial' | 'consultoria';
   status?: string;
+  lifecycle_status?: string;
   plano_id?: string;
   data_matricula?: string;
   valor_mensalidade?: number;
@@ -32,14 +35,21 @@ export function useSupabaseStudents() {
   const [students, setStudents] = useState<SupabaseStudent[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const {activeOrg,isAdmin,activeRole}=useOperationalContext();
+  const {requireOrganization,requireStudent}=useTenantGuard();
+  const [loadError,setLoadError]=useState('');
 
   const fetchStudents = async () => {
     try {
-      setLoading(true);
-      const { data, error } = await supabase
+      setLoading(true);setLoadError('');
+      if(!activeOrg&&!isAdmin){setStudents([]);return;}
+      if(activeOrg&&activeRole==='professor'){const {data,error}=await (supabase as any).rpc('coach_student_roster',{p_org:activeOrg.id});if(error)throw error;setStudents(data||[]);return;}
+      let query = supabase
         .from('alunos')
         .select('*')
         .order('created_at', { ascending: false });
+      if(activeOrg)query=query.eq('organization_id',activeOrg.id);
+      const {data,error}=await query;
 
       if (error) throw error;
       
@@ -50,6 +60,7 @@ export function useSupabaseStudents() {
       
       setStudents(typedStudents);
     } catch (error) {
+      setStudents([]);setLoadError((error as Error).message||'Falha ao carregar dados deste condomínio.');
       console.error('Error fetching students:', error);
       toast({
         title: "Erro",
@@ -65,7 +76,7 @@ export function useSupabaseStudents() {
     try {
       const { data, error } = await supabase
         .from('alunos')
-        .insert([studentData])
+        .insert([{...studentData,organization_id:requireOrganization()}])
         .select()
         .single();
 
@@ -98,8 +109,8 @@ export function useSupabaseStudents() {
     try {
       const { data, error } = await supabase
         .from('alunos')
-        .update(updates)
-        .eq('id', id)
+        .update({...updates,organization_id:requireOrganization()})
+        .eq('id', id).eq('organization_id',requireOrganization())
         .select()
         .single();
 
@@ -133,7 +144,7 @@ export function useSupabaseStudents() {
       const { error } = await supabase
         .from('alunos')
         .delete()
-        .eq('id', id);
+        .eq('id', id).eq('organization_id',requireOrganization());
 
       if (error) throw error;
       
@@ -160,6 +171,7 @@ export function useSupabaseStudents() {
   return {
     students,
     loading,
+    loadError,
     addStudent,
     updateStudent,
     deleteStudent,

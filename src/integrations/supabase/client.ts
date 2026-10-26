@@ -3,8 +3,11 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 import { brokeredPreviewStorage } from './previewAuthStorage';
 
-const SUPABASE_URL = "https://jobytedbdptuncvobarw.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpvYnl0ZWRiZHB0dW5jdm9iYXJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIwOTcyMTMsImV4cCI6MjA2NzY3MzIxM30.6Qh5ibUVGCfnCurH3xkC3pFlYbMty67t694qtfyRHhI";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://jobytedbdptuncvobarw.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpvYnl0ZWRiZHB0dW5jdm9iYXJ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIwOTcyMTMsImV4cCI6MjA2NzY3MzIxM30.6Qh5ibUVGCfnCurH3xkC3pFlYbMty67t694qtfyRHhI";
+
+if(Boolean(import.meta.env.VITE_SUPABASE_URL)!==Boolean(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY))throw new Error('Configure URL e chave pública do mesmo ambiente.');
+if(import.meta.env.VITE_APP_ENV==='staging'&&(!import.meta.env.VITE_SUPABASE_URL||SUPABASE_URL.includes('jobytedbdptuncvobarw')))throw new Error('Staging exige um projeto Supabase separado da produção.');
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";

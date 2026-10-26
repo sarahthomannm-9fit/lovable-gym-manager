@@ -1,3 +1,5 @@
+import { useOperationalContext } from './useOperationalContext';
+import { useTenantGuard } from './useTenantGuard';
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,18 +26,25 @@ export function useSupabaseClasses() {
   const [classes, setClasses] = useState<SupabaseClass[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const {activeOrg,isAdmin}=useOperationalContext();
+  const {requireOrganization,requireStudent}=useTenantGuard();
+  const [loadError,setLoadError]=useState('');
 
   const fetchClasses = async () => {
     try {
-      setLoading(true);
-      const { data, error } = await supabase
+      setLoading(true);setLoadError('');
+      if(!activeOrg&&!isAdmin){setClasses([]);return;}
+      let query = supabase
         .from('aulas')
         .select('*')
         .order('data_aula', { ascending: true });
+      if(activeOrg)query=query.eq('organization_id',activeOrg.id);
+      const {data,error}=await query;
 
       if (error) throw error;
       setClasses(data || []);
     } catch (error) {
+      setClasses([]);setLoadError((error as Error).message||'Falha ao carregar dados deste condomínio.');
       console.error('Error fetching classes:', error);
       toast({
         title: "Erro",
@@ -51,7 +60,7 @@ export function useSupabaseClasses() {
     try {
       const { data, error } = await supabase
         .from('aulas')
-        .insert([classData])
+        .insert([{...classData,organization_id:requireOrganization()}])
         .select()
         .single();
 
@@ -79,8 +88,8 @@ export function useSupabaseClasses() {
     try {
       const { data, error } = await supabase
         .from('aulas')
-        .update(updates)
-        .eq('id', id)
+        .update({...updates,organization_id:requireOrganization()})
+        .eq('id', id).eq('organization_id',requireOrganization())
         .select()
         .single();
 
@@ -109,7 +118,7 @@ export function useSupabaseClasses() {
       const { error } = await supabase
         .from('aulas')
         .delete()
-        .eq('id', id);
+        .eq('id', id).eq('organization_id',requireOrganization());
 
       if (error) throw error;
       
@@ -136,6 +145,7 @@ export function useSupabaseClasses() {
   return {
     classes,
     loading,
+    loadError,
     addClass,
     updateClass,
     deleteClass,

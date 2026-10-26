@@ -16,7 +16,7 @@ import { useCurrentUserRole } from '@/hooks/useCurrentUserRole';
 import { Navigate } from 'react-router-dom';
 import { useOperationalContext } from '@/hooks/useOperationalContext';
 
-type AppRole = 'admin' | 'manager' | 'user';
+type AppRole = 'admin' | 'manager' | 'user' | 'sindico' | 'professor' | 'corporate';
 
 interface UserRow {
   user_id: string;
@@ -146,10 +146,8 @@ export function UsersAdmin() {
   };
 
   const handleChangeRole = async (userId: string, newRole: AppRole) => {
-    const { data, error } = await supabase.functions.invoke('manage-users', {
-      body: { action: 'set_role', userId, role: newRole },
-    });
-    if (error || data?.error) toast.error('Erro ao alterar role');
+    const { error } = await (supabase as any).rpc('set_user_global_role',{p_user:userId,p_role:newRole});
+    if (error) toast.error('Erro ao alterar role');
     else { toast.success('Permissão atualizada'); fetchUsers(); }
   };
 
@@ -282,7 +280,7 @@ export function UsersAdmin() {
               <Select value={role} onValueChange={(v) => setRole(v as AppRole)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="user">User</SelectItem>
+                  <SelectItem value="user">Morador</SelectItem><SelectItem value="sindico">Síndico</SelectItem><SelectItem value="professor">Coach</SelectItem><SelectItem value="corporate">Corporativo</SelectItem>
                   <SelectItem value="manager">Manager</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
@@ -321,7 +319,7 @@ export function UsersAdmin() {
                     <Select value={u.role} onValueChange={(v) => handleChangeRole(u.user_id, v as AppRole)}>
                       <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="user">User</SelectItem>
+                        <SelectItem value="user">Morador</SelectItem><SelectItem value="sindico">Síndico</SelectItem><SelectItem value="professor">Coach</SelectItem><SelectItem value="corporate">Corporativo</SelectItem>
                         <SelectItem value="manager">Manager</SelectItem>
                         <SelectItem value="admin">Admin</SelectItem>
                       </SelectContent>
@@ -405,4 +403,3 @@ export function UsersAdmin() {
     </div>
   );
 }
-

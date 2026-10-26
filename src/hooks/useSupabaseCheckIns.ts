@@ -1,3 +1,5 @@
+import { useOperationalContext } from './useOperationalContext';
+import { useTenantGuard } from './useTenantGuard';
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,18 +18,25 @@ export function useSupabaseCheckIns() {
   const [checkIns, setCheckIns] = useState<SupabaseCheckIn[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const {activeOrg,isAdmin}=useOperationalContext();
+  const {requireOrganization,requireStudent}=useTenantGuard();
+  const [loadError,setLoadError]=useState('');
 
   const fetchCheckIns = async () => {
     try {
-      setLoading(true);
-      const { data, error } = await supabase
+      setLoading(true);setLoadError('');
+      if(!activeOrg&&!isAdmin){setCheckIns([]);return;}
+      let query = supabase
         .from('checkins')
-        .select('*')
+        .select('*,alunos!inner(organization_id)')
         .order('data_checkin', { ascending: false });
+      if(activeOrg)query=query.eq('alunos.organization_id',activeOrg.id);
+      const {data,error}=await query;
 
       if (error) throw error;
       setCheckIns(data || []);
     } catch (error) {
+      setCheckIns([]);setLoadError((error as Error).message||'Falha ao carregar dados deste condomínio.');
       console.error('Error fetching check-ins:', error);
       toast({
         title: "Erro",
@@ -41,6 +50,7 @@ export function useSupabaseCheckIns() {
 
   const addCheckIn = async (checkInData: Omit<SupabaseCheckIn, 'id' | 'created_at'>) => {
     try {
+      await requireStudent(checkInData.aluno_id);
       const { data, error } = await (supabase as any).rpc('record_daily_checkin', {
         p_aluno_id: checkInData.aluno_id,
         p_date: checkInData.data_checkin || null,
@@ -68,6 +78,9 @@ export function useSupabaseCheckIns() {
 
   const updateCheckIn = async (id: string, updates: Partial<SupabaseCheckIn>) => {
     try {
+      const current=checkIns.find(row=>row.id===id);
+      await requireStudent(current?.aluno_id);
+      if(updates.aluno_id&&updates.aluno_id!==current?.aluno_id)throw new Error('Não é permitido transferir este registro.');
       const { data, error } = await supabase
         .from('checkins')
         .update(updates)
@@ -102,6 +115,7 @@ export function useSupabaseCheckIns() {
   return {
     checkIns,
     loading,
+    loadError,
     addCheckIn,
     updateCheckIn,
     refetch: fetchCheckIns

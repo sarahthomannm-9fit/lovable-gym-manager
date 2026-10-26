@@ -1,3 +1,4 @@
+import { useOperationalContext } from './useOperationalContext';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -17,15 +18,17 @@ export function useFrequencia() {
   const [frequencias, setFrequencias] = useState<FrequenciaAluno[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const {activeOrg,isAdmin}=useOperationalContext();
 
   const fetchFrequencias = useCallback(async (dataInicio?: string, dataFim?: string) => {
     try {
       setLoading(true);
       let query = supabase
         .from('frequencia_alunos')
-        .select('*')
+        .select('*,alunos!inner(organization_id)')
         .order('horario_entrada', { ascending: false });
 
+      if(activeOrg)query=query.eq('alunos.organization_id',activeOrg.id);else if(!isAdmin){setFrequencias([]);return;}
       if (dataInicio) {
         query = query.gte('data', dataInicio);
       }
@@ -46,7 +49,7 @@ export function useFrequencia() {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast,activeOrg?.id,isAdmin]);
 
   const registrarEntrada = useCallback(async (
     alunoId: string, 

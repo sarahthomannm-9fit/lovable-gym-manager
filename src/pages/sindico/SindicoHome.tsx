@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { PersonaLayout, PersonaEmptyState } from '@/layouts/PersonaLayout';
 import { useOperationalContext } from '@/hooks/useOperationalContext';
 import { useOrgRole } from '@/hooks/useOrgRole';
@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertCircle, Inbox, LifeBuoy, MessageSquarePlus, Megaphone, Eye, QrCode, Dumbbell, ClipboardCheck, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
-import { usePersonaDashboard, type SindicoDashboard } from '@/hooks/usePersonaDashboard';
+import { type SindicoDashboard } from '@/hooks/usePersonaDashboard';
 import { KpiCard, DashboardError } from '@/components/dashboard/DashboardKit';
 import { MonthlyBarChart } from '@/components/charts/MonthlyBarChart';
 
@@ -28,9 +28,11 @@ const mesLabel = (ym: string) => {
 };
 
 export default function SindicoHome() {
-  const { activeOrg, ensureOrgForPersona } = useOperationalContext();
+  const { activeOrg } = useOperationalContext();
   const { isComite, canSeeFinancials, canManageComunicados } = useOrgRole();
   const [ready, setReady] = useState(false);
+  const [residents,setResidents] = useState<any[]>([]);
+  const [loadError,setLoadError] = useState('');
   const [metrics, setMetrics] = useState({ alunos: 0, receita: 0, inadCount: 0, ocupacao: 0 });
   const [operacao, setOperacao] = useState({ unidades: 0, adesao: 0, checkinsMes: 0, treinosAtivos: 0, plantao: 'Mensal' });
   const [aulasHoje, setAulasHoje] = useState<Aula[]>([]);
@@ -46,130 +48,53 @@ export default function SindicoHome() {
   const [actionPeriod, setActionPeriod] = useState('30');
   const [activationGoals, setActivationGoals] = useState({ moradores: 1, checkins: 1, eventos: 1 });
 
-  // Indicadores principais sempre pela RPC oficial
-  const { data: dash, loading: dashLoading, error: dashError, refresh: refreshDash } =
-    usePersonaDashboard<SindicoDashboard>('sindico', activeOrg?.id);
+  const [dash,setDash] = useState<SindicoDashboard|null>(null);
+  const [dashLoading,setDashLoading] = useState(true);
+  const [loadedOrg,setLoadedOrg] = useState<string|null>(null);
+  const requestVersion=useRef(0);
+  const live=useRef(true);
+  const dashError=loadError;
+  const refreshDash=()=>carregar();
+  useEffect(()=>{live.current=true;return()=>{live.current=false;requestVersion.current++;};},[]);
 
   const iniciais = (activeOrg?.nome || '??').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
-  useEffect(() => {
-    let mounted = true;
-    setReady(false);
-    ensureOrgForPersona('condominio').finally(() => {
-      if (mounted) setReady(true);
-    });
-    return () => { mounted = false; };
-  }, [ensureOrgForPersona]);
-
-
   const carregar = async () => {
-    if (!activeOrg) { setReady(true); return; }
-    const hoje = new Date().toISOString().slice(0, 10);
-    const { data: activationData } = await (supabase as any).rpc('organization_activation_metrics', { p_organization_id: activeOrg.id });
-    if (activationData) setActivation(activationData as any);
-    const { data: actionRows } = await (supabase as any).from('organization_activation_alert_actions')
-      .select('id, alert_type, action_label, created_at, acted_by, resolved_at').eq('organization_id', activeOrg.id)
-      .order('created_at', { ascending: false }).limit(8);
-    setActivationActions(actionRows || []);
-    const inicioMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
-    const seteDias = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
-
-    const { data: orgRow } = await supabase.from('organizations')
-      .select('metadata')
-      .eq('id', activeOrg.id)
-      .maybeSingle();
-
-    // Se o cadastro do condomínio já indica um número esperado de unidades/alunos,
-    // isso ajuda a distinguir "condomínio novo, sem alunos mesmo" de "vínculo quebrado".
-    const unidadesEsperadas = Number((orgRow?.metadata as any)?.total_unidades || (orgRow?.metadata as any)?.unidades || 0);
-    setOrgTemUnidadesEsperadas(unidadesEsperadas > 0);
-    const savedGoals = (orgRow?.metadata as any)?.activation_goals;
-    if (savedGoals) setActivationGoals({ moradores: Number(savedGoals.moradores || 1), checkins: Number(savedGoals.checkins || 1), eventos: Number(savedGoals.eventos || 1) });
-
-    const { data: alunosOrg } = await supabase.from('alunos')
-      .select('id, status')
-      .eq('organization_id', activeOrg.id);
-    const alunoIds = (alunosOrg || []).map(a => a.id);
-    const ativos = (alunosOrg || []).filter((a: any) => a.status === 'ativo').length;
-    const unidades = Number((orgRow?.metadata as any)?.total_unidades || (orgRow?.metadata as any)?.unidades || Math.max(ativos, 100));
-
-    let receita = 0;
-    let inadCount = 0;
-    if (alunoIds.length) {
-      const { data: pagos } = await supabase.from('pagamentos').select('valor')
-        .in('aluno_id', alunoIds).eq('status', 'pago').gte('data_pagamento', inicioMes);
-      receita = (pagos || []).reduce((s, p: any) => s + Number(p.valor || 0), 0);
-
-      const { count: atrasados } = await supabase.from('pagamentos')
-        .select('id', { count: 'exact', head: true })
-        .in('aluno_id', alunoIds).in('status', ['atrasado', 'pendente']).lt('data_vencimento', hoje);
-      inadCount = atrasados || 0;
-
-      const [{ count: checkinsMes }, { count: treinosAtivos }] = await Promise.all([
-        supabase.from('checkins').select('id', { count: 'exact', head: true }).in('aluno_id', alunoIds).gte('data_checkin', inicioMes),
-        supabase.from('treinos').select('id', { count: 'exact', head: true }).in('aluno_id', alunoIds).lte('data_inicio', hoje).or(`data_fim.is.null,data_fim.gte.${hoje}`),
-      ]);
-      setOperacao({
-        unidades,
-        adesao: unidades ? Math.round((ativos / unidades) * 100) : 0,
-        checkinsMes: checkinsMes || 0,
-        treinosAtivos: treinosAtivos || 0,
-        plantao: (orgRow?.metadata as any)?.plantao_periodicidade || 'Mensal',
-      });
-
-      // Engajamento mensal (check-ins) dos últimos 6 meses — mesmo padrão de
-      // agregação usado em CorpHome.faturamento, aqui aplicado a check-ins em vez
-      // de pagamentos, já que "engajamento" no Brandbook não é uma métrica financeira.
-      const seisMeses = new Date();
-      seisMeses.setMonth(seisMeses.getMonth() - 5);
-      const inicioJanela = new Date(seisMeses.getFullYear(), seisMeses.getMonth(), 1).toISOString().slice(0, 10);
-      const { data: ckHist } = await supabase.from('checkins')
-        .select('data_checkin').in('aluno_id', alunoIds).gte('data_checkin', inicioJanela);
-      const buckets: Record<string, number> = {};
-      (ckHist || []).forEach((c: any) => {
-        const k = (c.data_checkin || '').slice(0, 7);
-        buckets[k] = (buckets[k] || 0) + 1;
-      });
-      setEngajamentoMensal(Object.entries(buckets).sort().map(([mes, checkins]) => ({ mes, checkins })));
-    } else {
-      setOperacao({ unidades, adesao: 0, checkinsMes: 0, treinosAtivos: 0, plantao: (orgRow?.metadata as any)?.plantao_periodicidade || 'Mensal' });
-      setEngajamentoMensal([]);
-    }
-
-    const { data: aulasFut } = await supabase.from('aulas')
-      .select('id, nome, data_aula, horario_inicio, capacidade_maxima, inscritos_atual, professor_id')
-      .eq('organization_id', activeOrg.id)
-      .gte('data_aula', hoje).lte('data_aula', seteDias).order('data_aula').order('horario_inicio');
-    const profIds = [...new Set((aulasFut || []).map((a: any) => a.professor_id).filter(Boolean))];
-    const { data: profs } = profIds.length
-      ? await supabase.from('funcionarios').select('id, nome').in('id', profIds)
-      : { data: [] as any };
-    const profMap = Object.fromEntries((profs || []).map((p: any) => [p.id, p.nome]));
-    const mapAula = (a: any): Aula => ({
-      id: a.id, nome: a.nome, horario_inicio: a.horario_inicio,
-      capacidade: a.capacidade_maxima || 0, inscritos: a.inscritos_atual || 0,
-      professor: profMap[a.professor_id] || '—', data: a.data_aula,
-    });
-    setAulasSemana((aulasFut || []).map(mapAula));
-    setAulasHoje((aulasFut || []).filter((a: any) => a.data_aula === hoje).map(mapAula));
-
-    const seteAtras = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
-    const { data: aulas7 } = await supabase.from('aulas')
-      .select('capacidade_maxima, inscritos_atual')
-      .eq('organization_id', activeOrg.id)
-      .gte('data_aula', seteAtras).lte('data_aula', hoje);
-    const ocup = (aulas7 || []).filter((a: any) => a.capacidade_maxima > 0);
-    const ocupacao = ocup.length
-      ? Math.round(ocup.reduce((s: number, a: any) => s + (a.inscritos_atual / a.capacidade_maxima), 0) / ocup.length * 100)
-      : 0;
-
-    setMetrics({ alunos: alunoIds.length, receita, inadCount, ocupacao });
-
-    const { data: tk } = await supabase.from('support_tickets')
-      .select('id, message, status, created_at, agent_response')
-      .ilike('message', `[${activeOrg.nome}]%`)
-      .order('created_at', { ascending: false }).limit(20);
-    setTickets(tk || []);
+    const request=++requestVersion.current;
+    const orgId=activeOrg?.id;
+    setLoadError('');setDashLoading(true);setLoadedOrg(null);setDash(null);
+    setResidents([]);setAulasHoje([]);setAulasSemana([]);setTickets([]);setActivationActions([]);setEngajamentoMensal([]);
+    setActivation({moradores_ativos:0,treinos_ativos:0,eventos_publicados:0,checkins_30_dias:0});
+    setActivationGoals({moradores:1,checkins:1,eventos:1});
+    if(!orgId){setReady(true);setDashLoading(false);return;}
+    const current=()=>live.current&&request===requestVersion.current;
+    try {
+      const {data:snapshot,error}=await (supabase as any).rpc('condominium_dashboard',{p_org_id:orgId});
+      if(!current())return;
+      if(error)throw error;
+      if(!snapshot||snapshot.organization_id!==orgId)throw new Error('Resposta de outro condomínio bloqueada.');
+      const summary={data:snapshot.summary};
+      const orgResult={data:{metadata:snapshot.metadata}};
+      const activationResult={data:snapshot.activation};
+      const actionResult={data:snapshot.actions};
+      const ticketResult={data:snapshot.tickets};
+      setDash(snapshot.financial);
+      const data=summary.data||{};const metadata=(orgResult.data?.metadata||{}) as any;
+      const residentsList=data.residents||[];setResidents(residentsList);
+      const active=residentsList.filter((resident:any)=>resident.is_active===true).length;
+      const units=Number(metadata.total_unidades||metadata.unidades||0);
+      setOrgTemUnidadesEsperadas(units>0);
+      if(metadata.activation_goals)setActivationGoals(metadata.activation_goals);
+      setOperacao({unidades:units,adesao:units?Math.round(active/units*100):0,checkinsMes:data.checkins_month||0,treinosAtivos:data.active_workouts||0,plantao:metadata.plantao||'Não definido'});
+      setActivation(activationResult.data||{moradores_ativos:0,treinos_ativos:0,eventos_publicados:0,checkins_30_dias:0});
+      setActivationActions(actionResult.data||[]);setTickets(ticketResult.data||[]);
+      const classes=data.classes||[];setAulasSemana(classes);setAulasHoje(classes.filter((item:any)=>item.data===new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo'}).format(new Date())));
+      setMetrics(current=>({...current,alunos:active,ocupacao:classes.length?Math.round(classes.reduce((sum:number,item:any)=>sum+(item.capacidade?item.inscritos/item.capacidade*100:0),0)/classes.length):0}));
+      const engagement=data.engagement||[];
+      setEngajamentoMensal(Array.from({length:6},(_,i)=>{const month=new Date();month.setMonth(month.getMonth()-5+i,1);const key=month.getFullYear()+'-'+String(month.getMonth()+1).padStart(2,'0');return {mes:key,checkins:engagement.find((e:any)=>e.mes===key)?.checkins||0};}));
+      setLoadedOrg(orgId);
+    }catch(e){if(current())setLoadError((e as Error).message||'Não foi possível carregar o condomínio.');}
+    finally{if(current()){setDashLoading(false);setReady(true);}}
   };
 
   useEffect(() => {
@@ -178,7 +103,7 @@ export default function SindicoHome() {
     return () => window.clearInterval(timer);
   }, [activeOrg]);
 
-  if (!ready) {
+  if (!ready || dashLoading) {
     return (
       <PersonaLayout title="Painel do Síndico" accent={ACCENT}>
         <div className="min-h-[320px] flex items-center justify-center text-sm text-muted-foreground">Carregando contexto…</div>
@@ -194,11 +119,13 @@ export default function SindicoHome() {
     );
   }
 
+  if(loadError || loadedOrg!==activeOrg.id)return <PersonaLayout title="Painel do Síndico"><div role="alert" className="rounded border p-6"><p>{loadError||'Atualizando os dados deste condomínio…'}</p><Button onClick={carregar}>Carregar novamente</Button></div></PersonaLayout>;
+
   const enviarSolicitacao = async () => {
     if (!mensagem.trim() || !activeOrg) return toast.error('Escreva uma mensagem');
     setEnviando(true);
     const { error } = await supabase.from('support_tickets').insert({
-      message: `[${activeOrg.nome}] ${mensagem}`, category: 'condominio',
+      organization_id: activeOrg.id, created_by: (await supabase.auth.getUser()).data.user?.id, message: mensagem.trim(), category: 'condominio',
     });
     setEnviando(false);
     if (error) return toast.error('Falha');
@@ -249,6 +176,7 @@ export default function SindicoHome() {
 
   return (
     <PersonaLayout title="Painel do Síndico" accent={ACCENT}>
+      {loadError&&<div role="alert" className="mb-4 rounded border border-destructive p-3">{loadError}<Button variant="outline" onClick={carregar}>Tentar novamente</Button></div>}
       <Card className="bg-card/60 border-border/40 mb-4">
         <CardContent className="p-4 flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
@@ -348,9 +276,7 @@ export default function SindicoHome() {
           <div className="flex items-center justify-between gap-3 mb-3">
             <div><h2 className="font-semibold text-sm">Metas do condomínio</h2><p className="text-xs text-muted-foreground">Defina o mínimo esperado para acompanhar a ativação.</p></div>
             <Button size="sm" variant="outline" onClick={async () => {
-              const { data: current } = await supabase.from('organizations').select('metadata').eq('id', activeOrg.id).maybeSingle();
-              const metadata = { ...((current?.metadata as any) || {}), activation_goals: activationGoals };
-              const { error } = await supabase.from('organizations').update({ metadata }).eq('id', activeOrg.id);
+              const {error}=await (supabase as any).rpc('save_activation_goals',{p_org:activeOrg.id,p_goals:activationGoals});
               if (error) toast.error('Não foi possível salvar as metas'); else toast.success('Metas salvas');
             }}>Salvar metas</Button>
           </div>
@@ -373,7 +299,7 @@ export default function SindicoHome() {
               {activation.moradores_ativos === 0 && (
                 <div className="flex items-center justify-between gap-3 rounded-md border border-border/30 p-3">
                   <span><strong>Ative os moradores:</strong> compartilhe o QR de entrada e convites do condomínio.</span>
-                  <Button size="sm" variant="outline" onClick={async () => { await (supabase as any).rpc('record_activation_alert_action', { p_organization_id: activeOrg.id, p_alert_type: 'moradores_inativos', p_action_label: 'Abrir cadastro' }); window.location.assign('/admin/organizacoes'); }}>Abrir cadastro</Button>
+                  <Button size="sm" variant="outline" onClick={async () => { await (supabase as any).rpc('record_activation_alert_action', { p_organization_id: activeOrg.id, p_alert_type: 'moradores_inativos', p_action_label: 'Abrir cadastro' }); window.location.assign(`/entrada?organization=${encodeURIComponent(activeOrg.id)}`); }}>Abrir cadastro</Button>
                 </div>
               )}
               {activation.checkins_30_dias === 0 && activation.moradores_ativos > 0 && (
@@ -611,7 +537,7 @@ export default function SindicoHome() {
           <Card className="bg-card/60 border-border/40">
             <CardContent className="p-5">
               <p className="text-sm">{dash?.alunos_ativos ?? metrics.alunos} alunos ativos.</p>
-              <p className="text-xs text-muted-foreground mt-2">Os dados individuais são acompanhados pela equipe autorizada.</p>
+              <div className="mt-4 space-y-2">{!residents.length&&<p className="text-sm text-muted-foreground">Nenhum morador cadastrado.</p>}{residents.map(resident=><div key={resident.id} className="flex justify-between gap-2 border-b py-2 text-sm"><span>{resident.nome}{resident.unidade?' · Unidade '+resident.unidade:''}</span><Badge variant="outline">{resident.status}</Badge></div>)}</div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -733,4 +659,3 @@ function MetricCard({ label, value, valueCls }: { label: string; value: string; 
     </Card>
   );
 }
-

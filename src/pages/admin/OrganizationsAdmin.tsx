@@ -1,3 +1,6 @@
+import { OrganizationSettings } from '@/components/admin/OrganizationSettings';
+import { useOperationalContext } from '@/hooks/useOperationalContext';
+import { OrganizationMembers } from '@/components/admin/OrganizationMembers';
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,10 +52,11 @@ const PAPEL_LABELS: Record<string, string> = {
 };
 
 export default function OrganizationsAdmin() {
+  const {setActiveOrg,refresh,activeOrg}=useOperationalContext();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [invites, setInvites] = useState<Record<string, Invite[]>>({});
   const [loading, setLoading] = useState(true);
-  const [selectedOrg, setSelectedOrg] = useState<string | null>(null);
+  const [selectedOrg, setSelectedOrg] = useState<string | null>(activeOrg?.id || null);
 
   const [newOrgOpen, setNewOrgOpen] = useState(false);
   const [newOrgNome, setNewOrgNome] = useState("");
@@ -74,7 +78,7 @@ export default function OrganizationsAdmin() {
     } else {
       setOrganizations((data as Organization[]) ?? []);
       if (!selectedOrg && data && data.length > 0) {
-        setSelectedOrg(data[0].id);
+        if(activeOrg && data.some(o=>o.id===activeOrg.id))setSelectedOrg(activeOrg.id);
       }
     }
     setLoading(false);
@@ -115,7 +119,7 @@ export default function OrganizationsAdmin() {
     const { data, error } = await supabase
       .from("organizations")
       .insert({ nome: newOrgNome.trim(), tipo: newOrgTipo })
-      .select("id")
+      .select("id,nome,tipo,status")
       .single();
     setCreatingOrg(false);
     if (error) {
@@ -126,7 +130,7 @@ export default function OrganizationsAdmin() {
     setNewOrgOpen(false);
     setNewOrgNome("");
     await loadOrganizations();
-    if (data?.id) setSelectedOrg(data.id);
+    if(data?.id){await refresh();setActiveOrg({id:data.id,nome:data.nome,tipo:data.tipo as any,status:data.status});setSelectedOrg(data.id);}
   };
 
   const createInvite = async () => {
@@ -170,6 +174,12 @@ export default function OrganizationsAdmin() {
     }
     toast.success("Convite cancelado");
     if (selectedOrg) await loadInvites(selectedOrg);
+  };
+
+  const sendInvite = async (invite: Invite) => {
+    const {data,error}=await supabase.functions.invoke('send-organization-invite',{body:{inviteId:invite.id,token:invite.token,email:invite.email,papel:invite.papel}});
+    if(error||data?.error)return toast.error(data?.error||'Falha ao enviar convite.');
+    if(data?.sent)toast.success('Convite enviado por e-mail.');else toast.info('Envio de e-mail não configurado. Copie e compartilhe o link do convite.');
   };
 
   const copyInviteLink = async (token: string) => {
@@ -278,7 +288,7 @@ export default function OrganizationsAdmin() {
               {organizations.map((org) => (
                 <button
                   key={org.id}
-                  onClick={() => setSelectedOrg(org.id)}
+                  onClick={() => {setSelectedOrg(org.id);setActiveOrg({id:org.id,nome:org.nome,tipo:org.tipo as any,status:org.status});}}
                   className={`w-full rounded-md px-3 py-2 text-left text-sm transition-colors ${
                     selectedOrg === org.id
                       ? "bg-accent font-medium text-accent-foreground"
@@ -363,11 +373,11 @@ export default function OrganizationsAdmin() {
             ) : (
             <Tabs defaultValue="convites">
               <TabsList>
-                <TabsTrigger value="convites">Convites</TabsTrigger>
+                <TabsTrigger value="convites">Convites</TabsTrigger><TabsTrigger value="vinculos">Contas e vínculos</TabsTrigger><TabsTrigger value="configuracao">Configurações</TabsTrigger>
                 <TabsTrigger value="onboarding">Onboarding / Roteiro de visita</TabsTrigger>
                 <TabsTrigger value="operacao">Operação NINE LIVING</TabsTrigger>
               </TabsList>
-              <TabsContent value="operacao">
+              <TabsContent value="configuracao"><OrganizationSettings orgId={selectedOrgData.id} onSaved={()=>{void loadOrganizations();}}/></TabsContent><TabsContent value="vinculos"><OrganizationMembers orgId={selectedOrgData.id}/></TabsContent><TabsContent value="operacao">
                 <OrganizationOperations
                   key={selectedOrgData.id}
                   orgId={selectedOrgData.id}
@@ -432,7 +442,7 @@ export default function OrganizationsAdmin() {
                                 title="Copiar link do convite"
                               >
                                 <Copy className="h-4 w-4" />
-                              </Button>
+                              </Button><Button size="sm" variant="outline" onClick={()=>sendInvite(inv)}>Enviar por e-mail</Button>
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -459,6 +469,3 @@ export default function OrganizationsAdmin() {
     </div>
   );
 }
-
-
-

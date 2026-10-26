@@ -56,7 +56,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    const audit=supabase.rpc('record_user_access',{p_event_type:'logout'});
+    const {error}=await supabase.auth.signOut();
+    if(error)throw error;
+    lastUserIdRef.current=null;setSession(null);
+    void audit;
   };
 
   return (

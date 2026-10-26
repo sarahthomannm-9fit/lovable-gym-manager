@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
         const { userId } = body as { userId: string };
         if (!userId) return json({ error: 'userId obrigatório' }, 400);
         if (userId === callerId) return json({ error: 'Você não pode excluir a si mesmo' }, 400);
-        await admin.from('user_roles').delete().eq('user_id', userId);
+        const {error: banError}=await admin.auth.admin.updateUserById(userId,{ban_duration:'876000h'});if(banError)throw banError;
         const { error } = await admin.auth.admin.deleteUser(userId);
         if (error) throw error;
         return json({ success: true });
@@ -120,6 +120,7 @@ Deno.serve(async (req) => {
       case 'set_role': {
         const { userId, role } = body as { userId: string; role: AppRole };
         if (!userId || !role) return json({ error: 'userId e role obrigatórios' }, 400);
+        if(userId===callerId && role!=='admin')return json({error:'Você não pode remover seu próprio papel de administrador'},400);
         if (!['admin', 'manager', 'user', 'sindico', 'professor', 'corporate'].includes(role)) return json({ error: 'role inválido' }, 400);
         await admin.from('user_roles').delete().eq('user_id', userId);
         const { error } = await admin.from('user_roles').insert({ user_id: userId, role });
@@ -129,6 +130,7 @@ Deno.serve(async (req) => {
 
       case 'set_user_active': {
         const { userId, active } = body as { userId: string; active: boolean };
+        if (userId === callerId && !active) return json({error:'Você não pode desativar a própria conta'},400);
         if (!userId || typeof active !== 'boolean') return json({ error: 'userId e active obrigatórios' }, 400);
         const { error } = await admin.auth.admin.updateUserById(userId, { ban_duration: active ? 'none' : '876000h' });
         if (error) throw error;
@@ -141,7 +143,7 @@ Deno.serve(async (req) => {
         const { alunoId, email, password } = body as { alunoId: string; email: string; password?: string };
         if (!alunoId || !email) return json({ error: 'alunoId e email obrigatórios' }, 400);
 
-        const { data: aluno, error: alunoErr } = await admin.from('alunos').select('id, nome, user_id').eq('id', alunoId).single();
+        const { data: aluno, error: alunoErr } = await admin.from('alunos').select('id, nome, user_id, organization_id').eq('id', alunoId).single();
         if (alunoErr || !aluno) return json({ error: 'Aluno não encontrado' }, 404);
         if (aluno.user_id) return json({ error: 'Este aluno já possui acesso vinculado' }, 400);
 
@@ -167,7 +169,7 @@ Deno.serve(async (req) => {
         }
 
         if (!existing) {
-          const { error: roleErr } = await admin.from('user_roles').upsert({ user_id: userId, role: 'user' }, { onConflict: 'user_id' });
+          const { error: roleErr } = await admin.from('user_roles').upsert({ user_id: userId, role: 'user' }, { onConflict: 'user_id,role' });
           if (roleErr) throw roleErr;
         }
 
@@ -175,6 +177,8 @@ Deno.serve(async (req) => {
           .eq('id', alunoId).is('user_id', null).select('id').maybeSingle();
         if (linkErr) throw linkErr;
         if (!linked) return json({ error: 'O aluno já foi vinculado por outra operação. Atualize a lista.' }, 409);
+
+        if (aluno.organization_id) { const {error: membershipError}=await admin.from('organization_members').upsert({organization_id:aluno.organization_id,user_id:userId,papel:'user'},{onConflict:'organization_id,user_id,papel'}); if(membershipError)throw membershipError; }
 
         let magic_link: string | undefined;
         if (!password) {
@@ -201,4 +205,3 @@ function json(payload: unknown, status = 200) {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 }
-

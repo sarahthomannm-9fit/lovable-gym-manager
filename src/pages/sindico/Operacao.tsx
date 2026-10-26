@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
-import { PersonaLayout } from "@/layouts/PersonaLayout";
-import { useOperationalContext } from "@/hooks/useOperationalContext";
-import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-export default function SindicoOperacao(){const {activeOrg}=useOperationalContext();const [m,setM]=useState<any>({areas:[],servicos:[]});useEffect(()=>{if(activeOrg)(supabase as any).rpc("organization_common_area_metrics",{p_organization_id:activeOrg.id}).then(({data}:any)=>setM(data||{areas:[],servicos:[]}))},[activeOrg?.id]);return <PersonaLayout title="Uso das áreas e serviços" subtitle={activeOrg?.nome||""} accent="#2563EB"><div className="grid gap-5 md:grid-cols-2"><Card><CardHeader><CardTitle>Áreas comuns · últimos 30 dias</CardTitle></CardHeader><CardContent className="space-y-3">{m.areas?.map((x:any)=><div key={x.area} className="rounded border p-3"><strong>{x.area}</strong><p>{x.reservas} reservas · {x.concluidas} concluídas</p></div>)}</CardContent></Card><Card><CardHeader><CardTitle>Serviços adicionais</CardTitle></CardHeader><CardContent className="space-y-3">{m.servicos?.map((x:any)=><div key={x.tipo} className="rounded border p-3"><strong>{x.tipo}</strong><p>{x.total} solicitações · {x.em_aberto} em aberto</p></div>)}</CardContent></Card></div></PersonaLayout>}
-
+import { PersonaLayout, PersonaEmptyState } from '@/layouts/PersonaLayout';
+import { useOperationalContext } from '@/hooks/useOperationalContext';
+import { CommonAreaOperations } from '@/components/admin/CommonAreaOperations';
+import { ServiceRequestsBoard } from '@/components/admin/ServiceRequestsBoard';
+import { SupportTickets } from '@/components/SupportTickets';
+export default function SindicoOperacao() {
+  const { activeOrg } = useOperationalContext();
+  return <PersonaLayout title="Áreas, serviços e atendimento" subtitle={activeOrg?.nome || ''}>{activeOrg ? <div className="space-y-6"><CommonAreaOperations orgId={activeOrg.id}/><ServiceRequestsBoard orgId={activeOrg.id}/><SupportTickets orgId={activeOrg.id} manage/></div> : <PersonaEmptyState/>}</PersonaLayout>;
+}

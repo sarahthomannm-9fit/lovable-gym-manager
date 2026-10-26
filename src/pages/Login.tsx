@@ -1,3 +1,4 @@
+import { pickPrimaryRole } from '@/lib/access';
 import { useState } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,14 +30,14 @@ export function Login() {
       return;
     }
 
-    await (supabase as any).rpc('record_user_access', { p_event: 'login' });
+    await (supabase as any).rpc('record_user_access', { p_event_type: 'login' });
 
     const uid = data.user.id;
     const [{ data: roleRow }, { data: mems }] = await Promise.all([
-      supabase.from('user_roles').select('role').eq('user_id', uid).maybeSingle(),
+      supabase.from('user_roles').select('role').eq('user_id', uid),
       (supabase as any).from('organization_members').select('papel, organization_id').eq('user_id', uid),
     ]);
-    const role = roleRow?.role;
+    const role = pickPrimaryRole((roleRow || []).map(row=>row.role)) as import('@/hooks/useCurrentUserRole').AppRole | null;
     const memberships = mems || [];
 
     const papelToRoute = (p: string) => {
@@ -53,7 +54,7 @@ export function Login() {
     };
 
     const redirect = searchParams.get('redirect');
-    if (redirect) {
+    if (redirect?.startsWith('/') && !redirect.startsWith('//') && !redirect.includes('\\')) {
       navigate(redirect, { replace: true });
     } else if (memberships.length === 1 && memberships[0].papel !== 'admin' && memberships[0].papel !== 'manager') {
       navigate(papelToRoute(memberships[0].papel), { replace: true });
@@ -130,4 +131,3 @@ export function Login() {
     </div>
   );
 }
-

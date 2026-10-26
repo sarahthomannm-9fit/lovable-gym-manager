@@ -1,3 +1,5 @@
+import { useOperationalContext } from './useOperationalContext';
+import { useTenantGuard } from './useTenantGuard';
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,15 +21,20 @@ export function useSupabasePlanHistory() {
   const [planHistory, setPlanHistory] = useState<SupabasePlanHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const {activeOrg,isAdmin}=useOperationalContext();
+  const {requireOrganization,requireStudent}=useTenantGuard();
+  const [loadError,setLoadError]=useState('');
 
   const fetchPlanHistory = async (studentId?: string) => {
     try {
-      setLoading(true);
+      setLoading(true);setLoadError('');
+      if(!activeOrg&&!isAdmin){setPlanHistory([]);return;}
       let query = supabase
         .from('alunos_planos')
-        .select('*')
+        .select('*,alunos!inner(organization_id)')
         .order('created_at', { ascending: false });
 
+      if(activeOrg)query=query.eq('alunos.organization_id',activeOrg.id);
       if (studentId) {
         query = query.eq('aluno_id', studentId);
       }
@@ -43,6 +50,7 @@ export function useSupabasePlanHistory() {
       
       setPlanHistory(typedData);
     } catch (error) {
+      setPlanHistory([]);setLoadError((error as Error).message||'Falha ao carregar dados deste condomínio.');
       console.error('Error fetching plan history:', error);
       toast({
         title: "Erro",
@@ -56,6 +64,7 @@ export function useSupabasePlanHistory() {
 
   const addPlanHistory = async (historyData: Omit<SupabasePlanHistory, 'id' | 'created_at' | 'updated_at'>) => {
     try {
+      await requireStudent(historyData.aluno_id);
       const { data, error } = await supabase
         .from('alunos_planos')
         .insert([historyData])
@@ -89,6 +98,9 @@ export function useSupabasePlanHistory() {
 
   const updatePlanHistory = async (id: string, updates: Partial<SupabasePlanHistory>) => {
     try {
+      const current=planHistory.find(row=>row.id===id);
+      await requireStudent(current?.aluno_id);
+      if(updates.aluno_id&&updates.aluno_id!==current?.aluno_id)throw new Error('Não é permitido transferir este registro.');
       const { data, error } = await supabase
         .from('alunos_planos')
         .update(updates)
@@ -128,6 +140,7 @@ export function useSupabasePlanHistory() {
   return {
     planHistory,
     loading,
+    loadError,
     addPlanHistory,
     updatePlanHistory,
     refetch: fetchPlanHistory
