@@ -1,3 +1,5 @@
+> Implantação posterior confirmada: frontend, cinco migrations e seis funções publicados em 26/10/2026. Consulte [Registro de implantação](REGISTRO_IMPLANTACAO_2026-10-26.md) para revisão publicada, versões e pendências reais. A referência abaixo ao pacote local descreve o estado anterior à publicação.
+
 > Atualização de 26/10/2026: consulte [Correções dos relatórios](CORRECOES_RELATORIOS_2026-10-26.md). As alterações posteriores são locais e não foram testadas nesta rodada por solicitação do responsável. Evidências anteriores não validam o código atual nem confirmam implantação.
 
 # Piloto comercial — Maison Guimet

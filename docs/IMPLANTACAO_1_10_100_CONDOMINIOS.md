@@ -1,3 +1,5 @@
+> Implantação posterior confirmada: frontend, cinco migrations e seis funções publicados em 26/10/2026. Consulte [Registro de implantação](REGISTRO_IMPLANTACAO_2026-10-26.md) para revisão publicada, versões e pendências reais. A referência abaixo ao pacote local descreve o estado anterior à publicação.
+
 # Implantação comercial — 1 → 10 → 100 condomínios
 
 Este roteiro acompanha as correções locais de 26/10/2026. Não registra publicação nem execução de testes.

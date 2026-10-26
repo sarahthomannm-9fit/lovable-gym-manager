@@ -1,3 +1,5 @@
+> Implantação posterior confirmada: frontend, cinco migrations e seis funções publicados em 26/10/2026. Consulte [Registro de implantação](REGISTRO_IMPLANTACAO_2026-10-26.md) para revisão publicada, versões e pendências reais. A referência abaixo ao pacote local descreve o estado anterior à publicação.
+
 # Correções dos relatórios — 26/10/2026
 
 ## Situação desta entrega
