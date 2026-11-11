@@ -39,20 +39,20 @@ export function Painel() {
   const fmtR = (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}`;
   const criticalCount = alerts.filter(a => a.coluna === 'critico').length;
   const totalInsights = insights.retencao.length + insights.crescimento.length + insights.otimizacao.length;
-  const churnPct = metrics ? (metrics.totalAlunos > 0 ? ((metrics.totalAlunos - metrics.alunosAtivos) / metrics.totalAlunos * 100) : 0) : 0;
+  const inactivePct = metrics ? (metrics.totalAlunos > 0 ? ((metrics.totalAlunos - metrics.alunosAtivos) / metrics.totalAlunos * 100) : 0) : 0;
 
   const shellMetrics = metrics ? [
-    { label: 'MRR', value: fmtR(metrics.receitaMensal), sub: `${metrics.crescimentoReceita >= 0 ? '+' : ''}${metrics.crescimentoReceita.toFixed(0)}% vs mês ant.`, color: 'text-primary' },
+    { label: 'RECEITA MENSAL', value: fmtR(metrics.receitaMensal), sub: `${metrics.crescimentoReceita >= 0 ? '+' : ''}${metrics.crescimentoReceita.toFixed(0)}% vs mês ant.`, color: 'text-primary' },
     { label: 'ALUNOS ATIVOS', value: String(metrics.alunosAtivos), sub: `${metrics.totalAlunos} total` },
     { label: 'INADIMPLÊNCIA', value: fmtR(metrics.totalInadimplente), sub: `${metrics.inadimplencia} alunos`, color: 'text-urgency-critical' },
-    { label: 'CHURN', value: `${churnPct.toFixed(1)}%`, sub: `${metrics.totalAlunos - metrics.alunosAtivos} cancel.`, color: 'text-urgency-attention' },
+    { label: 'CADASTROS INATIVOS', value: `${inactivePct.toFixed(1)}%`, sub: `${metrics.totalAlunos - metrics.alunosAtivos} inativos`, color: 'text-urgency-attention' },
     { label: 'CONVERSÃO', value: `${metrics.taxaConversaoExperimental.toFixed(0)}%`, sub: `${metrics.leadsConvertidos}/${metrics.leadsTotal} leads`, color: 'text-urgency-attention' },
     { label: 'LTV MÉDIO', value: fmtR(metrics.ltvMedio), sub: `ticket ${fmtR(metrics.ticketMedio)}` },
   ] : [];
 
   if (loading) {
     return (
-      <PageShell title="CONTROL PLANE" sub="Carregando dados do ecossistema...">
+      <PageShell title="Central de operação" sub="Carregando dados do ecossistema...">
         <div className="space-y-4">
           <div className="h-10 bg-muted animate-pulse rounded" />
           <div className="grid grid-cols-3 gap-4">
@@ -78,8 +78,8 @@ export function Painel() {
 
   return (
     <PageShell
-      title="CONTROL PLANE"
-      sub="O que o ecossistema precisa de você agora"
+      title="Central de operação"
+      sub="Condomínios, equipe e pendências da operação"
       criticals={criticalCount}
       metrics={shellMetrics}
       actions={
@@ -91,6 +91,19 @@ export function Painel() {
         </button>
       }
     >
+      {role === 'admin' && <section className="mb-6 grid gap-3 md:grid-cols-3" aria-label="Ações principais da operação">
+        {[
+          { title: 'Cadastrar condomínio', detail: 'Comece pelo cadastro guiado e inclua a infraestrutura.', path: '/operacao-9fit' },
+          { title: 'Gerenciar condomínios', detail: 'Confira equipe, acessos e prontidão de cada operação.', path: '/admin/organizacoes' },
+          { title: 'Resolver solicitações', detail: 'Acompanhe o atendimento e as pendências da equipe.', path: '/admin/solicitacoes' },
+        ].map(item => (
+          <button key={item.path} onClick={() => navigate(item.path)}
+            className="rounded-xl border bg-card p-5 text-left transition hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <span className="block text-base font-semibold">{item.title}</span>
+            <span className="mt-2 block text-sm text-muted-foreground">{item.detail}</span>
+          </button>
+        ))}
+      </section>}
       {/* Deep Dive Quick Links */}
       <div className="flex flex-wrap gap-2 mb-4">
         {deepDives.map(dd => (

@@ -1,661 +1,338 @@
-import { useEffect, useState, useRef } from 'react';
-import { PersonaLayout, PersonaEmptyState } from '@/layouts/PersonaLayout';
-import { useOperationalContext } from '@/hooks/useOperationalContext';
-import { useOrgRole } from '@/hooks/useOrgRole';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AlertCircle, Inbox, LifeBuoy, MessageSquarePlus, Megaphone, Eye, QrCode, Dumbbell, ClipboardCheck, ShieldAlert } from 'lucide-react';
-import { toast } from 'sonner';
-import { type SindicoDashboard } from '@/hooks/usePersonaDashboard';
-import { KpiCard, DashboardError } from '@/components/dashboard/DashboardKit';
-import { MonthlyBarChart } from '@/components/charts/MonthlyBarChart';
-
-
-const ACCENT = '#60A5FA';
-
-type Aula = { id: string; nome: string; horario_inicio: string; capacidade: number; inscritos: number; professor: string; data: string };
-type Ticket = { id: string; message: string; status: string; created_at: string; agent_response: string | null };
-
-const mesLabel = (ym: string) => {
-  const [, mes] = ym.split('-');
-  const nomes = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
-  return nomes[Number(mes) - 1] || ym;
-};
-
+import { PageIntro } from "@/components/visual/LivingIdentity";
+import { useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { PersonaLayout, PersonaEmptyState } from "@/layouts/PersonaLayout";
+import { useOperationalContext } from "@/hooks/useOperationalContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { residentDate } from "@/lib/resident";
+import { FitnessUsage } from "./FitnessUsage";
 export default function SindicoHome() {
   const { activeOrg } = useOperationalContext();
-  const { isComite, canSeeFinancials, canManageComunicados } = useOrgRole();
-  const [ready, setReady] = useState(false);
-  const [residents,setResidents] = useState<any[]>([]);
-  const [loadError,setLoadError] = useState('');
-  const [metrics, setMetrics] = useState({ alunos: 0, receita: 0, inadCount: 0, ocupacao: 0 });
-  const [operacao, setOperacao] = useState({ unidades: 0, adesao: 0, checkinsMes: 0, treinosAtivos: 0, plantao: 'Mensal' });
-  const [aulasHoje, setAulasHoje] = useState<Aula[]>([]);
-  const [aulasSemana, setAulasSemana] = useState<Aula[]>([]);
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [mensagem, setMensagem] = useState('');
-  const [aviso, setAviso] = useState({ titulo: '', mensagem: '' });
-  const [enviando, setEnviando] = useState(false);
-  const [orgTemUnidadesEsperadas, setOrgTemUnidadesEsperadas] = useState(false);
-  const [engajamentoMensal, setEngajamentoMensal] = useState<{ mes: string; checkins: number }[]>([]);
-  const [activation, setActivation] = useState({ moradores_ativos: 0, treinos_ativos: 0, eventos_publicados: 0, checkins_30_dias: 0 });
-  const [activationActions, setActivationActions] = useState<any[]>([]);
-  const [actionPeriod, setActionPeriod] = useState('30');
-  const [activationGoals, setActivationGoals] = useState({ moradores: 1, checkins: 1, eventos: 1 });
-
-  const [dash,setDash] = useState<SindicoDashboard|null>(null);
-  const [dashLoading,setDashLoading] = useState(true);
-  const [loadedOrg,setLoadedOrg] = useState<string|null>(null);
-  const requestVersion=useRef(0);
-  const live=useRef(true);
-  const dashError=loadError;
-  const refreshDash=()=>carregar();
-  useEffect(()=>{live.current=true;return()=>{live.current=false;requestVersion.current++;};},[]);
-
-  const iniciais = (activeOrg?.nome || '??').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
-
-  const carregar = async () => {
-    const request=++requestVersion.current;
-    const orgId=activeOrg?.id;
-    setLoadError('');setDashLoading(true);setLoadedOrg(null);setDash(null);
-    setResidents([]);setAulasHoje([]);setAulasSemana([]);setTickets([]);setActivationActions([]);setEngajamentoMensal([]);
-    setActivation({moradores_ativos:0,treinos_ativos:0,eventos_publicados:0,checkins_30_dias:0});
-    setActivationGoals({moradores:1,checkins:1,eventos:1});
-    if(!orgId){setReady(true);setDashLoading(false);return;}
-    const current=()=>live.current&&request===requestVersion.current;
-    try {
-      const {data:snapshot,error}=await (supabase as any).rpc('condominium_dashboard',{p_org_id:orgId});
-      if(!current())return;
-      if(error)throw error;
-      if(!snapshot||snapshot.organization_id!==orgId)throw new Error('Resposta de outro condomínio bloqueada.');
-      const summary={data:snapshot.summary};
-      const orgResult={data:{metadata:snapshot.metadata}};
-      const activationResult={data:snapshot.activation};
-      const actionResult={data:snapshot.actions};
-      const ticketResult={data:snapshot.tickets};
-      setDash(snapshot.financial);
-      const data=summary.data||{};const metadata=(orgResult.data?.metadata||{}) as any;
-      const residentsList=data.residents||[];setResidents(residentsList);
-      const active=residentsList.filter((resident:any)=>resident.is_active===true).length;
-      const units=Number(metadata.total_unidades||metadata.unidades||0);
-      setOrgTemUnidadesEsperadas(units>0);
-      if(metadata.activation_goals)setActivationGoals(metadata.activation_goals);
-      setOperacao({unidades:units,adesao:units?Math.round(active/units*100):0,checkinsMes:data.checkins_month||0,treinosAtivos:data.active_workouts||0,plantao:metadata.plantao||'Não definido'});
-      setActivation(activationResult.data||{moradores_ativos:0,treinos_ativos:0,eventos_publicados:0,checkins_30_dias:0});
-      setActivationActions(actionResult.data||[]);setTickets(ticketResult.data||[]);
-      const classes=data.classes||[];setAulasSemana(classes);setAulasHoje(classes.filter((item:any)=>item.data===new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo'}).format(new Date())));
-      setMetrics(current=>({...current,alunos:active,ocupacao:classes.length?Math.round(classes.reduce((sum:number,item:any)=>sum+(item.capacidade?item.inscritos/item.capacidade*100:0),0)/classes.length):0}));
-      const engagement=data.engagement||[];
-      setEngajamentoMensal(Array.from({length:6},(_,i)=>{const month=new Date();month.setMonth(month.getMonth()-5+i,1);const key=month.getFullYear()+'-'+String(month.getMonth()+1).padStart(2,'0');return {mes:key,checkins:engagement.find((e:any)=>e.mes===key)?.checkins||0};}));
-      setLoadedOrg(orgId);
-    }catch(e){if(current())setLoadError((e as Error).message||'Não foi possível carregar o condomínio.');}
-    finally{if(current()){setDashLoading(false);setReady(true);}}
-  };
-
+  const [params, setParams] = useSearchParams();
+  const [data, setData] = useState<any>(null),
+    [error, setError] = useState(""),
+    [loading, setLoading] = useState(true),
+    [revision, setRevision] = useState(0);
+  const search = params.get("search") || "";
   useEffect(() => {
-    carregar();
-    const timer = window.setInterval(carregar, 5 * 60 * 1000);
-    return () => window.clearInterval(timer);
-  }, [activeOrg]);
-
-  if (!ready || dashLoading) {
-    return (
-      <PersonaLayout title="Painel do Síndico" accent={ACCENT}>
-        <div className="min-h-[320px] flex items-center justify-center text-sm text-muted-foreground">Carregando contexto…</div>
-      </PersonaLayout>
-    );
-  }
-
-  if (!activeOrg) {
-    return (
-      <PersonaLayout title="Painel do Síndico" accent={ACCENT}>
-        <PersonaEmptyState message="Nenhum condomínio selecionado. Selecione um contexto para visualizar o painel." />
-      </PersonaLayout>
-    );
-  }
-
-  if(loadError || loadedOrg!==activeOrg.id)return <PersonaLayout title="Painel do Síndico"><div role="alert" className="rounded border p-6"><p>{loadError||'Atualizando os dados deste condomínio…'}</p><Button onClick={carregar}>Carregar novamente</Button></div></PersonaLayout>;
-
-  const enviarSolicitacao = async () => {
-    if (!mensagem.trim() || !activeOrg) return toast.error('Escreva uma mensagem');
-    setEnviando(true);
-    const { error } = await supabase.from('support_tickets').insert({
-      organization_id: activeOrg.id, created_by: (await supabase.auth.getUser()).data.user?.id, message: mensagem.trim(), category: 'condominio',
-    });
-    setEnviando(false);
-    if (error) return toast.error('Falha');
-    toast.success('Solicitação enviada');
-    setMensagem(''); carregar();
-  };
-
-  const enviarComunicado = async () => {
-    if (!activeOrg || !aviso.titulo.trim() || !aviso.mensagem.trim()) return toast.error('Preencha título e mensagem');
-    const { data: draft, error: draftError } = await (supabase as any).from('organization_announcements')
-      .insert({ organization_id: activeOrg.id, titulo: aviso.titulo.trim(), mensagem: aviso.mensagem.trim(), publico: 'condominio' })
-      .select('id').single();
-    if (draftError || !draft) return toast.error(draftError?.message || 'Falha ao salvar comunicado');
-    const { error } = await (supabase as any).rpc('publish_organization_announcement', { p_id: draft.id });
-    if (error) return toast.error(`Rascunho salvo, mas a publicação falhou: ${error.message}`);
-    toast.success('Comunicado disponível no app para este condomínio');
-    setAviso({ titulo: '', mensagem: '' });
-  };
-
-  const statusBadge = (s: string) => {
-    const map: Record<string, string> = {
-      open: 'bg-amber-500/20 text-amber-400 border-amber-500/40',
-      in_progress: 'bg-blue-500/20 text-blue-400 border-blue-500/40',
-      resolved: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40',
+    if (!activeOrg) {
+      setLoading(false);
+      return;
+    }
+    let live = true;
+    setLoading(true);
+    setError("");
+    void (async () => {
+      try {
+        const { data, error } = await (supabase as any).rpc(
+          "syndic_operation_overview",
+          { p_org: activeOrg.id },
+        );
+        if (error || data?.organization_id !== activeOrg.id)
+          throw error || new Error("Resposta incompatível.");
+        if (live) setData(data);
+      } catch (e) {
+        if (live)
+          setError(
+            (e as Error).message || "Não foi possível consultar o condomínio.",
+          );
+      } finally {
+        if (live) setLoading(false);
+      }
+    })();
+    return () => {
+      live = false;
     };
-    const lbl: Record<string, string> = { open: 'aberto', in_progress: 'em andamento', resolved: 'resolvido' };
-    return <Badge variant="outline" className={map[s] || ''}>{lbl[s] || s}</Badge>;
-  };
-
-  const statusSaude = (dash?.inadimplentes ?? metrics.inadCount) > 10
-    ? { txt: '⚠ Atenção', cls: 'text-amber-400' }
-    : { txt: '✓ Saudável', cls: 'text-emerald-400' };
-
-  // Sinal de possível problema de vínculo: a organização tem cadastro (metadata com
-  // unidades esperadas) mas a consulta direta não retornou nenhum aluno vinculado.
-  // Isso é diferente de "condomínio novo, ainda sem alunos" — nesse caso não há
-  // unidades esperadas cadastradas, então não mostramos o aviso.
-  const possivelProblemaDeVinculo = !dashLoading && !dashError && (dash?.alunos_ativos ?? metrics.alunos) === 0 && orgTemUnidadesEsperadas;
-  const filteredActivationActions = activationActions.filter(a => actionPeriod === '0' || new Date(a.created_at).getTime() >= Date.now() - Number(actionPeriod) * 86400000);
-  const resolvedActivationActions = filteredActivationActions.filter(a => a.resolved_at).length;
-  const openActivationActions = filteredActivationActions.length - resolvedActivationActions;
-  const activationResolutionRate = filteredActivationActions.length ? Math.round((resolvedActivationActions / filteredActivationActions.length) * 100) : 0;
-  const goalProgress = [activation.moradores_ativos >= activationGoals.moradores, activation.checkins_30_dias >= activationGoals.checkins, activation.eventos_publicados >= activationGoals.eventos];
-  const goalScore = Math.round((goalProgress.filter(Boolean).length / goalProgress.length) * 100);
-  const activationHealth = goalScore === 100 ? { label: 'Saudável', color: 'text-emerald-400', score: 100 } : goalScore > 0 ? { label: 'Em evolução', color: 'text-amber-400', score: goalScore } : { label: 'Precisa de ativação', color: 'text-red-400', score: 0 };
-  const activationGaps = [{ label: 'Moradores', current: activation.moradores_ativos, goal: activationGoals.moradores }, { label: 'Check-ins', current: activation.checkins_30_dias, goal: activationGoals.checkins }, { label: 'Eventos', current: activation.eventos_publicados, goal: activationGoals.eventos }].map(item => ({ ...item, progress: Math.min(100, Math.round((item.current / Math.max(1, item.goal)) * 100)) })).sort((a, b) => a.progress - b.progress);
-  const criticalActivationGap = activationGaps[0];
-
+  }, [activeOrg?.id, revision]);
+  if (!activeOrg)
+    return (
+      <PersonaLayout title="Meu condomínio">
+        <PersonaEmptyState />
+      </PersonaLayout>
+    );
+  const c = data?.coverage,
+    summary = data?.summary;
+  const money = (value: number) =>
+    Number(value || 0).toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
   return (
-    <PersonaLayout title="Painel do Síndico" accent={ACCENT}>
-      {loadError&&<div role="alert" className="mb-4 rounded border border-destructive p-3">{loadError}<Button variant="outline" onClick={carregar}>Tentar novamente</Button></div>}
-      <Card className="bg-card/60 border-border/40 mb-4">
-        <CardContent className="p-4 flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center font-semibold"
-                 style={{ backgroundColor: `${ACCENT}1A`, color: ACCENT }}>{iniciais}</div>
-            <div>
-              <div className="font-medium">{activeOrg?.nome || 'Selecione um condomínio'}</div>
-              <div className="text-xs text-muted-foreground">Condomínio residencial</div>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Badge variant="secondary">{dash?.alunos_ativos ?? metrics.alunos} alunos</Badge>
-            <Badge variant="secondary">R$ {(Number(dash?.receita_mes ?? metrics.receita) / 1000).toFixed(1)}k</Badge>
-          </div>
-        </CardContent>
-      </Card>
-
-      {dashError && (
-        <div className="mb-4"><DashboardError message={dashError} onRetry={refreshDash} /></div>
-      )}
-
-      {possivelProblemaDeVinculo && (
-        <Card className="mb-4 border-amber-500/30 bg-amber-500/5">
-          <CardContent className="p-4 flex items-start gap-3">
-            <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-            <div className="text-xs">
-              <p className="font-medium text-amber-400">Nenhum aluno vinculado a este condomínio</p>
-              <p className="text-muted-foreground mt-1">
-                Este condomínio tem unidades cadastradas, mas nenhum aluno aparece vinculado a ele.
-                Isso pode indicar que o vínculo (<code className="font-mono">alunos.user_id</code> /
-                {' '}<code className="font-mono">organization_id</code>) ainda não foi feito para esta
-                organização — verifique antes de considerar o painel "vazio".
+    <PersonaLayout title="Meu condomínio">
+      <div className="mx-auto max-w-5xl space-y-5">
+        <PageIntro
+          eyebrow="Seu condomínio · visão geral"
+          title={activeOrg.nome}
+          description="Uma comunidade em movimento. Acompanhe a rotina, organize os encontros e cuide do que precisa de atenção."
+          actions={
+            <Button
+              disabled={loading}
+              onClick={() => setRevision((v) => v + 1)}
+            >
+              {loading ? "Atualizando…" : "Atualizar visão geral"}
+            </Button>
+          }
+        />
+        <p className="text-xs text-muted-foreground">
+          Situação cadastral: {data?.status || activeOrg.status}. Uso registrado
+          e homologação são informações distintas.
+        </p>
+        {error && (
+          <div
+            role="alert"
+            className="rounded-xl border border-destructive p-4"
+          >
+            <p>{error}</p>
+            {data && (
+              <p className="text-sm">
+                Os dados abaixo são da última consulta confirmada, não da
+                atualização que falhou.
               </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <Card className="mb-4 bg-card/60 border-border/40">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h2 className="font-semibold text-sm">Ativação do condomínio</h2>
-              <p className="text-xs text-muted-foreground">Sinais operacionais atualizados automaticamente</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-primary border-primary/30">30 dias</Badge>
-              <Button size="sm" variant="ghost" onClick={carregar} className="h-7 px-2 text-xs">Atualizar</Button>
-            </div>
+            )}
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="rounded-lg border border-border/30 p-3">
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Moradores ativos</div>
-              <div className="text-xl font-semibold mt-1">{activation.moradores_ativos}</div>
-            </div>
-            <div className="rounded-lg border border-border/30 p-3">
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Treinos ativos</div>
-              <div className="text-xl font-semibold mt-1">{activation.treinos_ativos}</div>
-            </div>
-            <div className="rounded-lg border border-border/30 p-3">
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Eventos publicados</div>
-              <div className="text-xl font-semibold mt-1">{activation.eventos_publicados}</div>
-            </div>
-            <div className="rounded-lg border border-border/30 p-3">
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Check-ins recentes</div>
-              <div className="text-xl font-semibold mt-1">{activation.checkins_30_dias}</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="mb-4 bg-card/60 border-border/40">
-        <CardContent className="p-4 flex items-center justify-between gap-4">
-          <div>
-            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Saúde da ativação</p>
-            <p className={`text-lg font-semibold ${activationHealth.color}`}>{activationHealth.label}</p>
-            <p className="text-xs text-muted-foreground mt-1">Baseado em moradores, check-ins e eventos publicados.</p>
-            {criticalActivationGap && criticalActivationGap.progress < 100 && <p className="text-xs text-amber-400 mt-1">Maior lacuna: {criticalActivationGap.label} ({criticalActivationGap.progress}% da meta).</p>}
-            <div className="flex flex-wrap gap-2 mt-3 text-[11px]">
-              <span className={`rounded-full px-2 py-1 ${activation.moradores_ativos >= activationGoals.moradores ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>Moradores {activation.moradores_ativos}/{activationGoals.moradores} {activation.moradores_ativos >= activationGoals.moradores ? '✓' : '!'}</span>
-              <span className={`rounded-full px-2 py-1 ${activation.checkins_30_dias >= activationGoals.checkins ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>Check-ins {activation.checkins_30_dias}/{activationGoals.checkins} {activation.checkins_30_dias >= activationGoals.checkins ? '✓' : '!'}</span>
-              <span className={`rounded-full px-2 py-1 ${activation.treinos_ativos >= 1 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>Treinos {activation.treinos_ativos > 0 ? '✓' : '!'}</span>
-              <span className={`rounded-full px-2 py-1 ${activation.eventos_publicados >= activationGoals.eventos ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>Eventos {activation.eventos_publicados}/{activationGoals.eventos} {activation.eventos_publicados >= activationGoals.eventos ? '✓' : '!'}</span>
-            </div>
-            {activation.moradores_ativos === 0 && <p className="text-xs text-muted-foreground mt-2">Meta: ativar o primeiro morador pelo QR ou convite.</p>}
-            {activation.moradores_ativos > 0 && activation.checkins_30_dias === 0 && <p className="text-xs text-muted-foreground mt-2">Meta: obter o primeiro check-in nos próximos 30 dias.</p>}
-            {activation.moradores_ativos > 0 && activation.checkins_30_dias > 0 && activation.eventos_publicados === 0 && <p className="text-xs text-muted-foreground mt-2">Meta: publicar o primeiro evento de saúde.</p>}
-          </div>
-          <div className="relative w-16 h-16 rounded-full border-4 border-border/40 flex items-center justify-center">
-            <span className={`text-sm font-semibold ${activationHealth.color}`}>{activationHealth.score}%</span>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="mb-4 bg-card/60 border-border/40">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between gap-3 mb-3">
-            <div><h2 className="font-semibold text-sm">Metas do condomínio</h2><p className="text-xs text-muted-foreground">Defina o mínimo esperado para acompanhar a ativação.</p></div>
-            <Button size="sm" variant="outline" onClick={async () => {
-              const {error}=await (supabase as any).rpc('save_activation_goals',{p_org:activeOrg.id,p_goals:activationGoals});
-              if (error) toast.error('Não foi possível salvar as metas'); else toast.success('Metas salvas');
-            }}>Salvar metas</Button>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <label className="text-xs text-muted-foreground">Moradores ativos<input type="number" min="1" value={activationGoals.moradores} onChange={e => setActivationGoals(g => ({ ...g, moradores: Number(e.target.value) }))} className="mt-1 w-full rounded-md border border-border/40 bg-background px-2 py-1.5 text-sm text-foreground" /></label>
-            <label className="text-xs text-muted-foreground">Check-ins / 30 dias<input type="number" min="1" value={activationGoals.checkins} onChange={e => setActivationGoals(g => ({ ...g, checkins: Number(e.target.value) }))} className="mt-1 w-full rounded-md border border-border/40 bg-background px-2 py-1.5 text-sm text-foreground" /></label>
-            <label className="text-xs text-muted-foreground">Eventos publicados<input type="number" min="1" value={activationGoals.eventos} onChange={e => setActivationGoals(g => ({ ...g, eventos: Number(e.target.value) }))} className="mt-1 w-full rounded-md border border-border/40 bg-background px-2 py-1.5 text-sm text-foreground" /></label>
-          </div>
-        </CardContent>
-      </Card>
-
-      {(activation.moradores_ativos === 0 || activation.checkins_30_dias === 0 || activation.eventos_publicados === 0) && (
-        <Card className="mb-4 border-amber-500/30 bg-amber-500/5">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <ShieldAlert className="w-4 h-4 text-amber-400" />
-              <h2 className="font-semibold text-sm">Próximas ações recomendadas</h2>
-            </div>
-            <div className="grid gap-2 text-xs">
-              {activation.moradores_ativos === 0 && (
-                <div className="flex items-center justify-between gap-3 rounded-md border border-border/30 p-3">
-                  <span><strong>Ative os moradores:</strong> compartilhe o QR de entrada e convites do condomínio.</span>
-                  <Button size="sm" variant="outline" onClick={async () => { await (supabase as any).rpc('record_activation_alert_action', { p_organization_id: activeOrg.id, p_alert_type: 'moradores_inativos', p_action_label: 'Abrir cadastro' }); window.location.assign(`/entrada?organization=${encodeURIComponent(activeOrg.id)}`); }}>Abrir cadastro</Button>
-                </div>
-              )}
-              {activation.checkins_30_dias === 0 && activation.moradores_ativos > 0 && (
-                <div className="flex items-center justify-between gap-3 rounded-md border border-border/30 p-3">
-                  <span><strong>Sem check-ins recentes:</strong> publique um comunicado ou agende um Health Day.</span>
-                  <Button size="sm" variant="outline" onClick={async () => { await (supabase as any).rpc('record_activation_alert_action', { p_organization_id: activeOrg.id, p_alert_type: 'sem_checkins', p_action_label: 'Criar comunicado' }); window.location.assign('/sindico/comunicados'); }}>Criar comunicado</Button>
-                </div>
-              )}
-              {activation.eventos_publicados === 0 && (
-                <div className="flex items-center justify-between gap-3 rounded-md border border-border/30 p-3">
-                  <span><strong>Nenhum evento publicado:</strong> um Health Day ajuda a iniciar o ciclo de engajamento.</span>
-                  <Button size="sm" variant="outline" onClick={async () => { await (supabase as any).rpc('record_activation_alert_action', { p_organization_id: activeOrg.id, p_alert_type: 'sem_eventos', p_action_label: 'Criar evento' }); window.location.assign('/sindico/health-day'); }}>Criar evento</Button>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {activationActions.length > 0 && (
-        <Card className="mb-4 bg-card/60 border-border/40">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between gap-3 mb-3">
-              <div>
-                <h2 className="font-semibold text-sm">Histórico de ações de ativação</h2>
-                <div className="flex gap-2 mt-1 text-[11px]">
-                  <span className="text-amber-400">{openActivationActions} abertas</span>
-                  <span className="text-emerald-400">{resolvedActivationActions} concluídas</span>
-                  <span className="text-muted-foreground">{activationResolutionRate}% resolvidas</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <select value={actionPeriod} onChange={e => setActionPeriod(e.target.value)} className="h-8 rounded-md border border-border/40 bg-background px-2 text-xs">
-                  <option value="7">7 dias</option><option value="30">30 dias</option><option value="90">90 dias</option><option value="0">Tudo</option>
-                </select>
-                <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => {
-                  const cutoff = actionPeriod === '0' ? 0 : Date.now() - Number(actionPeriod) * 86400000;
-                  const rows = activationActions.filter(a => !cutoff || new Date(a.created_at).getTime() >= cutoff);
-                  const csv = [['Ação','Tipo de alerta','Data'], ...rows.map(a => [a.action_label, a.alert_type, new Date(a.created_at).toLocaleString('pt-BR')])]
-                    .map(row => row.map(cell => '"' + String(cell).replace(/"/g, '""') + '"').join(',')).join('\n');
-                  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
-                  const link = document.createElement('a'); link.href = url; link.download = 'historico-ativacao.csv'; link.click(); URL.revokeObjectURL(url);
-                  toast.success('Histórico exportado');
-                }}>Exportar</Button>
-              </div>
-            </div>
-            <div className="space-y-2">
-              {filteredActivationActions.map((action) => (
-                <div key={action.id} className="flex items-center justify-between gap-3 rounded-md border border-border/30 px-3 py-2 text-xs">
-                  <div>
-                    <span className="font-medium">{action.action_label}</span>
-                    <span className="text-muted-foreground ml-2">({action.alert_type.replace(/_/g, ' ')})</span>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className={action.resolved_at ? "text-emerald-400" : "text-amber-400"}>{action.resolved_at ? "Concluída" : "Aberta"}</span>
-                    {!action.resolved_at && <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={async () => {
-                      await (supabase as any).rpc('resolve_activation_alert_action', { p_action_id: action.id });
-                      carregar();
-                    }}>Concluir</Button>}
-                    <span className="text-muted-foreground">{new Date(action.created_at).toLocaleString('pt-BR')}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-        <KpiCard label="Alunos ativos" value={dashLoading ? '…' : (dash?.alunos_ativos ?? metrics.alunos)} hint="via dashboard_sindico" />
-        <KpiCard label="Taxa de adesão" value={operacao.adesao ? `${operacao.adesao}%` : '--'} hint={`${operacao.unidades} unidades`} />
-        <KpiCard label="Check-ins no mês" value={operacao.checkinsMes} />
-        <KpiCard label="Aulas hoje" value={dashLoading ? '…' : (dash?.aulas_hoje ?? 0)} />
-        {canSeeFinancials && (
-          <KpiCard label="Receita do mês"
-                   value={`R$ ${Number(dash?.receita_mes ?? metrics.receita).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`} />
         )}
-        {canSeeFinancials && (
-          <KpiCard label="Inadimplência"
-                   value={`${dash?.inadimplentes ?? metrics.inadCount} pessoa${(dash?.inadimplentes ?? metrics.inadCount) !== 1 ? 's' : ''}`}
-                   hint={dash ? `R$ ${Number(dash.valor_inadimplencia || 0).toLocaleString('pt-BR', { maximumFractionDigits: 0 })} em aberto` : undefined}
-                   tone={(dash?.inadimplentes ?? metrics.inadCount) > 0 ? 'warning' : 'default'} />
-        )}
-        <KpiCard label="Ocupação média" value={dash?.ocupacao_media != null ? `${dash.ocupacao_media}%` : (metrics.ocupacao ? `${metrics.ocupacao}%` : '--')} />
-        <KpiCard label="Status" value={dash?.status === 'saudavel' ? '✓ Saudável' : statusSaude.txt}
-                 tone={dash?.status === 'saudavel' ? 'positive' : 'warning'} />
-      </div>
-
-
-      {isComite && (
-        <Card className="mb-4 border-primary/20 bg-primary/5">
-          <CardContent className="p-3 flex items-center gap-2 text-xs">
-            <Eye className="w-3.5 h-3.5 text-primary" />
-            <span className="text-muted-foreground">Você está no <strong className="text-foreground">modo Comitê</strong> — visão consultiva, sem acesso a dados financeiros ou de contrato.</span>
-          </CardContent>
-        </Card>
-      )}
-
-      <Tabs defaultValue="visao">
-        <TabsList className="mb-4 flex-wrap h-auto">
-          <TabsTrigger value="visao">Visão geral</TabsTrigger>
-          <TabsTrigger value="alunos">Alunos</TabsTrigger>
-          <TabsTrigger value="aulas">Aulas</TabsTrigger>
-          <TabsTrigger value="comunicados">Comunicados</TabsTrigger>
-          {canSeeFinancials && <TabsTrigger value="9fit">Falar com 9FIT</TabsTrigger>}
-        </TabsList>
-
-        <TabsContent value="visao">
-          <Card className="bg-card/60 border-border/40 mb-4">
-            <CardContent className="p-5">
-              <h2 className="font-semibold text-sm uppercase tracking-wide mb-4">Engajamento mensal — últimos 6 meses</h2>
-              <MonthlyBarChart
-                data={engajamentoMensal.map(e => ({ mes: mesLabel(e.mes), valor: e.checkins }))}
-                accent={ACCENT}
-                valueLabel="Check-ins"
-              />
-            </CardContent>
-          </Card>
-
-          <div className="grid sm:grid-cols-3 gap-3 mb-4">
-            <Card className="bg-card/60 border-border/40">
-              <CardContent className="p-4 flex gap-3">
-                <QrCode className="w-5 h-5 text-primary shrink-0" />
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Onboarding QR</p>
-                  <p className="text-sm font-medium">{operacao.unidades} unidades · {operacao.adesao}% de adesão</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="bg-card/60 border-border/40">
-              <CardContent className="p-4 flex gap-3">
-                <Dumbbell className="w-5 h-5 text-primary shrink-0" />
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Planos ativos</p>
-                  <p className="text-sm font-medium">{operacao.treinosAtivos} treino{operacao.treinosAtivos === 1 ? '' : 's'} em execução</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="bg-card/60 border-border/40">
-              <CardContent className="p-4 flex gap-3">
-                <ClipboardCheck className="w-5 h-5 text-primary shrink-0" />
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Plantão 9FIT</p>
-                  <p className="text-sm font-medium">{operacao.plantao} · QR academia/elevador</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card className="bg-card/60 border-border/40 mb-4">
-            <CardContent className="p-5 flex items-center justify-between gap-3">
-              <div>
-                <h2 className="font-semibold text-sm uppercase tracking-wide">Relatório do mês</h2>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {activeOrg?.nome || 'Organização'} · Receita R$ {Number(dash?.receita_mes ?? metrics.receita).toFixed(2)} · {dash?.inadimplentes ?? metrics.inadCount} inadimplente(s) · Ocupação {dash?.ocupacao_media ?? metrics.ocupacao}%
-                </p>
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  const rows = [
-                    ['Métrica', 'Valor'],
-                    ['Organização', activeOrg?.nome || ''],
-                    ['Alunos ativos', String(dash?.alunos_ativos ?? metrics.alunos)],
-                    ['Total de unidades', String(operacao.unidades)],
-                    ['Taxa de adesão (%)', String(operacao.adesao)],
-                    ['Check-ins no mês', String(operacao.checkinsMes)],
-                    ['Treinos ativos', String(operacao.treinosAtivos)],
-                    ['Plantão presencial', operacao.plantao],
-                    ['Receita do mês (R$)', Number(dash?.receita_mes ?? metrics.receita).toFixed(2)],
-                    ['Inadimplentes (qtd)', String(dash?.inadimplentes ?? metrics.inadCount)],
-                    ['Ocupação média (%)', String(dash?.ocupacao_media ?? metrics.ocupacao)],
-                    ['Recomendação 9FIT', operacao.adesao < 15 ? 'Reforçar QR em elevador e comunicado no WhatsApp' : 'Manter cadência de plantão e comunicar evolução mensal'],
-                  ];
-                  const csv = rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
-                  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `relatorio-sindico-${new Date().toISOString().slice(0, 10)}.csv`;
-                  a.click();
-                  URL.revokeObjectURL(url);
-                  toast.success('Relatório baixado');
-                }}
-              >
-                Baixar CSV
-              </Button>
-            </CardContent>
-          </Card>
-
-
-          <Card className="bg-card/60 border-border/40 mb-4">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="font-semibold text-sm uppercase tracking-wide">Pendências financeiras</h2>
-                <AlertCircle className="w-4 h-4 text-amber-400" />
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {dash?.inadimplentes ?? metrics.inadCount} pendência(s) no condomínio.
-                A equipe financeira acompanha os casos individuais.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card/60 border-border/40">
-            <CardContent className="p-5">
-              <h2 className="font-semibold text-sm uppercase tracking-wide mb-3">Aulas hoje</h2>
-              {aulasHoje.length === 0 ? <p className="text-sm text-muted-foreground">Sem aulas hoje.</p> : (
-                <ul className="divide-y divide-border/30">
-                  {aulasHoje.map(a => {
-                    const ocup = a.capacidade ? a.inscritos / a.capacidade : 0;
-                    const st = ocup < 0.5
-                      ? { txt: 'Baixa ocupação', cls: 'text-amber-400' }
-                      : { txt: 'Confirmada', cls: 'text-emerald-400' };
-                    return (
-                      <li key={a.id} className="py-3 flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="text-sm font-medium truncate">{a.nome}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {a.horario_inicio?.slice(0, 5)} • Prof. {a.professor} • {a.inscritos}/{a.capacidade}
-                          </div>
-                        </div>
-                        <span className={`text-xs ${st.cls} shrink-0`}>{st.txt}</span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="alunos">
-          <Card className="bg-card/60 border-border/40">
-            <CardContent className="p-5">
-              <p className="text-sm">{dash?.alunos_ativos ?? metrics.alunos} alunos ativos.</p>
-              <div className="mt-4 space-y-2">{!residents.length&&<p className="text-sm text-muted-foreground">Nenhum morador cadastrado.</p>}{residents.map(resident=><div key={resident.id} className="flex justify-between gap-2 border-b py-2 text-sm"><span>{resident.nome}{resident.unidade?' · Unidade '+resident.unidade:''}</span><Badge variant="outline">{resident.status}</Badge></div>)}</div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="aulas">
-          <Card className="bg-card/60 border-border/40">
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader><TableRow>
-                  <TableHead>Data</TableHead><TableHead>Aula</TableHead>
-                  <TableHead>Professor</TableHead><TableHead>Ocupação</TableHead>
-                </TableRow></TableHeader>
-                <TableBody>
-                  {aulasSemana.map(a => (
-                    <TableRow key={a.id}>
-                      <TableCell className="text-xs">{a.data} {a.horario_inicio?.slice(0,5)}</TableCell>
-                      <TableCell>{a.nome}</TableCell>
-                      <TableCell>{a.professor}</TableCell>
-                      <TableCell>{a.inscritos}/{a.capacidade}</TableCell>
-                    </TableRow>
-                  ))}
-                  {!aulasSemana.length && <TableRow><TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-6">Sem aulas nos próximos 7 dias.</TableCell></TableRow>}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="comunicados">
-          {canManageComunicados ? (
-            <Card className="bg-card/60 border-border/40">
-              <CardContent className="p-5">
-                <div className="flex items-center gap-2 mb-3">
-                  <Megaphone className="w-4 h-4" style={{ color: ACCENT }} />
-                  <h2 className="font-semibold">Publicar comunicado</h2>
-                </div>
-                <input value={aviso.titulo}
-                       onChange={e => setAviso({ ...aviso, titulo: e.target.value })}
-                       placeholder="Título do aviso"
-                       className="w-full bg-background border border-border/40 rounded-md px-3 py-2 text-sm mb-2" />
-                <Textarea value={aviso.mensagem}
-                          onChange={e => setAviso({ ...aviso, mensagem: e.target.value })}
-                          placeholder="Mensagem para os alunos…" rows={4} className="mb-3" />
-                <Button onClick={enviarComunicado} className="bg-[#60A5FA] text-black hover:bg-[#60A5FA]/90">
-                  <Megaphone className="w-4 h-4 mr-1" /> Publicar
-                </Button>
-              </CardContent>
-            </Card>
+        {!data ? (
+          loading ? (
+            <p role="status">Consultando operação…</p>
           ) : (
-            <Card className="bg-card/60 border-border/40">
-              <CardContent className="p-5 text-sm text-muted-foreground text-center">
-                <Megaphone className="w-6 h-6 mx-auto mb-2 text-muted-foreground/50" />
-                Modo Comitê: comunicados são apenas leitura. Peça ao síndico para publicar novos avisos.
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="9fit">
-          <Card className="bg-card/60 border-border/40 mb-4">
-            <CardContent className="p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <LifeBuoy className="w-4 h-4" style={{ color: ACCENT }} />
-                <h2 className="font-semibold">Falar com a equipe 9FIT</h2>
+            <p>
+              Não há dados confirmados nesta consulta. Verifique o acesso e a
+              situação operacional com a administração.
+            </p>
+          )
+        ) : (
+          <>
+            <p className="text-xs text-muted-foreground">
+              Última consulta: {residentDate(data.as_of, true)}
+            </p>
+            <section
+              aria-label="Indicadores do condomínio"
+              className="grid gap-3 sm:grid-cols-3"
+            >
+              {[
+                [
+                  "Pessoas com conta vinculada",
+                  c.people_linked,
+                  "Moradores ativos, não apartamentos",
+                ],
+                [
+                  "Cobertura das unidades",
+                  c.percent == null ? "Sem base" : c.percent + "%",
+                  `${c.units_linked} unidades identificadas de ${c.units_total ?? "total não configurado"}`,
+                ],
+                [
+                  "Presenças neste mês",
+                  summary.checkins_month,
+                  "Check-ins diários; não são sessões concluídas",
+                ],
+              ].map(([title, value, hint]) => (
+                <article
+                  key={String(title)}
+                  className="rounded-xl border bg-card p-5"
+                >
+                  <h2 className="text-sm text-muted-foreground">{title}</h2>
+                  <p className="mt-2 text-3xl font-semibold">{value}</p>
+                  <p className="mt-2 text-xs text-muted-foreground">{hint}</p>
+                </article>
+              ))}
+            </section>
+            <details className="rounded-lg border p-4">
+              <summary className="min-h-11 cursor-pointer py-2">
+                Como a cobertura é calculada
+              </summary>
+              <p className="text-sm">
+                Unidades distintas de moradores ativos com conta vinculada /
+                total de unidades cadastrado. Identificadores são comparados sem
+                espaços excedentes e sem diferenciar maiúsculas. Não é uma
+                verificação cadastral da unidade.
+              </p>
+              <p className="mt-2 text-sm">
+                {c.without_unit} pessoa(s) vinculada(s) sem unidade informada.
+                Se o total não estiver configurado ou houver mais
+                identificadores de unidade do que o total, o percentual aparece
+                como Sem base para revisão da administração.
+              </p>
+            </details>
+            <section className="space-y-3 rounded-xl border p-5">
+              <h2 className="text-xl font-semibold">Precisa de atenção</h2>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {[
+                  [
+                    "Serviços aguardando proposta",
+                    data.services_pending,
+                    "/sindico/operacao?category=servicos",
+                  ],
+                  [
+                    "Reservas aguardando registro de uso",
+                    data.reservations_pending,
+                    "/sindico/operacao?category=reservas",
+                  ],
+                  [
+                    "Chamados abertos na consulta",
+                    data.tickets.filter((t: any) => t.status !== "resolved")
+                      .length,
+                    "/sindico/operacao?category=chamados",
+                  ],
+                ].map(([label, count, to]) => (
+                  <Link
+                    key={String(to)}
+                    to={String(to)}
+                    className="rounded-lg border p-4 hover:border-primary"
+                  >
+                    <strong className="block text-2xl">{count}</strong>
+                    <span className="mt-1 block text-sm">{label}</span>
+                  </Link>
+                ))}
               </div>
-              <Textarea value={mensagem} onChange={e => setMensagem(e.target.value)}
-                        placeholder="Ex.: Aula de pilates de terça precisa mudar de horário…"
-                        rows={4} className="mb-3" />
-              <Button onClick={enviarSolicitacao} disabled={enviando}
-                      className="bg-[#60A5FA] text-black hover:bg-[#60A5FA]/90">
-                <MessageSquarePlus className="w-4 h-4 mr-1" />
-                {enviando ? 'Enviando…' : 'Enviar solicitação'}
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card/60 border-border/40">
-            <CardContent className="p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <Inbox className="w-4 h-4" style={{ color: ACCENT }} />
-                <h2 className="font-semibold">Minhas solicitações</h2>
-                <Badge variant="outline" className="ml-auto">{tickets.length}</Badge>
-              </div>
-              {tickets.length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma solicitação enviada.</p> : (
-                <ul className="space-y-3">
-                  {tickets.map(t => (
-                    <li key={t.id} className="border border-border/30 rounded-lg p-3">
-                      <div className="flex items-start justify-between gap-3 mb-1">
-                        <p className="text-sm flex-1">{t.message.replace(`[${activeOrg?.nome}] `, '')}</p>
-                        {statusBadge(t.status)}
-                      </div>
-                      <p className="text-[10px] text-muted-foreground font-mono">
-                        {new Date(t.created_at).toLocaleString('pt-BR')}
-                      </p>
-                      {t.agent_response && (
-                        <p className="text-xs mt-2 p-2 bg-muted/30 rounded border-l-2" style={{ borderColor: ACCENT }}>
-                          <strong>9FIT:</strong> {t.agent_response}
-                        </p>
-                      )}
-                    </li>
-                  ))}
-                </ul>
+              <p className="text-xs text-muted-foreground">
+                Chamados: até 20 registros recentes autorizados. A
+                responsabilidade e os prazos seguem o atendimento registrado.
+              </p>
+            </section>
+            <FitnessUsage key={activeOrg.id} organizationId={activeOrg.id} />
+            <section className="space-y-3 rounded-xl border p-5">
+              <h2 className="text-xl font-semibold">
+                Próximas aulas · sete dias
+              </h2>
+              {!summary.classes.length ? (
+                <p>Nenhuma aula publicada para este período.</p>
+              ) : (
+                summary.classes.map((a: any) => (
+                  <article key={a.id} className="border-b py-3">
+                    <h3 className="font-medium">{a.nome}</h3>
+                    <p className="text-sm">
+                      {residentDate(a.data)} · {a.horario_inicio?.slice(0, 5)}–
+                      {a.horario_fim?.slice(0, 5)} · {a.professor}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {a.inscritos}/{a.capacidade ?? "—"} inscrições. Inscrição
+                      não confirma presença.
+                    </p>
+                  </article>
+                ))
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </section>
+            <section className="grid gap-3 sm:grid-cols-2">
+              <Button asChild className="min-h-12">
+                <Link to="/sindico/health-day">
+                  Organizar evento e recepção
+                </Link>
+              </Button>
+              <Button variant="outline" asChild className="min-h-12">
+                <Link to="/sindico/comunicados?new=1">Preparar comunicado</Link>
+              </Button>
+            </section>
+            <details
+              open={params.get("section") === "moradores"}
+              className="rounded-xl border p-5"
+            >
+              <summary className="min-h-11 cursor-pointer py-2 text-lg font-semibold">
+                Moradores · visão operacional
+              </summary>
+              <Input
+                aria-label="Buscar morador"
+                className="my-3"
+                placeholder="Buscar pelo nome"
+                value={search}
+                onChange={(e) => {
+                  const next = new URLSearchParams(params);
+                  next.set("search", e.target.value);
+                  setParams(next, { replace: true });
+                }}
+              />
+              {summary.residents
+                .filter((r: any) =>
+                  r.nome.toLowerCase().includes(search.toLowerCase()),
+                )
+                .map((r: any) => (
+                  <p key={r.id} className="border-b py-3 text-sm">
+                    {r.nome} · Unidade {r.unidade || "não informada"} ·{" "}
+                    {r.is_active ? "Ativo" : "Cadastro não ativo"}
+                  </p>
+                ))}
+              {!summary.residents.length && (
+                <p>
+                  Nenhum cadastro disponível. Solicite apoio à administração
+                  para conferir a implantação.
+                </p>
+              )}
+            </details>
+            <details className="rounded-xl border p-5">
+              <summary className="min-h-11 cursor-pointer py-2 text-lg font-semibold">
+                Implantação e histórico da operação
+              </summary>
+              <p className="text-sm">
+                O cadastro não comprova que o percurso do morador foi
+                homologado. Preparação e ativação são conduzidas pela
+                administração.
+              </p>
+              <dl className="mt-3 grid gap-3 sm:grid-cols-3">
+                {[
+                  ["Moradores ativos", data.activation.moradores_ativos],
+                  ["Planos dentro da validade", data.activation.treinos_ativos],
+                  [
+                    "Eventos futuros publicados",
+                    data.activation.eventos_publicados,
+                  ],
+                ].map(([label, value]) => (
+                  <div key={String(label)}>
+                    <dt className="text-sm text-muted-foreground">{label}</dt>
+                    <dd className="text-xl">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+              <h3 className="mt-4 font-semibold">Ações registradas</h3>
+              {!data.actions.length ? (
+                <p className="text-sm">
+                  Nenhuma ação registrada nesta consulta.
+                </p>
+              ) : (
+                data.actions.map((a: any) => (
+                  <p key={a.id} className="border-b py-2 text-sm">
+                    {a.action_label} · {residentDate(a.created_at, true)} ·{" "}
+                    {a.resolved_at ? "Concluída" : "Em acompanhamento"}
+                  </p>
+                ))
+              )}
+            </details>
+            {data.can_see_financials && (
+              <details className="rounded-xl border p-5">
+                <summary className="min-h-11 cursor-pointer py-2 text-lg font-semibold">
+                  Financeiro autorizado
+                </summary>
+                <p className="text-sm">
+                  Visão financeira agregada; não classifica a saúde da operação
+                  fitness.
+                </p>
+                <p className="mt-3">
+                  Recebido no mês: {money(data.financial.receita_mes)}
+                </p>
+                <p>
+                  Pessoas com cobrança vencida: {data.financial.inadimplentes}
+                </p>
+                <p>
+                  Valor vencido pendente:{" "}
+                  {money(data.financial.valor_inadimplencia)}
+                </p>
+              </details>
+            )}
+            <section className="rounded-xl border p-5">
+              <h2 className="font-semibold">Atendimento da operação</h2>
+              <p className="mt-2 text-sm">
+                Use Atendimento para abrir uma solicitação ou acompanhar as
+                pendências do condomínio.
+              </p>
+              <Button className="mt-3" asChild variant="outline">
+                <Link to="/sindico/operacao?category=ajuda">
+                  Pedir apoio à equipe
+                </Link>
+              </Button>
+            </section>
+          </>
+        )}
+      </div>
     </PersonaLayout>
-  );
-}
-
-function MetricCard({ label, value, valueCls }: { label: string; value: string; valueCls?: string }) {
-  return (
-    <Card className="bg-card/60 border-border/40">
-      <CardContent className="p-4">
-        <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">{label}</div>
-        <div className={`text-xl font-semibold ${valueCls || ''}`}>{value}</div>
-      </CardContent>
-    </Card>
   );
 }

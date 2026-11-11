@@ -26,3 +26,9 @@ verify_jwt = false
 
 [functions.agent-workflow-worker]
 verify_jwt = false
+
+[functions.anamnese-public]
+verify_jwt = false
+
+[functions.triagem-decidir]
+verify_jwt = false

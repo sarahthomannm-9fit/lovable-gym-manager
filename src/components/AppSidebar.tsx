@@ -1,3 +1,4 @@
+import { LivingMark } from "@/components/visual/LivingIdentity";
 import {
   Sidebar,
   SidebarContent,
@@ -51,6 +52,7 @@ import {
   User,
   ArrowLeftRight,
   ClipboardCheck,
+  ChevronDown,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useCurrentUserRole, AppRole } from "@/hooks/useCurrentUserRole";
@@ -78,32 +80,33 @@ export function AppSidebar() {
   const location = useLocation();
   const { role: storedRole } = useCurrentUserRole();
   const { activeRole, primaryRole } = useOperationalContext();
-  const residentSurface = location.pathname.startsWith('/morador');
-  const role = residentSurface ? 'user' : activeRole;
-const { signOut, user } = useAuth();
+  const residentSurface = location.pathname.startsWith("/morador");
+  const role = residentSurface ? "user" : activeRole;
+  const { signOut, user } = useAuth();
   const { pagamentos, alunos, checkins, leads, aulas } = useDataIntegration();
 
   // Dynamic badge counts
   const badges = useMemo(() => {
-    const hoje = new Date().toISOString().split('T')[0];
+    const hoje = new Date().toISOString().split("T")[0];
     const hojeMs = Date.now();
     const MS_DIA = 86400000;
 
     // Inadimplentes
-    const inadimplentes = (pagamentos || []).filter((p: any) =>
-      p.status !== 'pago' && p.data_vencimento && p.data_vencimento < hoje
+    const inadimplentes = (pagamentos || []).filter(
+      (p: any) =>
+        p.status !== "pago" && p.data_vencimento && p.data_vencimento < hoje,
     ).length;
 
     // Alunos sem frequência (14+ dias)
     const checkinPorAluno = new Map<string, string>();
     (checkins || []).forEach((c: any) => {
-      const dt = c.data_checkin || c.horario_entrada?.split('T')[0];
+      const dt = c.data_checkin || c.horario_entrada?.split("T")[0];
       if (!dt) return;
       const prev = checkinPorAluno.get(c.aluno_id);
       if (!prev || dt > prev) checkinPorAluno.set(c.aluno_id, dt);
     });
     const alunosSemFreq = (alunos || []).filter((a: any) => {
-      if (a.status !== 'ativo') return false;
+      if (a.status !== "ativo") return false;
       const last = checkinPorAluno.get(a.id);
       if (!last) return true;
       return Math.ceil((hojeMs - new Date(last).getTime()) / MS_DIA) > 14;
@@ -111,14 +114,17 @@ const { signOut, user } = useAuth();
 
     // Leads quentes (novos, < 7 dias)
     const leadsQuentes = (leads || []).filter((l: any) => {
-      if (l.status !== 'novo') return false;
-      const dias = Math.ceil((hojeMs - new Date(l.created_at).getTime()) / MS_DIA);
+      if (l.status !== "novo") return false;
+      const dias = Math.ceil(
+        (hojeMs - new Date(l.created_at).getTime()) / MS_DIA,
+      );
       return dias <= 7;
     }).length;
 
     // Aulas sem instrutor
-    const aulasSemInst = (aulas || []).filter((a: any) =>
-      a.data_aula >= hoje && !a.professor_id && a.status !== 'cancelada'
+    const aulasSemInst = (aulas || []).filter(
+      (a: any) =>
+        a.data_aula >= hoje && !a.professor_id && a.status !== "cancelada",
     ).length;
 
     return { inadimplentes, alunosSemFreq, leadsQuentes, aulasSemInst };
@@ -129,65 +135,181 @@ const { signOut, user } = useAuth();
       category: "INÍCIO",
       items: [
         { title: "Home", icon: Home, path: "/home" },
-        { title: "Trocar contexto", icon: ArrowLeftRight, path: "/select-context" },
+        {
+          title: "Trocar contexto",
+          icon: ArrowLeftRight,
+          path: "/select-context",
+        },
       ],
     },
     {
-      category: "CENTRAL DE OPERAÇÕES",
+      category: "OPERAÇÃO",
       items: [
         { title: "Visão geral", icon: LayoutDashboard, path: "/painel" },
-        { title: "Operação NLIT", icon: ClipboardCheck, path: "/operacao-9fit", roles: ['admin','manager'] },
-        { title: "Pipeline comercial", icon: Target, path: "/pipeline", roles: ['admin','manager'] },
-        { title: "Clientes ativos", icon: Building2, path: "/clientes", roles: ['admin','manager'] },
-        { title: "Alunos", icon: Users, path: "/alunos", roles: ['admin', 'manager'], badge: badges.alunosSemFreq || undefined, badgeColor: 'bg-amber-500' },
-        { title: "Check-in", icon: UserCheck, path: "/checkin", roles: ['admin', 'manager'] },
+        {
+          title: "Cadastrar condomínio",
+          icon: ClipboardCheck,
+          path: "/operacao-9fit",
+          roles: ["admin"],
+        },
+        {
+          title: "Pipeline comercial",
+          icon: Target,
+          path: "/pipeline",
+          roles: ["admin", "manager"],
+        },
+        {
+          title: "Clientes ativos",
+          icon: Building2,
+          path: "/clientes",
+          roles: ["admin", "manager"],
+        },
+        {
+          title: "Alunos",
+          icon: Users,
+          path: "/alunos",
+          roles: ["admin", "manager"],
+          badge: badges.alunosSemFreq || undefined,
+          badgeColor: "bg-amber-500",
+        },
+        {
+          title: "Check-in",
+          icon: UserCheck,
+          path: "/checkin",
+          roles: ["admin", "manager"],
+        },
         { title: "Agenda", icon: Calendar, path: "/painel/agenda" },
       ],
     },
     {
-      category: "ASSESSORIA ESPORTIVA",
+      category: "TREINOS E EQUIPE",
       items: [
-        { title: "Treinos", icon: Dumbbell, path: "/treinos", roles: ['admin','manager','professor'] },
-        { title: "Planos de treino", icon: Dumbbell, path: "/planos-treino", roles: ['admin','manager','professor'] },
-        { title: "Studio", icon: Sparkles, path: "/studio", roles: ['admin', 'manager'] },
-        { title: "Avaliações físicas", icon: Activity, path: "/avaliacoes", roles: ['admin', 'manager'] },
-        { title: "Aulas", icon: Calendar, path: "/aulas", roles: ['admin', 'manager'], badge: badges.aulasSemInst || undefined, badgeColor: 'bg-destructive' },
-        { title: "Aulas experimentais", icon: UserCheck, path: "/experimentais", roles: ['admin', 'manager'] },
-        { title: "Coaches & equipe", icon: Briefcase, path: "/coaches", roles: ['admin'] },
+        {
+          title: "Treinos",
+          icon: Dumbbell,
+          path: "/treinos",
+          roles: ["admin", "manager", "professor"],
+        },
+        {
+          title: "Planos de treino",
+          icon: Dumbbell,
+          path: "/planos-treino",
+          roles: ["admin", "manager", "professor"],
+        },
+        {
+          title: "Studio",
+          icon: Sparkles,
+          path: "/studio",
+          roles: ["admin", "manager"],
+        },
+        {
+          title: "Avaliações físicas",
+          icon: Activity,
+          path: "/avaliacoes",
+          roles: ["admin", "manager"],
+        },
+        {
+          title: "Aulas",
+          icon: Calendar,
+          path: "/aulas",
+          roles: ["admin", "manager"],
+          badge: badges.aulasSemInst || undefined,
+          badgeColor: "bg-destructive",
+        },
+        {
+          title: "Aulas experimentais",
+          icon: UserCheck,
+          path: "/experimentais",
+          roles: ["admin", "manager"],
+        },
+        {
+          title: "Coaches & equipe",
+          icon: Briefcase,
+          path: "/coaches",
+          roles: ["admin"],
+        },
       ],
     },
     {
       category: "MERCADOS",
-      roles: ['admin','manager'],
+      roles: ["admin", "manager"],
       items: [
-        { title: "Condomínios", icon: Building2, path: "/mercados/condominios" },
-        { title: "Corporativo", icon: Briefcase, path: "/mercados/corporativo" },
-        { title: "Academias & Studios", icon: Dumbbell, path: "/mercados/academias" },
-        { title: "Professores", icon: GraduationCap, path: "/mercados/professores" },
+        {
+          title: "Condomínios",
+          icon: Building2,
+          path: "/mercados/condominios",
+        },
+        {
+          title: "Corporativo",
+          icon: Briefcase,
+          path: "/mercados/corporativo",
+        },
+        {
+          title: "Academias & Studios",
+          icon: Dumbbell,
+          path: "/mercados/academias",
+        },
+        {
+          title: "Professores",
+          icon: GraduationCap,
+          path: "/mercados/professores",
+        },
       ],
     },
     {
       category: "FINANCEIRO",
-      roles: ['admin'],
+      roles: ["admin"],
       items: [
         { title: "Dashboard", icon: BarChart3, path: "/relatorios" },
         { title: "Contratos & propostas", icon: Receipt, path: "/contratos" },
-        { title: "Pagamentos", icon: Receipt, path: "/pagamentos", badge: badges.inadimplentes || undefined, badgeColor: 'bg-destructive' },
-        { title: "Fluxo de pagamentos", icon: ArrowDownCircle, path: "/relatorios/pagamentos" },
-        { title: "Fluxo de recebimentos", icon: ArrowUpCircle, path: "/relatorios/recebimentos" },
+        {
+          title: "Pagamentos",
+          icon: Receipt,
+          path: "/pagamentos",
+          badge: badges.inadimplentes || undefined,
+          badgeColor: "bg-destructive",
+        },
+        {
+          title: "Fluxo de pagamentos",
+          icon: ArrowDownCircle,
+          path: "/relatorios/pagamentos",
+        },
+        {
+          title: "Fluxo de recebimentos",
+          icon: ArrowUpCircle,
+          path: "/relatorios/recebimentos",
+        },
         { title: "Cobranças", icon: Receipt, path: "/relatorios/cobrancas" },
         { title: "Planos & SKUs", icon: Package, path: "/catalogo" },
-        { title: "Estratégias & IA", icon: Brain, path: "/relatorios/estrategias" },
-        { title: "Promoções & cupons", icon: Percent, path: "/relatorios/promocoes-cupons" },
+        {
+          title: "Estratégias & IA",
+          icon: Brain,
+          path: "/relatorios/estrategias",
+        },
+        {
+          title: "Promoções & cupons",
+          icon: Percent,
+          path: "/relatorios/promocoes-cupons",
+        },
       ],
     },
     {
       category: "MARKETING & CAPTAÇÃO",
-      roles: ['admin'],
+      roles: ["admin"],
       items: [
         { title: "Campanhas", icon: Target, path: "/marketing/campanhas" },
-        { title: "Captação", icon: UserPlus, path: "/marketing/captacao", badge: badges.leadsQuentes || undefined, badgeColor: 'bg-orange-500' },
-        { title: "Comunicação", icon: MessageSquare, path: "/marketing/comunicacao" },
+        {
+          title: "Captação",
+          icon: UserPlus,
+          path: "/marketing/captacao",
+          badge: badges.leadsQuentes || undefined,
+          badgeColor: "bg-orange-500",
+        },
+        {
+          title: "Comunicação",
+          icon: MessageSquare,
+          path: "/marketing/comunicacao",
+        },
         { title: "Conversão", icon: TrendingUp, path: "/marketing/conversao" },
         { title: "Funis", icon: Target, path: "/marketing/funis" },
         { title: "E-mail marketing", icon: Mail, path: "/marketing/email" },
@@ -198,44 +320,133 @@ const { signOut, user } = useAuth();
     {
       category: "CENTRO DE INTELIGÊNCIA",
       items: [
-        { title: "Hub de Agentes", icon: Bot, path: "/agents", roles: ['admin','manager'] },
+        {
+          title: "Hub de Agentes",
+          icon: Bot,
+          path: "/agents",
+          roles: ["admin", "manager"],
+        },
         { title: "RON • Agente CEO", icon: Sparkles, path: "/agente-ia" },
-        { title: "Insights de mercado", icon: BarChart3, path: "/insights", roles: ['admin'] },
-        { title: "Plano CFO", icon: Target, path: "/cfo/leads", roles: ['admin'] },
-        { title: "Relatórios automáticos", icon: Receipt, path: "/relatorios/automaticos", roles: ['admin','manager'] },
+        {
+          title: "Insights de mercado",
+          icon: BarChart3,
+          path: "/insights",
+          roles: ["admin"],
+        },
+        {
+          title: "Plano CFO",
+          icon: Target,
+          path: "/cfo/leads",
+          roles: ["admin"],
+        },
+        {
+          title: "Relatórios automáticos",
+          icon: Receipt,
+          path: "/relatorios/automaticos",
+          roles: ["admin", "manager"],
+        },
       ],
     },
     {
       category: "NINE LIVING",
       items: [
-        { title: "Health Day · Gestão", icon: HeartHandshake, path: "/sindico/health-day", roles: ['sindico', 'admin'] },
-        { title: "Comunicados do condomínio", icon: MessageSquare, path: "/sindico/comunicados", roles: ['sindico', 'admin'] },
-        { title: "Eventos do condomínio", icon: Calendar, path: "/morador/eventos", roles: ['user', 'admin'] },
+        {
+          title: "Health Day · Gestão",
+          icon: HeartHandshake,
+          path: "/sindico/health-day",
+          roles: ["sindico", "admin"],
+        },
+        {
+          title: "Comunicados do condomínio",
+          icon: MessageSquare,
+          path: "/sindico/comunicados",
+          roles: ["sindico", "admin"],
+        },
+        {
+          title: "Eventos do condomínio",
+          icon: Calendar,
+          path: "/morador/eventos",
+          roles: ["user", "admin"],
+        },
       ],
     },
     {
       category: "ADMINISTRAÇÃO",
-      roles: ['admin'],
+      roles: ["admin"],
       items: [
-        { title: "Usuários", icon: Shield, path: "/admin/usuarios", roles: ['admin'] },
-        { title: "Solicitações e suporte", icon: MessageSquare, path: "/admin/solicitacoes", roles: ['admin'] },
-        { title: "Vínculos pendentes", icon: Users, path: "/admin/vinculos", roles: ['admin'] },
-        { title: "Aprovações", icon: ClipboardCheck, path: "/admin/aprovacoes-workflows", roles: ['admin'] },
-        { title: "Integração FitPro", icon: Network, path: "/admin/fitpro", roles: ['admin'] },
-        { title: "Organizações", icon: Network, path: "/admin/organizacoes", roles: ['admin'] },
-        { title: "Auditoria de prescrições", icon: ClipboardCheck, path: "/admin/auditoria-prescricoes", roles: ['admin'] },
-        { title: "Auditoria de acessos", icon: Shield, path: "/admin/auditoria-acessos", roles: ['admin'] },
-        { title: "Produtos & equipamentos", icon: Package, path: "/produtos", roles: ['admin'] },
-        { title: "Equipamentos", icon: Dumbbell, path: "/equipamentos", roles: ['admin'] },
+        {
+          title: "Usuários",
+          icon: Shield,
+          path: "/admin/usuarios",
+          roles: ["admin"],
+        },
+        {
+          title: "Solicitações e suporte",
+          icon: MessageSquare,
+          path: "/admin/solicitacoes",
+          roles: ["admin"],
+        },
+        {
+          title: "Vínculos pendentes",
+          icon: Users,
+          path: "/admin/vinculos",
+          roles: ["admin"],
+        },
+        {
+          title: "Aprovações",
+          icon: ClipboardCheck,
+          path: "/admin/aprovacoes-workflows",
+          roles: ["admin"],
+        },
+        {
+          title: "Integração FitPro",
+          icon: Network,
+          path: "/admin/fitpro",
+          roles: ["admin"],
+        },
+        {
+          title: "Organizações",
+          icon: Network,
+          path: "/admin/organizacoes",
+          roles: ["admin"],
+        },
+        {
+          title: "Auditoria de prescrições",
+          icon: ClipboardCheck,
+          path: "/admin/auditoria-prescricoes",
+          roles: ["admin"],
+        },
+        {
+          title: "Auditoria de acessos",
+          icon: Shield,
+          path: "/admin/auditoria-acessos",
+          roles: ["admin"],
+        },
+        {
+          title: "Produtos & equipamentos",
+          icon: Package,
+          path: "/produtos",
+          roles: ["admin"],
+        },
+        {
+          title: "Equipamentos",
+          icon: Dumbbell,
+          path: "/equipamentos",
+          roles: ["admin"],
+        },
       ],
     },
     {
       category: "9FIT OS 🚀",
-      roles: ['admin'],
+      roles: ["admin"],
       items: [
         { title: "Dashboard 9FIT", icon: Rocket, path: "/9fit" },
         { title: "CEO", icon: Crown, path: "/9fit/ceo" },
-        { title: "Consultoria", icon: HeartHandshake, path: "/9fit/consultoria" },
+        {
+          title: "Consultoria",
+          icon: HeartHandshake,
+          path: "/9fit/consultoria",
+        },
         { title: "Concierge", icon: Users, path: "/9fit/concierge" },
         { title: "Trust", icon: Shield, path: "/9fit/trust" },
         { title: "Network", icon: Network, path: "/9fit/network" },
@@ -245,75 +456,101 @@ const { signOut, user } = useAuth();
     },
   ];
 
-
   const canSee = (roles?: AppRole[]) => {
-    if (!roles) return role === 'admin' || role === 'manager';
+    if (!roles) return role === "admin" || role === "manager";
     if (!role) return false;
     return roles.includes(role);
   };
 
-  const nomeUsuario = (user?.user_metadata as any)?.nome || user?.email?.split('@')[0] || 'Usuário';
+  const nomeUsuario =
+    (user?.user_metadata as any)?.nome ||
+    user?.email?.split("@")[0] ||
+    "Usuário";
   const inicial = nomeUsuario.charAt(0).toUpperCase();
-  const roleLabel = role ? role.charAt(0).toUpperCase() + role.slice(1) : '9FIT';
+  const roleLabel = role
+    ? role.charAt(0).toUpperCase() + role.slice(1)
+    : "9FIT";
 
   return (
     <Sidebar>
       <SidebarHeader>
         <div className="px-4 py-5 border-b border-sidebar-border/50">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gradient-gold flex items-center justify-center text-[12px] font-black text-primary-foreground font-display rounded-md shrink-0 shadow-gold">
-              9F
-            </div>
+            <LivingMark small />
             <div>
-              <div className="text-[12px] font-bold font-display text-sidebar-foreground tracking-wide">NINE LIVING</div>
-              <div className="text-[8px] text-primary/70 font-mono tracking-[0.2em] uppercase mt-0.5">SAÚDE · COMUNIDADE</div>
+              <div className="text-[12px] font-extrabold text-sidebar-foreground tracking-[0.16em]">
+                NINE LIVING
+              </div>
+              <div className="text-[9px] text-sidebar-foreground/55 tracking-[0.13em] uppercase mt-0.5">
+                SAÚDE · COMUNIDADE
+              </div>
             </div>
           </div>
         </div>
       </SidebarHeader>
       <SidebarContent>
         {menuItems
-          .filter(cat => (!cat.roles || canSee(cat.roles)) && cat.items.some(item=>canSee(item.roles)))
+          .filter(
+            (cat) =>
+              (!cat.roles || canSee(cat.roles)) &&
+              cat.items.some((item) => canSee(item.roles)),
+          )
           .map((category) => {
-            const visibleItems = category.items.filter(item => canSee(item.roles));
+            const visibleItems = category.items.filter((item) =>
+              canSee(item.roles),
+            );
             if (visibleItems.length === 0) return null;
             return (
-              <SidebarGroup key={category.category}>
-                <SidebarGroupLabel className="text-[9px] font-mono tracking-[0.18em] font-semibold text-primary/50 px-3.5 mt-1">
+              <details
+                key={category.category}
+                className="group"
+                open={
+                  ["INÍCIO", "OPERAÇÃO"].includes(category.category) ||
+                  visibleItems.some((item) => location.pathname === item.path)
+                }
+              >
+                <summary className="flex cursor-pointer list-none items-center justify-between px-3.5 py-2 text-[10px] font-semibold tracking-wide text-sidebar-foreground/70 hover:text-sidebar-foreground">
                   {category.category}
-                </SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {visibleItems.map((item, itemIndex) => {
-                      const isActive = location.pathname === item.path;
-                      const isPrimaryAction = itemIndex === 0;
-                      return (
-                        <SidebarMenuItem key={item.path}>
-                          <SidebarMenuButton
-                            onClick={() => navigate(item.path)}
-                            isActive={isActive}
-                            className={`w-full justify-start text-xs rounded-md transition-all duration-150 ${isPrimaryAction ? 'mt-0.5' : 'ml-3 w-[calc(100%-0.75rem)]'} ${
-                              isActive
-                                ? 'bg-primary/10 text-primary border-l-2 border-primary font-semibold'
-                                : isPrimaryAction
-                                  ? 'text-sidebar-foreground font-semibold hover:text-sidebar-foreground hover:bg-sidebar-accent border-l-2 border-transparent'
-                                  : 'text-sidebar-foreground/65 hover:text-sidebar-foreground hover:bg-sidebar-accent border-l-2 border-sidebar-border/40'
-                            }`}
-                          >
-                            <item.icon className={`mr-2 h-3.5 w-3.5 ${isActive || isPrimaryAction ? 'text-primary' : ''}`} />
-                            <span className="flex-1">{item.title}</span>
-                            {item.badge && item.badge > 0 && (
-                              <span className={`ml-auto min-w-[18px] h-[18px] rounded-full ${item.badgeColor || 'bg-destructive'} text-white text-[9px] font-mono font-bold flex items-center justify-center px-1.5 shadow-sm`}>
-                                {item.badge > 99 ? '99+' : item.badge}
-                              </span>
-                            )}
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      );
-                    })}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
+                  <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
+                </summary>
+                <SidebarGroup className="pt-0">
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {visibleItems.map((item, itemIndex) => {
+                        const isActive = location.pathname === item.path;
+                        const isPrimaryAction = itemIndex === 0;
+                        return (
+                          <SidebarMenuItem key={item.path}>
+                            <SidebarMenuButton
+                              onClick={() => navigate(item.path)}
+                              isActive={isActive}
+                              className={`w-full min-h-10 justify-start text-xs rounded-xl transition-all duration-150 ${isPrimaryAction ? "mt-0.5" : "ml-3 w-[calc(100%-0.75rem)]"} ${
+                                isActive
+                                  ? "bg-sidebar-primary/15 text-sidebar-primary border-l-2 border-sidebar-primary font-semibold"
+                                  : isPrimaryAction
+                                    ? "text-sidebar-foreground font-semibold hover:text-sidebar-foreground hover:bg-sidebar-accent border-l-2 border-transparent"
+                                    : "text-sidebar-foreground/65 hover:text-sidebar-foreground hover:bg-sidebar-accent border-l-2 border-sidebar-border/40"
+                              }`}
+                            >
+                              <item.icon
+                                className={`mr-2 h-3.5 w-3.5 ${isActive || isPrimaryAction ? "text-sidebar-primary" : ""}`}
+                              />
+                              <span className="flex-1">{item.title}</span>
+                              {item.badge && item.badge > 0 && (
+                                <span
+                                  className={`ml-auto min-w-[18px] h-[18px] rounded-full ${item.badgeColor || "bg-destructive"} text-white text-[9px] font-mono font-bold flex items-center justify-center px-1.5 shadow-sm`}
+                                >
+                                  {item.badge > 99 ? "99+" : item.badge}
+                                </span>
+                              )}
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        );
+                      })}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              </details>
             );
           })}
       </SidebarContent>
@@ -324,11 +561,19 @@ const { signOut, user } = useAuth();
               {inicial}
             </div>
             <div className="min-w-0">
-              <div className="text-[11px] font-semibold text-sidebar-foreground truncate">{nomeUsuario}</div>
-              <div className="text-[8px] text-primary/60 font-mono tracking-wider uppercase">{roleLabel} · NINE LIVING</div>
+              <div className="text-[11px] font-semibold text-sidebar-foreground truncate">
+                {nomeUsuario}
+              </div>
+              <div className="text-[8px] text-primary/60 font-mono tracking-wider uppercase">
+                {roleLabel} · NINE LIVING
+              </div>
             </div>
           </div>
-          <button onClick={() => signOut()} className="p-1.5 rounded-md hover:bg-sidebar-accent text-sidebar-foreground/50 hover:text-primary transition-colors shrink-0" title="Sair">
+          <button
+            onClick={() => signOut()}
+            className="p-1.5 rounded-md hover:bg-sidebar-accent text-sidebar-foreground/50 hover:text-primary transition-colors shrink-0"
+            title="Sair"
+          >
             <LogOut className="w-4 h-4" />
           </button>
         </div>

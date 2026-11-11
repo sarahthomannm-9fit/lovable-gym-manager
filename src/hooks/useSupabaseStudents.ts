@@ -3,6 +3,7 @@ import { useTenantGuard } from './useTenantGuard';
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import { useToast } from '@/hooks/use-toast';
 
 export interface SupabaseStudent {
@@ -15,7 +16,7 @@ export interface SupabaseStudent {
   data_nascimento?: string;
   tipo?: 'presencial' | 'consultoria';
   status?: string;
-  lifecycle_status?: string;
+  lifecycle_status?: Database["public"]["Tables"]["alunos"]["Row"]["lifecycle_status"];
   plano_id?: string;
   data_matricula?: string;
   valor_mensalidade?: number;

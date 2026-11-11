@@ -1,3 +1,4 @@
+import { decideTriage } from '../_shared/triagem.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 const corsHeaders = {
@@ -32,6 +33,18 @@ Deno.serve(async (req) => {
     .maybeSingle();
   if (error) return json({ error: 'Falha ao consultar questionário' }, 500);
   if (!data) return json({ error: 'Link inválido ou expirado' }, 404);
+  const processTriage = async (status: string) => {
+    try {
+      if (await decideTriage(db, data.id, Deno.env.get('LOVABLE_API_KEY'))) return json({ status });
+    } catch {
+      // The saved answers can be processed again using the same token.
+    }
+    return json({ error: 'Questionário salvo. Tente novamente para concluir a triagem.' }, 503);
+  };
+  if (data.status === 'preenchido') {
+    if (req.method === 'POST') return processTriage('done');
+    return processTriage('already');
+  }
   if (data.status !== 'pendente') return json({ status: 'already' });
 
   if (req.method === 'GET') {
@@ -51,20 +64,20 @@ Deno.serve(async (req) => {
     return json({ error: 'Informações adicionais inválidas' }, 400);
   }
   const respostas = {
+    triagem_portaria: true,
     par_q: answers.par_q.map((entry: { pergunta?: string; resposta: string }) => ({
       pergunta: String(entry.pergunta || '').slice(0, 500),
       resposta: entry.resposta,
     })),
     ...Object.fromEntries(extras.map((field) => [field, answers[field]])),
   };
-  const { data: saved, error: saveError } = await db.from('anamnese_respostas')
+  const { error: saveError } = await db.from('anamnese_respostas')
     .update({ respostas, status: 'preenchido', preenchido_em: new Date().toISOString() })
     .eq('id', data.id)
     .eq('status', 'pendente')
     .select('id')
     .maybeSingle();
   if (saveError) return json({ error: 'Falha ao salvar questionário' }, 500);
-  if (!saved) return json({ status: 'already' }, 409);
-  return json({ status: 'done' });
+  return processTriage('done');
 });
 

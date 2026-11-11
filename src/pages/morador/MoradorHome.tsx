@@ -1,642 +1,1271 @@
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
-import { SupportTickets } from '@/components/SupportTickets';
-import { useEffect, useState } from 'react';
-import { PersonaLayout } from '@/layouts/PersonaLayout';
-import { supabase } from '@/integrations/supabase/client';
-import { localDate, safeVideoUrl } from '@/lib/workout';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ArrowUpRight } from "lucide-react";
+import { PageIntro, SectionHeading } from "@/components/visual/LivingIdentity";
+import { FitnessInfrastructure } from "@/components/FitnessInfrastructure";
 import {
-  Calendar, CreditCard, Activity, Bell, CheckCircle2,
-  Dumbbell, Heart, Sparkles, MapPin, Clock, PlayCircle,
-  MessageCircle, QrCode, TrendingUp, TrendingDown,
-} from 'lucide-react';
-import { toast } from 'sonner';
-import { useAuth } from '@/contexts/AuthContext';
-import { useOperationalContext } from '@/hooks/useOperationalContext';
-import { useAlunoVinculo } from '@/hooks/useAlunoVinculo';
-import { ProximoEventoCard, type EventoCondominio } from '@/components/ProximoEventoCard';
+  WorkoutExecutionCard,
+  type ExerciseExecution,
+} from "@/components/morador/WorkoutExecutionCard";
+import { useResidentDraftGuard } from "@/hooks/useResidentDraftGuard";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { PersonaLayout } from "@/layouts/PersonaLayout";
+import { ResidentFitnessStatus } from "./ResidentFitnessStatus";
+import { SupportTickets } from "@/components/SupportTickets";
+import { useAlunoVinculo } from "@/hooks/useAlunoVinculo";
+import { supabase } from "@/integrations/supabase/client";
+import { localDate, validSessionProgress } from "@/lib/workout";
+import { monthBounds, paymentPending, residentDate } from "@/lib/resident";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
-
-const ACCENT = '#2563EB';
-
-function saudacao() {
-  const h = new Date().getHours();
-  if (h < 12) return { text: 'Bom dia', emoji: '🌷' };
-  if (h < 18) return { text: 'Boa tarde', emoji: '☀️' };
-  return { text: 'Boa noite', emoji: '🌙' };
-}
-
-function dataExtenso() {
-  return new Date().toLocaleDateString('pt-BR', {
-    weekday: 'long', day: 'numeric', month: 'long',
-  });
-}
-
-export default function MoradorHome() {
-  const { user } = useAuth();
-  const { isAdmin } = useOperationalContext();
-  const [tab, setTab] = useState('hoje');
-  const { aluno: vinculo, loading: vinculoLoading } = useAlunoVinculo();
-
-  const [ready, setReady] = useState(false);
-  const [aluno, setAluno] = useState<any>(null);
-  const [proximas, setProximas] = useState<any[]>([]);
-  const [eventos, setEventos] = useState<EventoCondominio[]>([]);
-  const [pagamentos, setPagamentos] = useState<any[]>([]);
-  const [presencas, setPresencas] = useState(0);
-  const [presencasMesAnterior, setPresencasMesAnterior] = useState<number | null>(null);
-  const [notifs, setNotifs] = useState<any[]>([]);
-  const [readAnnouncements,setReadAnnouncements]=useState<string[]>([]);
-  const [announcements, setAnnouncements] = useState<any[]>([]);
-  const [treinoAtivo, setTreinoAtivo] = useState<any>(null);
-  const [exerciciosHoje, setExerciciosHoje] = useState<any[]>([]);
-  const [checkinFeito, setCheckinFeito] = useState(false);
-  const [salvando, setSalvando] = useState(false);
-  const [sessao, setSessao] = useState<any>(null);
-  const [treinoErro, setTreinoErro] = useState('');
-  const [workoutNotice,setWorkoutNotice]=useState('');
-  const [feedbackTreino, setFeedbackTreino] = useState('');
-  const [supportPhone, setSupportPhone] = useState('');
-  const [registrations, setRegistrations] = useState<Record<string,string>>({});
-  const [registering, setRegistering] = useState<string|null>(null);
-  const [progress, setProgress] = useState<Record<string,{completed:boolean;carga:string}>>({});
-
-  useEffect(() => {
-    if (!user || vinculoLoading) return;
-    let mounted = true;
-    setReady(false);
-    (async () => {
-      let al: any = null;
-      if (vinculo?.id) {
-        const { data: a } = await supabase.from('alunos')
-          .select('id, nome, status, plano_id, valor_mensalidade, data_matricula, organization_id, notifications_enabled')
-          .eq('id', vinculo.id).maybeSingle();
-        al = a;
-      }
-
-      if (!mounted) return;
-      setAluno(al);
-
-
-      const hoje = localDate();
-      const proximaSemana = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
-      const { data: aulas } = await supabase.from('aulas')
-        .select('id, nome, data_aula, horario_inicio, capacidade_maxima, inscritos_atual, modalidade')
-        .eq('organization_id', al?.organization_id || '00000000-0000-0000-0000-000000000000')
-        .neq('status', 'cancelada').gte('data_aula', hoje).lte('data_aula', proximaSemana)
-        .order('data_aula').order('horario_inicio').limit(10);
-      if (!mounted) return;
-      setProximas(aulas || []);
-
-      setSupportPhone('');
-      if (al?.organization_id) {
-        const { data: organization } = await supabase.from('organizations').select('operational_profile').eq('id', al.organization_id).maybeSingle();
-        const phone = String((organization?.operational_profile as Record<string, unknown>)?.support_phone || '').replace(/\D/g, '');
-        if (mounted && phone.length >= 10 && phone.length <= 15) setSupportPhone(phone);
-        const { data: ev } = await supabase.from('eventos_condominio')
-          .select('id, nome, data_evento, horario_inicio, horario_fim, local')
-          .eq('organization_id', al.organization_id).eq('ativo', true).eq('status', 'publicado')
-          .gte('data_evento', hoje).order('data_evento').limit(3);
-        if (mounted) { setEventos(ev || []); const { data: announcementsData } = await (supabase as any).rpc('resident_announcements', { p_aluno_id: al.id }); setAnnouncements((announcementsData || []).slice(0, 5)); const {data:reads,error:readError}=await (supabase as any).from('organization_announcement_reads').select('announcement_id').eq('aluno_id',al.id).eq('organization_id',al.organization_id);if(!readError&&mounted)setReadAnnouncements((reads||[]).map((r:any)=>r.announcement_id)); }
-      }
-
-      if (al?.id) {
-        const { data: memberships } = await supabase.from('aulas_inscritos').select('aula_id,status').eq('aluno_id',al.id);
-        if (mounted) setRegistrations(Object.fromEntries((memberships || []).map(item => [item.aula_id,item.status])));
-        const { data: pgs } = await supabase.from('pagamentos')
-          .select('id, valor, data_vencimento, data_pagamento, status, referencia_mes')
-          .eq('aluno_id', al.id).order('data_vencimento', { ascending: false }).limit(8);
-        if (!mounted) return;
-        setPagamentos(pgs || []);
-
-        const agora = new Date();
-        const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1).toISOString().slice(0, 10);
-        const inicioMesAnterior = new Date(agora.getFullYear(), agora.getMonth() - 1, 1).toISOString().slice(0, 10);
-        const fimMesAnterior = new Date(agora.getFullYear(), agora.getMonth(), 0).toISOString().slice(0, 10);
-
-        const [{ count: countAtual }, { count: countAnterior }] = await Promise.all([
-          supabase.from('checkins').select('id', { count: 'exact', head: true })
-            .eq('aluno_id', al.id).gte('data_checkin', inicioMes),
-          supabase.from('checkins').select('id', { count: 'exact', head: true })
-            .eq('aluno_id', al.id).gte('data_checkin', inicioMesAnterior).lte('data_checkin', fimMesAnterior),
-        ]);
-        if (!mounted) return;
-        setPresencas(countAtual || 0);
-        // Só mostramos a comparação percentual se o aluno já treinava no mês anterior —
-        // um aluno novo (0 presenças no mês passado) não tem uma base real de comparação,
-        // e "+∞%" ou "0 → N" não é uma informação honesta de evolução.
-        setPresencasMesAnterior(countAnterior && countAnterior > 0 ? countAnterior : null);
-
-        // Check-in de hoje
-        const { data: ck } = await supabase.from('checkins')
-          .select('id').eq('aluno_id', al.id).eq('data_checkin', hoje).maybeSingle();
-        setCheckinFeito(!!ck);
-
-        // A mesma função do servidor resolve vigência, plano, semana, dia e sessão.
-        const { data: workout, error: workoutError } = await (supabase as any).rpc('student_workout') as { data: any; error: any };
-        if (!mounted) return;
-        if (workoutError) {
-          setTreinoErro('Não foi possível carregar o treino de hoje.');
-          setTreinoAtivo(null); setExerciciosHoje([]); setSessao(null);
-        } else {
-          setTreinoErro('');setWorkoutNotice(workout?.reason || '');
-          setTreinoAtivo(workout?.treino || null);
-          setExerciciosHoje(workout?.exercicios || []);
-          setSessao(workout?.session || null);
-          setProgress(workout?.session?.progress || {});
-          setFeedbackTreino(workout?.session?.feedback || '');
-        }
-      }
-
-      let nf: any[] | null = [];
-      if (al?.id && al.notifications_enabled !== false) {
-        const { data } = await supabase.from('notificacoes')
-          .select('id, titulo, mensagem, created_at, prioridade, status')
-          .eq('destinatario_id', al.id)
-          .order('created_at', { ascending: false }).limit(6);
-        nf = data;
-      }
-      if (!mounted) return;
-      setNotifs(nf || []);
-      setReady(true);
-    })().catch(() => { if (mounted) setReady(true); });
-    return () => { mounted = false; };
-  }, [user?.id, vinculo?.id, vinculoLoading, isAdmin]);
-
-  const markAnnouncement = async (id:string) => {
-    if(!aluno?.id)return;
-    const {error}=await (supabase as any).rpc('mark_announcement_read',{p_id:id,p_aluno:aluno.id});
-    if(error)toast.error('Não foi possível registrar a leitura.');else setReadAnnouncements(current=>current.includes(id)?current:[...current,id]);
-  };
-
-  const markRead = async (id: string) => {
-    const { error } = await supabase.rpc('read_resident_notification', { p_id: id });
-    if(error)toast.error(error.message);else setNotifs(current=>current.map(n=>n.id===id?{...n,status:'lida'}:n));
-  };
-
-  const inscrever = async (aulaId: string, nome: string) => {
-    if (!aluno?.id || registering) return;
-    const enrolled = ['inscrito','presente'].includes(registrations[aulaId]);
-    if (enrolled && !confirm('Cancelar inscrição em ' + nome + '?')) return;
-    setRegistering(aulaId);
-    try {
-      const { data, error } = await (supabase as any).rpc('set_class_registration',{p_aula_id:aulaId,p_aluno_id:aluno.id,p_register:!enrolled});
-      if (error) throw error;
-      setRegistrations(current => ({...current,[aulaId]:data}));
-      const { data: updated } = await supabase.from('aulas').select('inscritos_atual').eq('id',aulaId).single();
-      if (updated) setProximas(current => current.map(a => a.id===aulaId?{...a,inscritos_atual:updated.inscritos_atual}:a));
-      toast.success(enrolled?'Inscrição cancelada.':'Inscrição confirmada.');
-    } catch(e) { toast.error((e as Error).message || 'Falha ao atualizar inscrição.'); }
-    finally { setRegistering(null); }
-  };
-
-  const fazerCheckin = async () => {
-    if (!aluno?.id) return toast.error('Aluno não vinculado');
-    setSalvando(true);
-    const { error } = await (supabase as any).rpc('record_daily_checkin', {
-      p_aluno_id: aluno.id, p_date: localDate(),
-    });
-    setSalvando(false);
-    if (error) toast.error('Falha no check-in');
-    else { setCheckinFeito(true); toast.success('Check-in registrado! Bom treino 💪'); setPresencas(p => p + 1); }
-  };
-
-  const atualizarSessao = async (action: 'start' | 'pause' | 'resume' | 'finish', sessionProgress = progress, feedback = sessao?.feedback || '') => {
-    if (!treinoAtivo || salvando) return;
-    setSalvando(true);
-    const { data, error } = await (supabase as any).rpc('save_workout_session', {
-      p_treino_id: treinoAtivo.id, p_action: action, p_progress: sessionProgress, p_feedback: feedback,
-    });
-    setSalvando(false);
-    if (error) toast.error(error.message || 'Falha ao registrar sessão');
-    else { setSessao(data); if (action === 'finish') toast.success('Treino concluído! Parabéns 🎉'); }
-  };
-
-  const iniciarTreino = () => {
-    setTab('treino');
-    if (sessao?.status !== 'em_andamento' && sessao?.status !== 'concluido') void atualizarSessao(sessao?.status === 'pausado' ? 'resume' : 'start');
-  };
-  const concluirTreino = () => {
-    if (!exerciciosHoje.length || exerciciosHoje.some(ex => !progress[ex.id]?.completed)) return toast.error('Marque os exercícios realizados antes de concluir.');
-    return atualizarSessao('finish', progress, feedbackTreino);
-  };
-
-  const s = saudacao();
-  const nomeCurto = aluno?.nome?.split(' ')[0] || '';
-  const proxAula = proximas[0];
-  const pgPendentes = pagamentos.filter(p => p.status !== 'pago').length;
-  const variacaoPercentual = presencasMesAnterior
-    ? Math.round(((presencas - presencasMesAnterior) / presencasMesAnterior) * 100)
-    : null;
-
-  if (!ready) {
-    return (
-      <PersonaLayout title="Meu painel" subtitle="Área do aluno" accent={ACCENT}>
-        <div className="min-h-[320px] flex items-center justify-center text-sm text-muted-foreground">Carregando…</div>
-      </PersonaLayout>
-    );
-  }
-
-  if (!aluno) {
-    return (
-      <PersonaLayout title="Meu painel" subtitle="Área do aluno" accent={ACCENT}>
-        <Card className="bg-card/60 border-border/40">
-          <CardContent className="p-5 text-sm text-muted-foreground">
-            Nenhum aluno vinculado a este e-mail. Peça ao administrador para associar seu cadastro.
-          </CardContent>
-        </Card>
-      </PersonaLayout>
-    );
-  }
-
+type Progress = Record<string, ExerciseExecution>;
+type BlockState = { loading: boolean; error: string };
+const initialBlock = { loading: true, error: "" };
+function Panel({
+  title,
+  children,
+  className,
+}: {
+  title: string;
+  children: ReactNode;
+  className?: string;
+}) {
   return (
-    <PersonaLayout title="Meu painel" subtitle="Área do aluno" accent={ACCENT}>
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="mb-6">
-          <TabsTrigger value="hoje" className="text-base px-6">Hoje</TabsTrigger>
-          <TabsTrigger value="treino">Meu treino</TabsTrigger>
-          <TabsTrigger value="aulas">Aulas</TabsTrigger>
-          <TabsTrigger value="suporte">Suporte</TabsTrigger>
-          <TabsTrigger value="mais">Mais</TabsTrigger><a href="/morador/operacao" className="ml-2 inline-flex h-9 items-center rounded-md bg-primary px-3 text-sm text-primary-foreground">Reservas e serviços</a>
-        </TabsList>
-
-        {/* HOJE — foco em simplicidade sênior */}
-        <TabsContent value="hoje" className="space-y-6">
-          <div>
-            <h1 className="text-3xl font-semibold mb-1">
-              {s.text}, {nomeCurto} {s.emoji}
-            </h1>
-            <p className="text-base text-muted-foreground capitalize">{dataExtenso()}</p>
-          </div>
-
-          {/* Bloco principal: Hoje você pode... */}
-          <div>
-            <h2 className="text-sm uppercase tracking-wider text-muted-foreground mb-3">
-              Hoje você pode…
-            </h2>
-            <div className="space-y-3">
-              {/* Treino */}
-              {treinoAtivo && (
-                <Card className="bg-gradient-to-br from-primary/10 to-transparent border-primary/30">
-                  <CardContent className="p-5 flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-primary/20 flex items-center justify-center shrink-0">
-                      <Dumbbell className="w-7 h-7 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-lg font-semibold">Fazer seu treino</p>
-                      <p className="text-sm text-muted-foreground truncate">{treinoAtivo.descricao || 'Plano personalizado'}</p>
-                    </div>
-                    <Button size="lg" onClick={iniciarTreino} disabled={salvando || sessao?.status === 'concluido'}
-                            style={{ backgroundColor: ACCENT, color: '#FFFFFF' }}
-                            className="hover:opacity-90 shrink-0 text-base px-6 h-12">
-                      <PlayCircle className="w-5 h-5 mr-1.5" /> {sessao?.status === 'pausado' ? 'Retomar' : sessao?.status === 'em_andamento' ? 'Em andamento' : 'Começar'}
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Aula do dia */}
-              {proxAula && proxAula.data_aula === localDate() && (
-                <Card className="bg-card/60 border-border/40">
-                  <CardContent className="p-5 flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-blue-500/15 flex items-center justify-center shrink-0">
-                      <Calendar className="w-7 h-7 text-blue-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-lg font-semibold truncate">{proxAula.nome}</p>
-                      <p className="text-sm text-muted-foreground">
-                        às {proxAula.horario_inicio?.slice(0, 5)}
-                        {proxAula.modalidade && ` · ${proxAula.modalidade}`}
-                      </p>
-                    </div>
-                    <Button size="lg" variant="outline" onClick={() => inscrever(proxAula.id, proxAula.nome)} disabled={!!registering || registrations[proxAula.id]==='presente'}
-                            className="shrink-0 text-base h-12">
-                      {registrations[proxAula.id]==='presente'?'Presença registrada':registrations[proxAula.id]==='inscrito'?'Cancelar inscrição':'Participar'}
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Check-in */}
-              <Card className={`${checkinFeito ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-card/60 border-border/40'}`}>
-                <CardContent className="p-5 flex items-center gap-4">
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${checkinFeito ? 'bg-emerald-500/20' : 'bg-amber-500/15'}`}>
-                    {checkinFeito ? <Heart className="w-7 h-7 text-emerald-400" /> : <QrCode className="w-7 h-7 text-amber-400" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-lg font-semibold">
-                      {checkinFeito ? 'Presença registrada hoje ✓' : 'Fazer check-in de hoje'}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {checkinFeito ? 'Continue com essa constância!' : 'Confirme que você veio treinar'}
-                    </p>
-                  </div>
-                  {!checkinFeito && (
-                    <Button size="lg" onClick={fazerCheckin} disabled={salvando}
-                            className="shrink-0 text-base h-12 bg-amber-500 hover:bg-amber-600 text-black">
-                      <CheckCircle2 className="w-5 h-5 mr-1.5" /> Check-in
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          {/* Sua evolução */}
-          <div>
-            <h2 className="text-sm uppercase tracking-wider text-muted-foreground mb-3">
-              Sua evolução
-            </h2>
-            <Card className="bg-card/60 border-border/40">
-              <CardContent className="p-5 flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-3xl font-bold">{presencas}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {presencas === 1 ? 'treino' : 'treinos'} este mês
-                  </p>
-                </div>
-                {variacaoPercentual !== null && (
-                  <div className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold ${
-                    variacaoPercentual >= 0
-                      ? 'bg-emerald-500/15 text-emerald-400'
-                      : 'bg-amber-500/15 text-amber-400'
-                  }`}>
-                    {variacaoPercentual >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                    {variacaoPercentual >= 0 ? '+' : ''}{variacaoPercentual}%
-                    <span className="font-normal text-xs opacity-80">vs. mês anterior</span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Próximo evento do condomínio */}
-          {announcements.length > 0 && <div><h2 className="text-sm uppercase tracking-wider text-muted-foreground mb-3">Comunicados do condomínio</h2><div className="space-y-2">{announcements.map((item: any) => <Card key={item.id} className="bg-card/60 border-border/40"><CardContent className="p-4"><p className="font-medium">{item.titulo}</p><p className="text-sm text-muted-foreground mt-1">{item.mensagem}</p>{readAnnouncements.includes(item.id)?<p className="mt-2 text-xs text-muted-foreground">Leitura registrada</p>:<Button size="sm" variant="outline" onClick={()=>markAnnouncement(item.id)}>Marcar como lido</Button>}</CardContent></Card>)}</div></div>}
-
-          {eventos.length > 0 && (
-            <div>
-              <h2 className="text-sm uppercase tracking-wider text-muted-foreground mb-3">
-                Próximo evento
-              </h2>
-              <ProximoEventoCard eventos={eventos} accent={ACCENT} />
-            </div>
-          )}
-
-          {/* Próximas atividades do condomínio */}
-          {proximas.length > 0 && (
-            <div>
-              <h2 className="text-sm uppercase tracking-wider text-muted-foreground mb-3">
-                Próximas atividades no condomínio
-              </h2>
-              <div className="space-y-2">
-                {proximas.slice(0, 2).map(a => (
-                  <Card key={a.id} className="bg-card/60 border-border/40">
-                    <CardContent className="p-4 flex flex-wrap items-center gap-3">
-                      <Clock className="w-5 h-5 text-muted-foreground shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{a.nome}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {new Date(a.data_aula).toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric' })}
-                          {' · '}{a.horario_inicio?.slice(0, 5)}
-                          {a.modalidade && <> · <MapPin className="w-3 h-3 inline" /> {a.modalidade}</>}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Frase motivacional */}
-          {presencas > 0 && (
-            <Card className="bg-card/40 border-border/30">
-              <CardContent className="p-5 flex items-center gap-3">
-                <Sparkles className="w-5 h-5 text-primary shrink-0" />
-                <p className="text-sm text-muted-foreground">
-                  Você treinou <span className="text-foreground font-semibold">{presencas} {presencas === 1 ? 'vez' : 'vezes'}</span> este mês.
-                  {presencas >= 8 && ' Que consistência incrível!'}
-                  {presencas >= 3 && presencas < 8 && ' Continue assim!'}
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        {/* MEU TREINO */}
-        <TabsContent value="treino" className="space-y-4">
-          {treinoErro ? (
-            <Card className="border-destructive/40"><CardContent className="p-6 text-sm text-destructive">{treinoErro}<Button className="ml-3" size="sm" variant="outline" onClick={() => window.location.reload()}>Tentar novamente</Button></CardContent></Card>
-          ) : !treinoAtivo ? (
-            <Card className="bg-card/60 border-border/40">
-              <CardContent className="p-8 text-center space-y-3">
-                <Dumbbell className="w-10 h-10 mx-auto text-muted-foreground/50" />
-                <p className="font-medium">Nenhum treino ativo</p>
-                <p className="text-sm text-muted-foreground">
-                  {workoutNotice || 'Peça ao seu coach para preparar um plano personalizado.'}
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <>
-              <Card className="bg-gradient-to-br from-primary/10 to-transparent border-primary/30">
-                <CardContent className="p-5">
-                  <p className="text-xs uppercase tracking-wider text-primary mb-1">Seu plano</p>
-                  <h2 className="text-xl font-semibold mb-2">{treinoAtivo.descricao || 'Plano personalizado'}</h2>
-                  <p className="text-sm text-muted-foreground">
-                    De {new Date(treinoAtivo.data_inicio).toLocaleDateString('pt-BR')} até {new Date(treinoAtivo.data_fim).toLocaleDateString('pt-BR')}
-                  </p>
-                </CardContent>
-              </Card>
-
-              <h3 className="text-sm uppercase tracking-wider text-muted-foreground">Exercícios de hoje</h3>
-              {exerciciosHoje.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Sem exercícios programados para hoje. Aproveite para descansar 🌿</p>
-              ) : (
-                <div className="space-y-2">
-                  {exerciciosHoje.map(ex => (
-                    <Card key={ex.id} className="bg-card/60 border-border/40">
-                      <CardContent className="p-4 flex flex-wrap items-center gap-3">
-                        <Checkbox aria-label={'Concluir ' + ex.nome} disabled={salvando || !sessao || sessao.status==='concluido' || sessao.status==='pausado'} checked={!!progress[ex.id]?.completed} onCheckedChange={value=>setProgress(current=>({...current,[ex.id]:{completed:value===true,carga:current[ex.id]?.carga || String(ex.carga_kg || '')}}))}/>
-                        <Input type="number" min="0" step="0.5" className="w-24" aria-label={'Carga realizada em kg: ' + ex.nome} placeholder="kg" disabled={salvando || sessao?.status!=='em_andamento'} value={progress[ex.id]?.carga ?? ''} onChange={e=>setProgress(current=>({...current,[ex.id]:{completed:!!current[ex.id]?.completed,carga:e.target.value}}))}/>
-                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-mono text-sm shrink-0">
-                          {ex.ordem}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{ex.nome || 'Exercício'}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {ex.series} séries × {ex.repeticoes}
-                            {ex.carga_kg && ` · ${ex.carga_kg}kg`}
-                            {ex.descanso_seg && ` · descanso ${ex.descanso_seg}s`}
-                          </p>
-                        </div>
-                        {safeVideoUrl(ex.video_url) && (
-                          <Button size="sm" variant="ghost" asChild>
-                            <a href={safeVideoUrl(ex.video_url) || '#'} target="_blank" rel="noreferrer">
-                              <PlayCircle className="w-5 h-5" />
-                            </a>
-                          </Button>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-
-              {!sessao && <Button disabled={salvando} onClick={iniciarTreino}>Iniciar sessão</Button>}
-              {sessao?.status === 'pausado' && <Button disabled={salvando} onClick={iniciarTreino}>Retomar sessão</Button>}
-              {sessao?.status === 'em_andamento' && <Button variant="outline" disabled={salvando} onClick={() => atualizarSessao('start',progress,feedbackTreino)}>Salvar progresso</Button>}
-              {sessao?.status === 'em_andamento' && <Button size="lg" variant="outline" onClick={() => atualizarSessao('pause')} disabled={salvando} className="w-full h-12">Pausar treino</Button>}
-              <Textarea value={feedbackTreino} onChange={(e) => setFeedbackTreino(e.target.value)} placeholder="Como foi o treino? Dor, dificuldade ou observação (opcional)" className="min-h-20" />
-              <Button size="lg" onClick={sessao?.status === 'concluido' ? undefined : concluirTreino} disabled={salvando || sessao?.status === 'concluido'}
-                      className="w-full h-14 text-base"
-                      style={{ backgroundColor: ACCENT, color: '#000' }}>
-                <CheckCircle2 className="w-5 h-5 mr-2" /> {sessao?.status === 'concluido' ? 'Treino concluído hoje' : 'Concluir treino de hoje'}
-              </Button>
-            </>
-          )}
-        </TabsContent>
-
-        {/* AULAS */}
-        <TabsContent value="aulas">
-          {proximas.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhuma aula nos próximos dias.</p>
-          ) : (
-            <div className="space-y-2">
-              {proximas.map(a => (
-                <Card key={a.id} className="bg-card/60 border-border/40">
-                  <CardContent className="p-4 flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="font-medium truncate">{a.nome}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {a.data_aula} • {a.horario_inicio?.slice(0, 5)} • {a.inscritos_atual ?? 0}/{a.capacidade_maxima ?? '—'}
-                      </p>
-                    </div>
-                    <Button size="sm" onClick={() => inscrever(a.id, a.nome)} disabled={!!registering || registrations[a.id]==='presente'}
-                            style={{ backgroundColor: ACCENT, color: '#000' }}
-                            className="hover:opacity-90 shrink-0">
-                      {registrations[a.id]==='presente'?'Presença registrada':registrations[a.id]==='inscrito'?'Cancelar inscrição':'Inscrever'}
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="suporte" className="space-y-4">
-          {aluno?.organization_id && <SupportTickets orgId={aluno.organization_id} alunoId={aluno.id} />}
-          <Card className="bg-card/60 border-border/40">
-            <CardContent className="p-5 space-y-4">
-              <div className="flex items-start gap-3">
-                <div className="w-12 h-12 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                  <MessageCircle className="w-6 h-6" />
-                </div>
-                <div>
-                  <h2 className="font-semibold text-lg">Falar com o professor</h2>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Canal direto para dúvidas sobre treino, dor, ajuste de carga ou plantão do condomínio.
-                  </p>
-                </div>
-              </div>
-              {supportPhone ? <Button asChild variant="premium" className="w-full">
-                <a href={`https://wa.me/${supportPhone}?text=${encodeURIComponent('Olá, preciso de suporte no meu treino Nine Living.')}`} target="_blank" rel="noreferrer">
-                  <MessageCircle className="w-4 h-4" /> Falar com o responsável
-                </a>
-              </Button> : <p className="text-sm text-muted-foreground">Contato de suporte ainda não configurado. Solicite o contato ao síndico.</p>}
-            </CardContent>
-          </Card>
-
-          {notifs.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="text-sm uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                <Bell className="w-4 h-4" /> Comunicados recentes
-              </h3>
-              {notifs.slice(0, 3).map(n => (
-                <Card key={n.id} className="bg-card/60 border-border/40">
-                  <CardContent className="p-4">
-                    <p className="font-medium text-sm mb-1">{n.titulo}</p>
-                    <p className="text-sm text-muted-foreground">{n.mensagem}</p>{n.status!=='lida'&&<Button size="sm" variant="outline" onClick={()=>markRead(n.id)}>Marcar como lida</Button>}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        {/* MAIS: pagamentos + notificações */}
-        <TabsContent value="mais" className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <Mini icon={Activity} label="Presenças no mês" value={presencas} />
-            <Mini icon={CreditCard} label="Pagamentos" value={pgPendentes ? `${pgPendentes} pendente${pgPendentes>1?'s':''}` : 'Em dia'}
-                  valueCls={pgPendentes ? 'text-amber-400' : 'text-emerald-400'} />
-          </div>
-
-          <h3 className="text-sm uppercase tracking-wider text-muted-foreground">Pagamentos</h3>
-          <Card className="bg-card/60 border-border/40">
-            <CardContent className="p-0">
-              {pagamentos.length === 0 ? (
-                <p className="text-sm text-muted-foreground p-5">Sem pagamentos registrados.</p>
-              ) : (
-                <ul className="divide-y divide-border/30">
-                  {pagamentos.map(p => (
-                    <li key={p.id} className="p-4 flex items-center justify-between">
-                      <div>
-                        <div className="text-sm font-medium">R$ {Number(p.valor).toFixed(2)}</div>
-                        <div className="text-xs text-muted-foreground">
-                          Venc. {p.data_vencimento} {p.data_pagamento && `• Pago em ${p.data_pagamento}`}
-                        </div>
-                      </div>
-                      <Badge variant="outline" className={
-                        p.status === 'pago' ? 'border-emerald-500/40 text-emerald-400' :
-                        p.status === 'atrasado' ? 'border-amber-500/40 text-amber-400' :
-                        'border-border'
-                      }>{p.status}</Badge>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-
-          {notifs.length > 0 && (
-            <>
-              <h3 className="text-sm uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                <Bell className="w-4 h-4" /> Comunicados
-              </h3>
-              <div className="space-y-2">
-                {notifs.map(n => (
-                  <Card key={n.id} className="bg-card/60 border-border/40">
-                    <CardContent className="p-4">
-                      <p className="font-medium text-sm mb-1">{n.titulo}</p>
-                      <p className="text-sm text-muted-foreground">{n.mensagem}</p>{n.status!=='lida'&&<Button size="sm" variant="outline" onClick={()=>markRead(n.id)}>Marcar como lida</Button>}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </>
-          )}
-        </TabsContent>
-      </Tabs>
-    </PersonaLayout>
-  );
-}
-
-function Mini({ icon: Icon, label, value, valueCls }: any) {
-  return (
-    <Card className="bg-card/60 border-border/40">
-      <CardContent className="p-4">
-        <div className="flex items-center gap-2 mb-1">
-          <Icon className="w-3.5 h-3.5 text-muted-foreground" />
-          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</span>
-        </div>
-        <div className={`text-lg font-semibold ${valueCls || ''}`}>{value}</div>
+    <Card className={className}>
+      <CardContent className="space-y-4 p-5 sm:p-6">
+        <h2 className="nl-card-title">{title}</h2>
+        {children}
       </CardContent>
     </Card>
+  );
+}
+export default function MoradorHome() {
+  const {
+    aluno,
+    loading: linking,
+    error: linkError,
+    retry,
+  } = useAlunoVinculo();
+  const [params, setParams] = useSearchParams();
+  const requested = params.get("tab") || "hoje";
+  const tab = ["hoje", "treino", "mais", "aulas", "suporte"].includes(requested)
+    ? requested
+    : "hoje";
+  const [today, setToday] = useState(localDate());
+  useEffect(() => {
+    const timer = window.setInterval(() => setToday(localDate()), 30000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const [revision, setRevision] = useState(0);
+  const [blocks, setBlocks] = useState<Record<string, BlockState>>({});
+  const [workout, setWorkout] = useState<any>(null),
+    [session, setSession] = useState<any>(null);
+  const [progress, setProgress] = useState<Progress>({}),
+    [feedback, setFeedback] = useState("");
+  const [saved, setSaved] = useState(""),
+    [saveError, setSaveError] = useState(""),
+    [busy, setBusy] = useState(false);
+  const writing = useRef(false),
+    live = useRef(true);
+  const [classes, setClasses] = useState<any[]>([]),
+    [registrations, setRegistrations] = useState<Record<string, string>>({});
+  const [payments, setPayments] = useState<any[]>([]),
+    [sessions, setSessions] = useState<any[]>([]),
+    [presence, setPresence] = useState<number | null>(null),
+    [checked, setChecked] = useState(false);
+  const [announcements, setAnnouncements] = useState<any[]>([]),
+    [reads, setReads] = useState<string[]>([]),
+    [notifications, setNotifications] = useState<any[]>([]);
+  const [organization, setOrganization] = useState<any>(null);
+  const snapshot = JSON.stringify({ progress, feedback });
+  const dirty = Boolean(
+    session?.status === "em_andamento" && saved && saved !== snapshot,
+  );
+  useEffect(() => {
+    live.current = true;
+    return () => {
+      live.current = false;
+    };
+  }, []);
+  const [supportDirty, setSupportDirty] = useState(false);
+  useResidentDraftGuard(dirty || supportDirty, supportDirty);
+  const [recovery, setRecovery] = useState<{
+    progress: Progress;
+    updated_at: string;
+  } | null>(null);
+  const recoveryChecked = useRef("");
+  useEffect(() => {
+    if (!session?.id || !workout?.treino?.id || !aluno?.id) return;
+    const key = "nine:execution:" + aluno.id + ":" + workout.treino.id;
+    if (recoveryChecked.current !== session.id) {
+      recoveryChecked.current = session.id;
+      try {
+        const value = JSON.parse(sessionStorage.getItem(key) || "null");
+        if (
+          value?.session_id === session.id &&
+          validSessionProgress(value.progress, workout.exercicios || []) &&
+          session.status !== "concluido"
+        )
+          setRecovery(value);
+      } catch {
+        /* Ignore invalid recovery. */
+      }
+    }
+    if (dirty)
+      try {
+        sessionStorage.setItem(
+          key,
+          JSON.stringify({
+            session_id: session.id,
+            updated_at: session.updated_at,
+            progress,
+          }),
+        );
+      } catch {
+        /* Current screen remains usable. */
+      }
+  }, [
+    session?.id,
+    session?.updated_at,
+    session?.status,
+    workout?.treino?.id,
+    aluno?.id,
+    dirty,
+    progress,
+  ]);
+
+  useEffect(() => {
+    if (!aluno?.id || !aluno.organization_id) return;
+    let current = true;
+    const db = supabase as any,
+      today = localDate(),
+      bounds = monthBounds(today);
+    setBlocks(
+      Object.fromEntries(
+        [
+          "workout",
+          "classes",
+          "payments",
+          "history",
+          "presence",
+          "organization",
+          "announcements",
+          "notifications",
+        ].map((key) => [key, initialBlock]),
+      ),
+    );
+    const run = async (key: string, load: () => Promise<void>) => {
+      try {
+        await load();
+        if (current)
+          setBlocks((old) => ({
+            ...old,
+            [key]: { loading: false, error: "" },
+          }));
+      } catch {
+        if (current)
+          setBlocks((old) => ({
+            ...old,
+            [key]: {
+              loading: false,
+              error: "Não foi possível consultar este bloco.",
+            },
+          }));
+      }
+    };
+    const result = async (query: any) => {
+      const response = await query;
+      if (response.error) throw response.error;
+      return response;
+    };
+    void Promise.all([
+      run("workout", async () => {
+        const { data } = await result(
+          db.rpc("resident_workout", { p_aluno: aluno.id }),
+        );
+        if (current) {
+          setWorkout(data);
+          setSession(data?.session || null);
+          setProgress(data?.session?.progress || {});
+          setFeedback(data?.session?.feedback || "");
+          setSaved(
+            JSON.stringify({
+              progress: data?.session?.progress || {},
+              feedback: data?.session?.feedback || "",
+            }),
+          );
+        }
+      }),
+      run("classes", async () => {
+        const [a, r] = await Promise.all([
+          result(
+            db
+              .from("aulas")
+              .select(
+                "id,nome,data_aula,horario_inicio,capacidade_maxima,inscritos_atual",
+              )
+              .eq("organization_id", aluno.organization_id)
+              .neq("status", "cancelada")
+              .gte("data_aula", today)
+              .order("data_aula")
+              .order("horario_inicio")
+              .limit(20),
+          ),
+          result(
+            db
+              .from("aulas_inscritos")
+              .select("aula_id,status")
+              .eq("aluno_id", aluno.id),
+          ),
+        ]);
+        if (current) {
+          setClasses(a.data || []);
+          setRegistrations(
+            Object.fromEntries(
+              (r.data || []).map((row: any) => [row.aula_id, row.status]),
+            ),
+          );
+        }
+      }),
+      run("payments", async () => {
+        const { data } = await result(
+          db
+            .from("pagamentos")
+            .select("id,valor,data_vencimento,status,referencia_mes")
+            .eq("aluno_id", aluno.id)
+            .order("data_vencimento", { ascending: false })
+            .limit(20),
+        );
+        if (current) setPayments(data || []);
+      }),
+      run("history", async () => {
+        const { data } = await result(
+          db
+            .from("workout_sessions")
+            .select("id,data,status,completion_kind,prescription,progress")
+            .eq("aluno_id", aluno.id)
+            .eq("status", "concluido")
+            .gte("data", bounds.start)
+            .lt("data", bounds.next)
+            .order("data", { ascending: false }),
+        );
+        if (current) setSessions(data || []);
+      }),
+      run("presence", async () => {
+        const [a, b] = await Promise.all([
+          result(
+            db
+              .from("checkins")
+              .select("id", { count: "exact", head: true })
+              .eq("aluno_id", aluno.id)
+              .gte("data_checkin", bounds.start)
+              .lt("data_checkin", bounds.next),
+          ),
+          result(
+            db
+              .from("checkins")
+              .select("id")
+              .eq("aluno_id", aluno.id)
+              .eq("data_checkin", today)
+              .maybeSingle(),
+          ),
+        ]);
+        if (current) {
+          setPresence(a.count);
+          setChecked(Boolean(b.data));
+        }
+      }),
+      run("organization", async () => {
+        const { data } = await result(
+          db
+            .from("organizations")
+            .select("nome,metadata,operational_profile")
+            .eq("id", aluno.organization_id)
+            .single(),
+        );
+        if (current) setOrganization(data);
+      }),
+      run("announcements", async () => {
+        const [a, r] = await Promise.all([
+          result(db.rpc("resident_announcements", { p_aluno_id: aluno.id })),
+          result(
+            db
+              .from("organization_announcement_reads")
+              .select("announcement_id")
+              .eq("aluno_id", aluno.id)
+              .eq("organization_id", aluno.organization_id),
+          ),
+        ]);
+        if (current) {
+          setAnnouncements((a.data || []).slice(0, 5));
+          setReads((r.data || []).map((row: any) => row.announcement_id));
+        }
+      }),
+      run("notifications", async () => {
+        const { data: profile } = await result(
+          db
+            .from("alunos")
+            .select("notifications_enabled")
+            .eq("id", aluno.id)
+            .single(),
+        );
+        const { data } =
+          profile?.notifications_enabled === false
+            ? { data: [] }
+            : await result(
+                db
+                  .from("notificacoes")
+                  .select("id,titulo,mensagem,status")
+                  .eq("destinatario_id", aluno.id)
+                  .order("created_at", { ascending: false })
+                  .limit(10),
+              );
+        if (current) setNotifications(data || []);
+      }),
+    ]);
+    return () => {
+      current = false;
+    };
+  }, [aluno?.id, aluno?.organization_id, revision]);
+  const refresh = () => {
+    if (
+      dirty &&
+      !confirm(
+        "Atualizar vai descartar as alterações de treino não salvas. Continuar?",
+      )
+    )
+      return;
+    setRevision((v) => v + 1);
+  };
+  const guard = (key: string, children: ReactNode) => {
+    const state = blocks[key] || initialBlock;
+    return state.loading ? (
+      <p role="status">Carregando…</p>
+    ) : state.error ? (
+      <div role="alert" className="space-y-2">
+        <p>{state.error}</p>
+        <Button variant="outline" onClick={refresh}>
+          Tentar novamente
+        </Button>
+      </div>
+    ) : (
+      children
+    );
+  };
+  const act = async (task: () => Promise<void>) => {
+    if (writing.current) return;
+    writing.current = true;
+    setBusy(true);
+    try {
+      await task();
+    } catch (e) {
+      if (live.current)
+        toast.error(
+          (e as Error).message || "Não foi possível concluir. Tente novamente.",
+        );
+    } finally {
+      writing.current = false;
+      if (live.current) setBusy(false);
+    }
+  };
+  const saveSession = (
+    action:
+      | "start"
+      | "save"
+      | "pause"
+      | "resume"
+      | "finish"
+      | "finish_partial"
+      | "discomfort",
+  ) =>
+    act(async () => {
+      if (!workout?.treino || !workout.exercicios?.length) return;
+      if (
+        action === "finish" &&
+        (session?.status !== "em_andamento" ||
+          workout.exercicios.some((ex: any) => !progress[ex.id]?.completed))
+      )
+        throw new Error(
+          "Inicie a sessão e marque os exercícios realizados antes de concluir.",
+        );
+      if (
+        Object.values(progress).some(
+          (row) =>
+            row.carga !== "" &&
+            (!Number.isFinite(Number(row.carga)) || Number(row.carga) < 0),
+        )
+      )
+        throw new Error("Informe cargas válidas, iguais ou maiores que zero.");
+      setSaveError("");
+      try {
+        const { data, error } = await (supabase as any).rpc(
+          "save_workout_journey",
+          {
+            p_treino_id: workout.treino.id,
+            p_action: action,
+            p_progress: progress,
+            p_feedback: feedback,
+            p_expected: session?.updated_at || null,
+          },
+        );
+        if (error || !data)
+          throw error || new Error("Resposta de sessão indisponível.");
+        if (!live.current) return;
+        setSession(data);
+        setProgress(data.progress || {});
+        setFeedback(data.feedback || "");
+        setSaved(
+          JSON.stringify({
+            progress: data.progress || {},
+            feedback: data.feedback || "",
+          }),
+        );
+        try {
+          sessionStorage.removeItem(
+            "nine:execution:" + aluno?.id + ":" + workout.treino.id,
+          );
+        } catch {
+          /* Optional browser recovery. */
+        }
+        if (action === "finish" || action === "finish_partial") {
+          setSessions((old) =>
+            old.some((s) => s.id === data.id)
+              ? old
+              : [
+                  {
+                    id: data.id,
+                    data: data.data,
+                    status: "concluido",
+                    completion_kind: data.completion_kind,
+                    prescription: data.prescription,
+                    progress: data.progress,
+                  },
+                  ...old,
+                ],
+          );
+          toast.success(
+            data.completion_kind === "partial"
+              ? "Sessão parcial encerrada e registrada."
+              : "Treino concluído e registrado.",
+          );
+        } else toast.success("Sessão salva.");
+      } catch (e) {
+        if (live.current)
+          setSaveError(
+            (e as Error).message ||
+              "Falha ao salvar. Suas alterações continuam nesta tela.",
+          );
+      }
+    });
+  const checkin = () =>
+    act(async () => {
+      const { error } = await (supabase as any).rpc("record_daily_checkin", {
+        p_aluno_id: aluno!.id,
+        p_date: localDate(),
+      });
+      if (error) throw error;
+      const { count, error: failure } = await supabase
+        .from("checkins")
+        .select("id", { count: "exact", head: true })
+        .eq("aluno_id", aluno!.id)
+        .gte("data_checkin", monthBounds(localDate()).start)
+        .lt("data_checkin", monthBounds(localDate()).next);
+      if (!live.current) return;
+      setChecked(true);
+      if (failure) {
+        setPresence(null);
+        setBlocks((old) => ({
+          ...old,
+          presence: {
+            loading: false,
+            error:
+              "Presença registrada. Não foi possível atualizar a contagem.",
+          },
+        }));
+      } else setPresence(count);
+      toast.success("Presença registrada.");
+    });
+  const register = (row: any) =>
+    act(async () => {
+      const enrolled = ["inscrito", "presente"].includes(registrations[row.id]);
+      if (enrolled && !confirm("Cancelar inscrição nesta aula?")) return;
+      const { data, error } = await (supabase as any).rpc(
+        "set_class_registration",
+        { p_aula_id: row.id, p_aluno_id: aluno!.id, p_register: !enrolled },
+      );
+      if (error) throw error;
+      if (live.current) setRegistrations((old) => ({ ...old, [row.id]: data }));
+      toast.success(
+        enrolled ? "Inscrição cancelada." : "Inscrição confirmada.",
+      );
+    });
+  const mark = (id: string, announcement: boolean) =>
+    act(async () => {
+      const { error } = announcement
+        ? await (supabase as any).rpc("mark_announcement_read", {
+            p_id: id,
+            p_aluno: aluno!.id,
+          })
+        : await supabase.rpc("read_resident_notification", { p_id: id });
+      if (error) throw error;
+      if (!live.current) return;
+      if (announcement) setReads((old) => [...old, id]);
+      else
+        setNotifications((old) =>
+          old.map((n) => (n.id === id ? { ...n, status: "lida" } : n)),
+        );
+    });
+  const exercises: any[] = workout?.exercicios || [];
+  const pending = payments.filter((p) => paymentPending(p.status)).length;
+  const phone = String(
+    organization?.operational_profile?.support_phone || "",
+  ).replace(/[^0-9]/g, "");
+  const hasPhone = phone.length >= 10 && phone.length <= 15;
+  const openTraining = () => {
+    setParams({ tab: "treino" });
+    if (exercises.length && (!session || session.status === "pausado"))
+      void saveSession(session ? "resume" : "start");
+  };
+  return (
+    <PersonaLayout
+      title={
+        tab === "treino"
+          ? "Meu treino"
+          : tab === "mais"
+            ? "Meu espaço"
+            : tab === "aulas"
+              ? "Aulas"
+              : tab === "suporte"
+                ? "Ajuda"
+                : "Meu dia"
+      }
+      subtitle="Seu treino e sua rotina no condomínio"
+    >
+      {linking ? (
+        <p role="status">Confirmando seu cadastro…</p>
+      ) : linkError ? (
+        <Panel title="Não foi possível confirmar seu cadastro">
+          <p role="alert">{linkError}</p>
+          <Button onClick={retry}>Tentar novamente</Button>
+          <Button variant="outline" asChild>
+            <Link to="/select-context">Selecionar condomínio</Link>
+          </Button>
+        </Panel>
+      ) : !aluno?.organization_id ? (
+        <Panel title="Confirme seu condomínio">
+          <p>
+            Selecione o condomínio correto. Se seu cadastro ainda não estiver
+            vinculado, peça apoio à administração.
+          </p>
+          <Button asChild>
+            <Link to="/select-context">Selecionar condomínio</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/entrada">Voltar à entrada</Link>
+          </Button>
+        </Panel>
+      ) : (
+        <div className="mx-auto max-w-3xl space-y-5">
+          <PageIntro
+            eyebrow={
+              tab === "hoje"
+                ? "Olá, " + (aluno.nome?.trim().split(" ")[0] || "bem-vindo")
+                : "Seu espaço de movimento"
+            }
+            title={
+              tab === "treino"
+                ? "Um movimento de cada vez."
+                : tab === "mais"
+                  ? "Viver bem, por perto."
+                  : tab === "aulas"
+                    ? "Encontre seu próximo encontro."
+                    : tab === "suporte"
+                      ? "Conte com a sua equipe."
+                      : "Seu próximo movimento."
+            }
+            description={
+              tab === "treino"
+                ? "Sua orientação está aqui. Acompanhe os exercícios e registre a sua evolução."
+                : tab === "hoje"
+                  ? "Treino, cuidado e bem-estar. Tudo a poucos passos de casa."
+                  : tab === "mais"
+                    ? "Sua academia, seus encontros e os detalhes que facilitam a rotina."
+                    : undefined
+            }
+            actions={
+              tab === "hoje" && workout?.treino && exercises.length > 0 ? (
+                <Button onClick={openTraining} disabled={busy}>
+                  Abrir meu treino <ArrowUpRight />
+                </Button>
+              ) : undefined
+            }
+            compact={tab !== "hoje"}
+            tone={tab === "hoje" ? "ink" : "paper"}
+          />
+          {tab === "treino" && session && exercises.length > 0 && (
+            <div className="nl-training-progress">
+              <span className="text-xs font-semibold">
+                {exercises.filter((e) => progress[e.id]?.completed).length} de{" "}
+                {exercises.length} exercícios
+              </span>
+              <div
+                className="nl-training-progress-track"
+                role="progressbar"
+                aria-label="Exercícios realizados"
+                aria-valuenow={
+                  exercises.filter((e) => progress[e.id]?.completed).length
+                }
+                aria-valuemin={0}
+                aria-valuemax={exercises.length}
+              >
+                <div
+                  className="nl-training-progress-fill"
+                  style={{
+                    width:
+                      (100 *
+                        exercises.filter((e) => progress[e.id]?.completed)
+                          .length) /
+                        exercises.length +
+                      "%",
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          {workout?.data && workout.data !== today && (
+            <p role="alert" className="rounded border p-4">
+              O dia mudou. Atualize para consultar a sessão de hoje. Salve ou
+              confira as alterações antes de sair.
+            </p>
+          )}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-muted-foreground">
+              {organization?.nome} · {residentDate(localDate())}
+            </p>
+            <Button variant="ghost" disabled={busy} onClick={refresh}>
+              Atualizar
+            </Button>
+          </div>
+          {tab === "hoje" && (
+            <div className="grid items-stretch gap-5 lg:grid-cols-[1.35fr_1fr]">
+              <div className="lg:col-span-2">
+                <SectionHeading
+                  eyebrow="Sua rotina, com intenção"
+                  title="Seu próximo passo"
+                />
+              </div>
+              <Panel
+                className="nl-resident-feature lg:row-span-2"
+                title={
+                  workout?.treino
+                    ? "Seu treino de hoje"
+                    : "Sua jornada de treino"
+                }
+              >
+                {guard(
+                  "workout",
+                  workout?.treino ? (
+                    <>
+                      <p>
+                        {workout.treino.descricao ||
+                          workout.treino.nome ||
+                          "Plano personalizado"}
+                      </p>
+                      <p className="text-muted-foreground">
+                        {session?.status === "concluido"
+                          ? session.completion_kind === "partial"
+                            ? "Sessão parcial encerrada. Seu registro está salvo."
+                            : "Treino concluído. Seu resultado está salvo."
+                          : !exercises.length
+                            ? "Hoje não há exercícios programados neste plano."
+                            : session?.status === "pausado"
+                              ? "Sua sessão está pausada. Retome quando estiver pronto."
+                              : session?.status === "em_andamento"
+                                ? "Sua sessão está em andamento."
+                                : "Seu plano está disponível para começar."}
+                      </p>
+                      <Button onClick={openTraining} disabled={busy}>
+                        {session?.status === "concluido"
+                          ? "Ver sessão registrada"
+                          : !exercises.length
+                            ? "Consultar meu plano"
+                            : session?.status
+                              ? "Continuar treino"
+                              : "Iniciar treino"}
+                      </Button>
+                    </>
+                  ) : (
+                    <ResidentFitnessStatus
+                      studentId={aluno.id}
+                      organizationId={aluno.organization_id}
+                      fallback={
+                        workout?.reason || "Consulte a situação do seu plano."
+                      }
+                      onRefresh={refresh}
+                    />
+                  ),
+                )}
+              </Panel>
+              <Panel title="Presença no condomínio">
+                {guard(
+                  "presence",
+                  <>
+                    <p>
+                      Check-in registra sua presença. A conclusão do treino é
+                      registrada separadamente.
+                    </p>
+                    <p className="font-medium">
+                      {checked
+                        ? "Presença registrada hoje"
+                        : `${presence ?? "—"} presenças neste mês`}
+                    </p>
+                    <Button
+                      variant="outline"
+                      disabled={busy || checked}
+                      onClick={checkin}
+                    >
+                      {checked
+                        ? "Presença confirmada"
+                        : "Registrar presença de hoje"}
+                    </Button>
+                  </>,
+                )}
+              </Panel>
+              <Panel title="Sua prática neste mês">
+                {guard(
+                  "history",
+                  <>
+                    <p className="text-3xl font-semibold">{sessions.length}</p>
+                    <p>
+                      Sessões encerradas desde{" "}
+                      {residentDate(monthBounds(localDate()).start)}.
+                    </p>
+                    <Button asChild variant="outline">
+                      <Link to="/morador?tab=mais#historico">
+                        Ver histórico
+                      </Link>
+                    </Button>
+                  </>,
+                )}
+              </Panel>
+              <Panel title="Comunicados" className="lg:col-span-2">
+                {guard(
+                  "announcements",
+                  !announcements.length ? (
+                    <p>Nenhum comunicado disponível.</p>
+                  ) : (
+                    announcements.map((row) => (
+                      <article key={row.id} className="space-y-2 border-b pb-3">
+                        <h3 className="font-medium">{row.titulo}</h3>
+                        <p className="whitespace-pre-wrap text-sm">
+                          {row.mensagem}
+                        </p>
+                        {reads.includes(row.id) ? (
+                          <p className="text-sm text-muted-foreground">
+                            Leitura registrada
+                          </p>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={busy}
+                            onClick={() => mark(row.id, true)}
+                          >
+                            Marcar como lido
+                          </Button>
+                        )}
+                      </article>
+                    ))
+                  ),
+                )}
+              </Panel>
+              <Button
+                asChild
+                variant="outline"
+                className="min-h-12 w-full lg:col-span-2"
+              >
+                <Link to="/morador/agenda">Ver minha agenda e atividades</Link>
+              </Button>
+            </div>
+          )}
+          {tab === "treino" &&
+            guard(
+              "workout",
+              !workout?.treino ? (
+                <Panel title="Situação do seu treino">
+                  <ResidentFitnessStatus
+                    studentId={aluno.id}
+                    organizationId={aluno.organization_id}
+                    fallback={workout?.reason || "Consulte sua triagem."}
+                    onRefresh={refresh}
+                  />
+                </Panel>
+              ) : (
+                <>
+                  <Panel
+                    title={
+                      workout.treino.descricao ||
+                      workout.treino.nome ||
+                      "Seu plano"
+                    }
+                  >
+                    <p>
+                      Vigência: {residentDate(workout.treino.data_inicio)} até{" "}
+                      {residentDate(workout.treino.data_fim)}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Siga as orientações do seu professor. Solicite avaliação
+                      para corrigir informações de saúde ou rever o plano.
+                    </p>
+                  </Panel>
+                  {!exercises.length ? (
+                    <Panel title="Dia sem exercícios programados">
+                      <p>Consulte a agenda ou peça orientação à equipe.</p>
+                    </Panel>
+                  ) : (
+                    <>
+                      <div className="flex flex-wrap gap-3">
+                        {!session && (
+                          <Button
+                            disabled={busy}
+                            onClick={() => saveSession("start")}
+                          >
+                            Iniciar sessão
+                          </Button>
+                        )}
+                        {session?.status === "pausado" && (
+                          <Button
+                            disabled={busy}
+                            onClick={() => saveSession("resume")}
+                          >
+                            Retomar sessão
+                          </Button>
+                        )}
+                        <p role="status" className="text-sm">
+                          {dirty
+                            ? "Alterações ainda não salvas"
+                            : session
+                              ? "Progresso salvo no servidor"
+                              : "Inicie a sessão para registrar os exercícios"}
+                        </p>
+                      </div>
+                      {recovery && (
+                        <div
+                          role="status"
+                          className="space-y-3 rounded border p-4"
+                        >
+                          <p>
+                            Há um registro local não confirmado nesta aba.{" "}
+                            {recovery.updated_at !== session?.updated_at
+                              ? "A sessão mudou no servidor; confira o registro local antes de reconciliar."
+                              : "Você pode recuperar o progresso que ainda não havia sido salvo."}
+                          </p>
+                          <details>
+                            <summary>Conferir registro local</summary>
+                            {(workout.exercicios || []).map((e: any) => {
+                              const r = recovery.progress[e.id];
+                              if (!r) return null;
+                              const actual =
+                                e.alternativas?.find(
+                                  (a: any) =>
+                                    a.exercicio_id === r.alternative_id,
+                                ) || e;
+                              return (
+                                <p key={e.id} className="py-2 text-sm">
+                                  {actual.nome} ·{" "}
+                                  {r.completed ? "Realizado" : "Pendente"} ·
+                                  carga {r.carga || "não registrada"} · séries{" "}
+                                  {r.series || "não registradas"} · repetições{" "}
+                                  {r.repeticoes || "não registradas"}
+                                </p>
+                              );
+                            })}
+                          </details>
+                          <Button
+                            variant="outline"
+                            disabled={
+                              recovery.updated_at !== session?.updated_at
+                            }
+                            onClick={() => {
+                              setProgress(recovery.progress);
+                              setRecovery(null);
+                            }}
+                          >
+                            Recuperar progresso
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            onClick={() => {
+                              setRecovery(null);
+                              try {
+                                sessionStorage.removeItem(
+                                  "nine:execution:" +
+                                    aluno?.id +
+                                    ":" +
+                                    workout.treino.id,
+                                );
+                              } catch {
+                                /* Optional recovery. */
+                              }
+                            }}
+                          >
+                            Manter registro do servidor
+                          </Button>
+                        </div>
+                      )}
+                      {session?.attention === "discomfort" && (
+                        <p role="status" className="rounded border p-3 text-sm">
+                          Relato de desconforto registrado para acompanhamento
+                          profissional. Usar alternativa por aparelho ocupado é
+                          uma situação diferente.
+                        </p>
+                      )}
+                      {workout?.pinned && (
+                        <p className="text-xs text-muted-foreground">
+                          Esta sessão preserva a prescrição do início. Revisões
+                          do coach serão consultadas nas próximas sessões.
+                        </p>
+                      )}
+                      {exercises.map((ex, index) => (
+                        <WorkoutExecutionCard
+                          key={ex.id}
+                          exercise={ex}
+                          facilities={workout.infrastructure}
+                          index={index}
+                          value={progress[ex.id]}
+                          disabled={busy || session?.status !== "em_andamento"}
+                          onChange={(row) =>
+                            setProgress((old) => ({ ...old, [ex.id]: row }))
+                          }
+                        />
+                      ))}
+                      <Panel title="Registro da sessão">
+                        <label className="block text-sm">
+                          Como foi o treino? Observação para a equipe (opcional)
+                          <Textarea
+                            className="mt-2"
+                            maxLength={2000}
+                            disabled={
+                              busy || session?.status !== "em_andamento"
+                            }
+                            value={feedback}
+                            onChange={(event) =>
+                              setFeedback(event.target.value)
+                            }
+                          />
+                        </label>
+                        <p className="text-sm text-muted-foreground">
+                          Este registro não substitui o atendimento
+                          profissional. Para orientação e reavaliação, fale com
+                          a equipe.
+                        </p>
+                        {saveError && (
+                          <p role="alert" className="text-destructive">
+                            {saveError} Suas alterações continuam nesta tela.
+                          </p>
+                        )}
+                        {session?.status === "em_andamento" && (
+                          <div className="flex flex-wrap gap-3">
+                            <Button
+                              disabled={busy}
+                              variant="outline"
+                              onClick={() => saveSession("save")}
+                            >
+                              Salvar progresso
+                            </Button>
+                            <Button
+                              disabled={busy}
+                              variant="outline"
+                              onClick={() => saveSession("pause")}
+                            >
+                              Salvar e pausar
+                            </Button>
+                            <Button
+                              disabled={busy}
+                              onClick={() => {
+                                const partial = exercises.some(
+                                  (ex) => !progress[ex.id]?.completed,
+                                );
+                                if (
+                                  confirm(
+                                    partial
+                                      ? "Há exercícios pendentes. Encerrar como sessão parcial?"
+                                      : "Confirmar conclusão da sessão?",
+                                  )
+                                )
+                                  void saveSession(
+                                    partial ? "finish_partial" : "finish",
+                                  );
+                              }}
+                            >
+                              Encerrar sessão
+                            </Button>
+                            <Button
+                              variant="outline"
+                              disabled={busy}
+                              onClick={() => {
+                                if (feedback.trim().length < 3)
+                                  return toast.error(
+                                    "Descreva o desconforto no campo acima para encaminhar ao profissional.",
+                                  );
+                                if (
+                                  confirm(
+                                    "Interromper e registrar o relato para o coach? Este canal não é atendimento imediato.",
+                                  )
+                                )
+                                  void saveSession("discomfort");
+                              }}
+                            >
+                              Interromper por desconforto
+                            </Button>
+                          </div>
+                        )}
+                        {session?.status === "concluido" && (
+                          <p role="status" className="font-medium">
+                            {session.completion_kind === "partial"
+                              ? "Sessão parcial encerrada. Exercícios pendentes preservados."
+                              : "Treino concluído. Resultado salvo."}
+                          </p>
+                        )}
+                      </Panel>
+                    </>
+                  )}
+                </>
+              ),
+            )}
+          {tab === "aulas" && (
+            <Panel title="Aulas disponíveis">
+              {guard(
+                "classes",
+                classes.length ? (
+                  classes.map((row) => (
+                    <article key={row.id} className="space-y-2 border-b pb-4">
+                      <h3 className="font-medium">{row.nome}</h3>
+                      <p>
+                        {residentDate(row.data_aula)} ·{" "}
+                        {row.horario_inicio?.slice(0, 5)}
+                      </p>
+                      <p className="text-sm">
+                        {registrations[row.id] === "presente"
+                          ? "Presença registrada"
+                          : registrations[row.id] === "inscrito"
+                            ? "Inscrição confirmada"
+                            : "Consulte a disponibilidade ao se inscrever"}
+                      </p>
+                      <Button
+                        disabled={busy || registrations[row.id] === "presente"}
+                        onClick={() => register(row)}
+                      >
+                        {registrations[row.id] === "inscrito"
+                          ? "Cancelar inscrição"
+                          : "Inscrever-me"}
+                      </Button>
+                    </article>
+                  ))
+                ) : (
+                  <p>Nenhuma aula disponível.</p>
+                ),
+              )}
+            </Panel>
+          )}
+          {tab === "suporte" && (
+            <>
+              <Panel title="Falar com a equipe do condomínio">
+                {guard(
+                  "organization",
+                  <>
+                    <p>
+                      Canal de atendimento configurado pela administração para
+                      dúvidas, ajustes e encaminhamento ao professor.
+                    </p>
+                    {hasPhone ? (
+                      <Button asChild>
+                        <a
+                          target="_blank"
+                          rel="noreferrer"
+                          href={"https://wa.me/" + phone}
+                        >
+                          Abrir atendimento no WhatsApp
+                        </a>
+                      </Button>
+                    ) : (
+                      <p>
+                        WhatsApp ainda não configurado. Você pode abrir um
+                        chamado abaixo.
+                      </p>
+                    )}
+                  </>,
+                )}
+              </Panel>
+              <SupportTickets
+                key={aluno.id + ":" + (params.get("destino") || "condominio")}
+                onDirtyChange={setSupportDirty}
+                initialCategory={params.get("destino") || "condominio"}
+                orgId={aluno.organization_id}
+                alunoId={aluno.id}
+              />
+            </>
+          )}
+          {tab === "mais" && (
+            <>
+              <Panel title="Seu espaço">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {[
+                    ["Meu perfil", "/morador/perfil"],
+                    ["Aulas", "/morador?tab=aulas"],
+                    ["Eventos", "/morador/eventos"],
+                    ["Reservas e serviços", "/morador/operacao"],
+                    ["Ajuda e reavaliação", "/morador?tab=suporte"],
+                    ...(organization?.metadata?.features?.staff === true
+                      ? [["Agendar profissional", "/morador/staff"]]
+                      : []),
+                  ].map(([label, to]) => (
+                    <Button
+                      key={to}
+                      variant="outline"
+                      asChild
+                      className="min-h-12 justify-start"
+                    >
+                      <Link to={to}>{label}</Link>
+                    </Button>
+                  ))}
+                </div>
+                {guard(
+                  "organization",
+                  <p className="text-sm text-muted-foreground">
+                    Serviços conforme disponibilidade do seu condomínio.
+                  </p>,
+                )}
+              </Panel>
+              <Panel title="Pagamentos">
+                {guard(
+                  "payments",
+                  <>
+                    <p>
+                      {pending
+                        ? `${pending} cobrança(s) pendente(s) entre as ${payments.length} mais recentes`
+                        : "Nenhuma pendência entre as cobranças consultadas."}
+                    </p>
+                    {!payments.length ? (
+                      <p>Sem cobranças registradas.</p>
+                    ) : (
+                      payments.map((p) => (
+                        <article
+                          key={p.id}
+                          className="flex flex-wrap justify-between gap-2 border-b py-3"
+                        >
+                          <div>
+                            <p>
+                              {Number(p.valor).toLocaleString("pt-BR", {
+                                style: "currency",
+                                currency: "BRL",
+                              })}
+                            </p>
+                            <p className="text-sm">
+                              Vencimento: {residentDate(p.data_vencimento)}
+                              {p.referencia_mes
+                                ? ` · Referência: ${p.referencia_mes}`
+                                : ""}
+                            </p>
+                          </div>
+                          <span>{p.status}</span>
+                        </article>
+                      ))
+                    )}
+                  </>,
+                )}
+              </Panel>
+              <section id="historico" className="scroll-mt-40">
+                <Panel title="Sessões encerradas neste mês">
+                  {guard(
+                    "history",
+                    sessions.length ? (
+                      <ul className="space-y-2">
+                        {sessions.map((s) => (
+                          <li key={s.id}>
+                            {s.completion_kind === "partial"
+                              ? "Sessão parcial"
+                              : "Treino concluído"}{" "}
+                            em {residentDate(s.data)}
+                            <details className="rounded border p-3">
+                              <summary className="min-h-11 cursor-pointer py-2">
+                                Ver execução registrada
+                              </summary>
+                              {(s.prescription?.exercicios || []).map(
+                                (e: any) => {
+                                  const r = s.progress?.[e.id];
+                                  const actual =
+                                    e.alternativas?.find(
+                                      (a: any) =>
+                                        a.exercicio_id === r?.alternative_id,
+                                    ) || e;
+                                  return (
+                                    <p key={e.id} className="py-2 text-sm">
+                                      {actual.nome}
+                                      {r?.alternative_id
+                                        ? " (alternativa)"
+                                        : ""}{" "}
+                                      ·{" "}
+                                      {r?.completed ? "Realizado" : "Pendente"}{" "}
+                                      · carga {r?.carga || "não registrada"} ·
+                                      séries {r?.series || "não registradas"} ·
+                                      repetições{" "}
+                                      {r?.repeticoes || "não registradas"}
+                                    </p>
+                                  );
+                                },
+                              )}
+                            </details>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p>
+                        Nenhuma sessão encerrada neste mês. Presenças são
+                        contadas separadamente.
+                      </p>
+                    ),
+                  )}
+                </Panel>
+              </section>
+              <FitnessInfrastructure
+                key={aluno.organization_id}
+                orgId={aluno.organization_id}
+              />
+              <Panel title="Avisos pessoais">
+                {guard(
+                  "notifications",
+                  notifications.length ? (
+                    notifications.map((n) => (
+                      <article key={n.id} className="space-y-2 border-b pb-3">
+                        <h3 className="font-medium">{n.titulo}</h3>
+                        <p className="text-sm">{n.mensagem}</p>
+                        {n.status === "lida" ? (
+                          <p className="text-sm">Lido</p>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            disabled={busy}
+                            onClick={() => mark(n.id, false)}
+                          >
+                            Marcar como lido
+                          </Button>
+                        )}
+                      </article>
+                    ))
+                  ) : (
+                    <p>Nenhum aviso pessoal disponível.</p>
+                  ),
+                )}
+              </Panel>
+            </>
+          )}
+        </div>
+      )}
+    </PersonaLayout>
   );
 }

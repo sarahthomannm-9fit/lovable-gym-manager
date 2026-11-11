@@ -1,32 +1,67 @@
-import { useNavigate } from 'react-router-dom';
-import { useOperationalContext } from '@/hooks/useOperationalContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { SidebarTrigger } from '@/components/ui/sidebar';
-import { Button } from '@/components/ui/button';
+import { useNavigate } from "react-router-dom";
+import { useOperationalContext } from "@/hooks/useOperationalContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
-  DropdownMenuSeparator, DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Building2, GraduationCap, Briefcase, User, ChevronDown, LogOut, ArrowLeftRight, Sparkles } from 'lucide-react';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Building2,
+  GraduationCap,
+  Briefcase,
+  User,
+  ChevronDown,
+  LogOut,
+  ArrowLeftRight,
+  Sparkles,
+} from "lucide-react";
 
 const PERSONAS = [
-  { label: 'Síndico', path: '/sindico', icon: Building2, roles:['sindico'] },
-  { label: 'Coach', path: '/coach', icon: GraduationCap, roles:['professor'] },
-  { label: 'Corporativo', path: '/corp', icon: Briefcase, roles:['corporate'] },
-  { label: 'Morador', path: '/morador', icon: User, roles:['user'] },
-  { label: 'Studio', path: '/studio', icon: Sparkles, roles: ['admin', 'manager'] },
+  { label: "Síndico", path: "/sindico", icon: Building2, roles: ["sindico"] },
+  { label: "Coach", path: "/coach", icon: GraduationCap, roles: ["professor"] },
+  {
+    label: "Corporativo",
+    path: "/corp",
+    icon: Briefcase,
+    roles: ["corporate"],
+  },
+  { label: "Morador", path: "/morador", icon: User, roles: ["user"] },
+  {
+    label: "Studio",
+    path: "/studio",
+    icon: Sparkles,
+    roles: ["admin", "manager"],
+  },
 ];
 
 /** Seletor de contexto no topo: Usuário → Organização → Persona (troca sem logout) */
 export function ContextSwitcher() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const { activeOrg, memberships, setActiveOrg, isAdmin, activeRole } = useOperationalContext();
+  const { activeOrg, memberships, setActiveOrg, isAdmin, activeRole } =
+    useOperationalContext();
 
-  const orgs = Array.from(new Map(memberships.filter(m=>isAdmin||m.papel===activeRole).map((m) => [m.organization.id, m.organization])).values());
-  if (activeOrg && !orgs.find((o) => o.id === activeOrg.id)) orgs.unshift(activeOrg as any);
+  const orgs = Array.from(
+    new Map(
+      memberships
+        .filter((m) => isAdmin || m.papel === activeRole)
+        .map((m) => [m.organization.id, m.organization]),
+    ).values(),
+  );
+  if (activeOrg && !orgs.find((o) => o.id === activeOrg.id))
+    orgs.unshift(activeOrg as any);
 
-  const nome = (user?.user_metadata as any)?.nome || user?.email?.split('@')[0] || 'Usuário';
+  const roleLabels:Record<string,string>={admin:"Administração",manager:"Gestão",professor:"Coach",sindico:"Síndico",user:"Morador",corporate:"Corporativo",nutricionista:"Nutrição",fisioterapeuta:"Fisioterapia"};
+  const nome =
+    (user?.user_metadata as any)?.nome ||
+    user?.email?.split("@")[0] ||
+    "Usuário";
 
   const canSeePersona = (roles?: string[]) => {
     if (!roles) return true;
@@ -35,35 +70,63 @@ export function ContextSwitcher() {
   };
 
   return (
-    <header className="h-12 shrink-0 border-b border-border/40 bg-card/40 backdrop-blur-xl sticky top-0 z-20 flex items-center gap-2 px-3">
+    <header className="min-h-16 shrink-0 border-b border-border/60 bg-background/95 sticky top-0 z-20 flex items-center gap-3 px-4 sm:px-7">
       <SidebarTrigger />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="sm" className="h-8 text-xs gap-1.5">
             <span className="font-medium">{nome}</span>
             <span className="text-muted-foreground">/</span>
-            <span className="text-muted-foreground truncate max-w-[160px]">{activeOrg?.nome || 'Todos os contextos'}</span>
-            {activeRole && <span className="text-muted-foreground">/ {activeRole}</span>}
+            <span className="text-muted-foreground truncate max-w-[160px]">
+              {activeOrg?.nome || "Todos os contextos"}
+            </span>
+            {activeRole && (
+              <span className="text-muted-foreground">/ {roleLabels[activeRole]||activeRole}</span>
+            )}
             <ChevronDown className="w-3.5 h-3.5 opacity-60" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-64">
-          <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Organização</DropdownMenuLabel>
-          {orgs.length === 0 && <DropdownMenuItem disabled className="text-xs">Nenhum vínculo</DropdownMenuItem>}
+          <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Organização
+          </DropdownMenuLabel>
+          {orgs.length === 0 && (
+            <DropdownMenuItem disabled className="text-xs">
+              Nenhum vínculo
+            </DropdownMenuItem>
+          )}
           {orgs.map((o) => (
-            <DropdownMenuItem key={o.id} className="text-xs" onClick={() => setActiveOrg(o as any)}>
-              {o.nome}{activeOrg?.id === o.id && ' ✓'}
+            <DropdownMenuItem
+              key={o.id}
+              className="text-xs"
+              onClick={() => setActiveOrg(o as any)}
+            >
+              {o.nome}
+              {activeOrg?.id === o.id && " ✓"}
             </DropdownMenuItem>
           ))}
           <DropdownMenuSeparator />
-          <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Persona</DropdownMenuLabel>
+          <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Persona
+          </DropdownMenuLabel>
           {PERSONAS.filter((p) => canSeePersona((p as any).roles)).map((p) => (
-            <DropdownMenuItem key={p.path} className="text-xs" onClick={() => {if(activeOrg&&p.roles?.[0])setActiveOrg(activeOrg,p.roles[0] as any);navigate(p.path);}}>
+            <DropdownMenuItem
+              key={p.path}
+              className="text-xs"
+              onClick={() => {
+                if (activeOrg && p.roles?.[0])
+                  setActiveOrg(activeOrg, p.roles[0] as any);
+                navigate(p.path);
+              }}
+            >
               <p.icon className="w-3.5 h-3.5 mr-2" /> {p.label}
             </DropdownMenuItem>
           ))}
           <DropdownMenuSeparator />
-          <DropdownMenuItem className="text-xs" onClick={() => navigate('/select-context')}>
+          <DropdownMenuItem
+            className="text-xs"
+            onClick={() => navigate("/select-context")}
+          >
             <ArrowLeftRight className="w-3.5 h-3.5 mr-2" /> Trocar contexto
           </DropdownMenuItem>
           <DropdownMenuItem className="text-xs" onClick={() => signOut()}>
@@ -72,8 +135,8 @@ export function ContextSwitcher() {
         </DropdownMenuContent>
       </DropdownMenu>
       {isAdmin && (
-        <span className="ml-auto text-[10px] uppercase tracking-[0.16em] text-primary/70 font-mono hidden sm:block">
-          9FIT · admin
+        <span className="ml-auto text-[10px] font-semibold uppercase tracking-[0.16em] text-primary/70 hidden sm:block">
+          Nine Living · Administração
         </span>
       )}
     </header>

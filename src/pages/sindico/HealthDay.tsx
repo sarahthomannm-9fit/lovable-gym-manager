@@ -1,54 +1,663 @@
-import { PersonaLayout } from '@/layouts/PersonaLayout';
-import { useEffect, useState } from 'react';
-import { useOperationalContext } from '@/hooks/useOperationalContext';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
-
-type EventRow = { id: string; nome: string; descricao: string | null; data_evento: string; horario_inicio: string; horario_fim: string | null; vagas_totais: number; status: string; inscritos?: number; espera?: number; checkins?: number };
-
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { PersonaLayout, PersonaEmptyState } from "@/layouts/PersonaLayout";
+import { useOperationalContext } from "@/hooks/useOperationalContext";
+import { useSyndicMutation } from "@/hooks/useSyndicMutation";
+import { useResidentDraftGuard } from "@/hooks/useResidentDraftGuard";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { residentDate, residentInstant } from "@/lib/resident";
+import { participantsCsv, eventStatus } from "@/lib/syndic";
+import { HealthDayReception } from "./HealthDayReception";
+import { HealthDayImpact } from "./HealthDayImpact";
+import { toast } from "sonner";
+const blank = () => ({
+  name: "Health Day",
+  description: "",
+  date: "",
+  start: "",
+  end: "",
+  capacity: "",
+  location: "",
+});
 export default function HealthDay() {
   const { activeOrg } = useOperationalContext();
-  const [editingId,setEditingId] = useState<string|null>(null);
-  const [actionBusy,setActionBusy] = useState(false);
-  const [saving,setSaving] = useState(false);
-  const [location,setLocation] = useState('');
-  const [events, setEvents] = useState<EventRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [participants, setParticipants] = useState<any[]>([]);
-  const [selectedEvent, setSelectedEvent] = useState<string | null>(null);
-  const [form, setForm] = useState({ nome: 'Health Day', descricao: '', inicio: '', fim: '', capacidade: '15' });
-  const load = async () => { if (!activeOrg) {setEvents([]);setLoading(false);return;} setLoading(true); const { data, error } = await (supabase as any).from('eventos_condominio').select('*').eq('organization_id', activeOrg.id).order('data_evento', { ascending: true }); if (error) { setLoading(false); return toast.error(error.message); } const rows = await Promise.all((data || []).map(async (event: EventRow) => { const { data: registrations, error: regError } = await (supabase as any).from('health_day_inscricoes').select('status').eq('evento_id', event.id); if (regError) toast.error(regError.message); const list = registrations || []; return { ...event, inscritos: list.filter((r: any) => ['confirmado','checkin'].includes(r.status)).length, espera: list.filter((r: any) => r.status === 'lista_espera').length, checkins: list.filter((r: any) => r.status === 'checkin').length }; })); setEvents(rows); setLoading(false); };
-  useEffect(() => { load(); }, [activeOrg?.id]);
-  const create = async () => {
-    if (!activeOrg) return toast.error('Selecione um condomínio antes de criar o evento.');
-    if (!form.nome.trim() || !form.inicio || !form.fim) return toast.error('Informe nome, início e fim.');
-    const inicio = new Date(form.inicio);
-    const fim = new Date(form.fim);
-    const capacidade = Number(form.capacidade);
-    if (Number.isNaN(inicio.getTime()) || Number.isNaN(fim.getTime()) || fim <= inicio) return toast.error('O fim deve ser depois do início.');
-    if (form.inicio.slice(0, 10) !== form.fim.slice(0, 10)) return toast.error('O Health Day deve começar e terminar no mesmo dia.');
-    if (!Number.isInteger(capacidade) || capacidade < 1) return toast.error('Informe uma capacidade válida.');
-    if (saving) return;
-    setSaving(true);
-    try {
-      const {error} = await (supabase as any).rpc('save_condominium_event',{p_id:editingId,p_org:activeOrg.id,p_name:form.nome.trim(),p_description:form.descricao.trim(),p_date:form.inicio.slice(0,10),p_start:form.inicio.slice(11,16),p_end:form.fim.slice(11,16),p_capacity:capacidade,p_location:location.trim()});
-      if(error)throw error;
-      toast.success(editingId?'Evento atualizado.':'Health Day criado.');setEditingId(null);setLocation('');setForm({nome:'Health Day',descricao:'',inicio:'',fim:'',capacidade:'15'});await load();
-    }catch(e){toast.error((e as Error).message||'Não foi possível salvar o evento.');}finally{setSaving(false);}
-
+  const [params, setParams] = useSearchParams();
+  const edit = params.get("edit"),
+    eventId = params.get("event"),
+    panel = params.get("panel") || "participantes";
+  const [events, setEvents] = useState<any[] | null>(null),
+    [error, setError] = useState(""),
+    [revision, setRevision] = useState(0),
+    [participants, setParticipants] = useState<any[] | null>(null),
+    [participantError, setParticipantError] = useState(""),
+    [search, setSearch] = useState(""),
+    [busy, setBusy] = useState(false);
+  const [form, setForm] = useState(blank()),
+    [initial, setInitial] = useState(""),
+    [review, setReview] = useState(false);
+  const initialized = useRef<string | null>(null),
+    participantLock = useRef(false);
+  const mutation = useSyndicMutation(activeOrg?.id);
+  const dirty = !!edit && !!initial && initial !== JSON.stringify(form);
+  const allowNavigation = useResidentDraftGuard(
+    dirty || mutation.pending || mutation.busy,
+  );
+  useEffect(() => {
+    let live = true;
+    setError("");
+    void (async () => {
+      try {
+        if (!activeOrg) throw new Error("Selecione um condomínio.");
+        const { data, error } = await (supabase as any).rpc(
+          "syndic_event_list",
+          { p_org: activeOrg.id },
+        );
+        if (error) throw error;
+        if (live) setEvents(data || []);
+      } catch (e) {
+        if (live)
+          setError(
+            (e as Error).message || "Não foi possível consultar os eventos.",
+          );
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, [activeOrg?.id, revision]);
+  useEffect(() => {
+    if (!edit) {
+      initialized.current = null;
+      return;
+    }
+    if (initialized.current === edit || events === null) return;
+    const e = events.find((e) => e.id === edit);
+    if (edit !== "new" && !e) return;
+    const value =
+      edit === "new"
+        ? blank()
+        : {
+            name: e.nome,
+            description: e.descricao || "",
+            date: e.data_evento,
+            start: e.horario_inicio?.slice(0, 5) || "",
+            end: e.horario_fim?.slice(0, 5) || "",
+            capacity: String(e.vagas_totais),
+            location: e.local || "",
+          };
+    setForm(value);
+    setInitial(JSON.stringify(value));
+    setReview(false);
+    initialized.current = edit;
+  }, [edit, events]);
+  useEffect(() => {
+    let live = true;
+    setParticipants(null);
+    setParticipantError("");
+    setSearch("");
+    if (!eventId) return;
+    void (async () => {
+      try {
+        const { data, error } = await (supabase as any).rpc(
+          "event_participants",
+          { p_event: eventId },
+        );
+        if (error) throw error;
+        if (live)
+          setParticipants(
+            (data || []).map((p: any) => ({
+              ...p,
+              alunos: { nome: p.nome, email: p.email },
+            })),
+          );
+      } catch {
+        if (live)
+          setParticipantError(
+            "Não foi possível consultar os participantes deste evento.",
+          );
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, [eventId, activeOrg?.id, revision]);
+  const patch = (values: Record<string, string | null>) => {
+    const next = new URLSearchParams(params);
+    Object.entries(values).forEach(([k, v]) =>
+      v === null ? next.delete(k) : next.set(k, v),
+    );
+    setParams(next);
   };
-  const showParticipants = async (id: string) => { const { data, error } = await (supabase as any).rpc('event_participants',{p_event:id}); if (error) toast.error(error.message); else { setParticipants((data || []).map((p:any)=>({...p,alunos:{nome:p.nome,email:p.email}}))); setSelectedEvent(id); } };
-  const exportParticipants = () => { const csv = participants.map((p: any) => [p.alunos?.nome || 'Morador', p.alunos?.email || '', p.status, p.checkin_at || ''].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n'); const blob = new Blob([`nome,email,status,checkin_at\n${csv}`], { type: 'text/csv;charset=utf-8' }); const url = URL.createObjectURL(blob); const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'health-day-participantes.csv'; anchor.click(); URL.revokeObjectURL(url); };
-  const updateRegistration = async (id: string, status: string) => { if(actionBusy)return;setActionBusy(true); const { error } = await (supabase as any).rpc('manage_health_day_registration', { p_registration_id: id, p_status: status }); setActionBusy(false); if (error) toast.error(error.message); else { toast.success('Inscrição atualizada.'); if (selectedEvent) showParticipants(selectedEvent); load(); } };
-  const setStatus = async (id: string, status: 'publicado' | 'encerrado' | 'cancelado') => { if(actionBusy)return;setActionBusy(true); const { error } = await (supabase as any).rpc('set_condominium_event_status', { p_event_id: id, p_status: status }); setActionBusy(false); if (error) toast.error(error.message); else { toast.success(status === 'publicado' ? 'Evento publicado.' : status === 'encerrado' ? 'Evento encerrado.' : 'Evento cancelado e inscrições encerradas.'); if (selectedEvent === id) { setSelectedEvent(null); setParticipants([]); } load(); } };
-  return <PersonaLayout title="Health Day"><div className="min-h-full bg-background p-6 space-y-6"><div><h1 className="font-display text-3xl font-normal tracking-tight text-foreground">Health Day</h1><p className="text-sm text-muted-foreground">Crie eventos de saúde, defina vagas e acompanhe a ativação do condomínio.</p></div>
-    <Card className="rounded-sm shadow-elegant"><CardHeader><CardTitle>{editingId?'Editar evento':'Novo evento'}</CardTitle></CardHeader><CardContent className="grid gap-3 sm:grid-cols-2"><div><Label>Nome</Label><Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} /></div><div><Label>Vagas</Label><Input type="number" min="1" value={form.capacidade} onChange={(e) => setForm({ ...form, capacidade: e.target.value })} /></div><div><Label>Início</Label><Input type="datetime-local" value={form.inicio} onChange={(e) => setForm({ ...form, inicio: e.target.value })} /></div><div><Label>Fim</Label><Input type="datetime-local" value={form.fim} onChange={(e) => setForm({ ...form, fim: e.target.value })} /></div><div className="sm:col-span-2"><Label>Descrição</Label><Textarea value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} /></div><div className="sm:col-span-2"><Label>Local</Label><Input value={location} onChange={e=>setLocation(e.target.value)}/></div><div className="sm:col-span-2 flex gap-2"><Button disabled={saving} onClick={create}>{saving?'Salvando…':editingId?'Salvar alterações':'Criar Health Day'}</Button>{editingId&&<Button variant="outline" disabled={saving} onClick={()=>{setEditingId(null);setLocation('');setForm({nome:'Health Day',descricao:'',inicio:'',fim:'',capacidade:'15'});}}>Cancelar edição</Button>}</div></CardContent></Card>
-    <div className="grid gap-4">{events.map((event) => <Card key={event.id} className="rounded-sm shadow-elegant"><CardContent className="flex flex-wrap items-center justify-between gap-4 p-5"><div><h2 className="font-semibold">{event.nome}</h2><p className="text-sm text-muted-foreground">{event.data_evento} · {event.horario_inicio?.slice(0, 5)} · {event.vagas_totais} vagas</p><div className="flex gap-2 text-xs"><Badge variant="outline">{event.inscritos || 0} inscritos</Badge><Badge variant="outline">{event.espera || 0} espera</Badge><Badge variant="outline">{event.checkins || 0} check-ins</Badge><Badge variant="outline">{Math.max(0, event.vagas_totais - (event.inscritos || 0))} vagas restantes</Badge></div></div><div className="flex flex-wrap items-center gap-2"><Badge variant="outline">{event.status}</Badge>{['rascunho','publicado'].includes(event.status)&&<Button size="sm" variant="outline" disabled={saving} onClick={()=>{setEditingId(event.id);setLocation((event as any).local||'');setForm({nome:event.nome,descricao:event.descricao||'',inicio:event.data_evento+'T'+event.horario_inicio.slice(0,5),fim:event.data_evento+'T'+(event.horario_fim||'').slice(0,5),capacidade:String(event.vagas_totais)});window.scrollTo({top:0,behavior:'smooth'});}}>Editar</Button>}<Button size="sm" variant="outline" onClick={() => showParticipants(event.id)}>Participantes</Button>{event.status === 'publicado' && <Button size="sm" variant="ghost" onClick={() => { const link = `${window.location.origin}/morador/eventos?event=${event.id}`; navigator.clipboard.writeText(link); toast.success("Link do Health Day copiado."); }}>Copiar link de inscrição</Button>}{event.status === 'rascunho' && <Button size="sm" disabled={actionBusy} onClick={() => setStatus(event.id, 'publicado')}>Publicar</Button>}{event.status === 'publicado' && <Button size="sm" variant="outline" disabled={actionBusy} onClick={() => setStatus(event.id, 'encerrado')}>Encerrar</Button>}{!['encerrado','cancelado'].includes(event.status) && <Button size="sm" variant="ghost" disabled={actionBusy} onClick={() => setStatus(event.id, 'cancelado')}>Cancelar evento</Button>}</div></CardContent></Card>)}{loading ? <p className="text-sm text-muted-foreground">Carregando Health Days...</p> : !events.length && <p className="text-sm text-muted-foreground">Nenhum Health Day criado.</p>}{selectedEvent && <Card><CardHeader><div className="flex items-center justify-between"><CardTitle>Participantes</CardTitle><Button size="sm" variant="outline" onClick={exportParticipants}>Exportar CSV</Button></div></CardHeader><CardContent className="space-y-2">{participants.map((p) => <div key={p.id} className="flex items-center justify-between border-b py-2 text-sm"><span>{p.alunos?.nome || 'Morador'}<span className="block text-xs text-muted-foreground">{p.alunos?.email || ''}</span></span><div className="flex items-center gap-2"><Badge variant={p.status === 'checkin' ? 'default' : 'outline'}>{p.status}</Badge>{p.status === 'lista_espera' && <Button size="sm" disabled={actionBusy} onClick={() => updateRegistration(p.id, 'confirmado')}>Promover</Button>}{['confirmado','lista_espera'].includes(p.status) && <Button size="sm" variant="ghost" disabled={actionBusy} onClick={() => updateRegistration(p.id, 'cancelado')}>Cancelar</Button>}</div></div>)}{!participants.length && <p className="text-sm text-muted-foreground">Nenhum participante.</p>}</CardContent></Card>}</div>
-  </div></PersonaLayout>;
+  const validate = () => {
+    if (
+      form.name.trim().length < 3 ||
+      !form.date ||
+      !form.start ||
+      !form.end ||
+      !form.location.trim()
+    )
+      return "Informe nome, data, horários e local.";
+    const start = residentInstant(form.date + "T" + form.start),
+      end = residentInstant(form.date + "T" + form.end);
+    if (
+      !Number.isFinite(start.getTime()) ||
+      !Number.isFinite(end.getTime()) ||
+      start <= new Date() ||
+      end <= start
+    )
+      return "Confira a data futura e o fim após o início.";
+    if (!Number.isInteger(Number(form.capacity)) || Number(form.capacity) < 1)
+      return "Informe a capacidade real do evento.";
+    return "";
+  };
+  const save = () => {
+    const failure = validate();
+    if (failure) return toast.error(failure);
+    void mutation.execute(
+      "event",
+      edit === "new" ? null : edit,
+      {
+        ...form,
+        name: form.name.trim(),
+        description: form.description.trim(),
+        location: form.location.trim(),
+        capacity: Number(form.capacity),
+      },
+      (id) => {
+        setInitial(JSON.stringify(form));
+        allowNavigation();
+        setRevision((v) => v + 1);
+        setParams({ event: id });
+        toast.success("Evento salvo. A publicação é uma decisão separada.");
+      },
+    );
+  };
+  const transition = (e: any, status: string) => {
+    if (
+      !confirm(
+        (status === "publicado"
+          ? "Publicar este evento e abrir inscrições?"
+          : status === "encerrado"
+            ? "Encerrar inscrições e operação deste evento? O histórico será preservado."
+            : "Cancelar o evento e suas inscrições? O histórico será preservado.") +
+          " " +
+          e.nome,
+      )
+    )
+      return;
+    void mutation.execute("event_status", e.id, { status }, () => {
+      setRevision((v) => v + 1);
+      toast.success("Situação do evento confirmada.");
+    });
+  };
+  const updateParticipant = async (id: string, status: string) => {
+    if (participantLock.current) return;
+    if (
+      !confirm(
+        status === "cancelado"
+          ? "Cancelar esta inscrição e atualizar a fila de espera?"
+          : "Confirmar esta vaga se houver disponibilidade?",
+      )
+    )
+      return;
+    participantLock.current = true;
+    setBusy(true);
+    try {
+      const { error } = await (supabase as any).rpc(
+        "manage_health_day_registration",
+        { p_registration_id: id, p_status: status },
+      );
+      if (error) throw error;
+      setRevision((v) => v + 1);
+      toast.success("Inscrição atualizada no servidor.");
+    } catch (e) {
+      toast.error((e as Error).message || "Falha ao atualizar inscrição.");
+    } finally {
+      participantLock.current = false;
+      setBusy(false);
+    }
+  };
+  const selected = events?.find((e) => e.id === eventId);
+  const copy = async (e: any, entry: boolean) => {
+    const url = new URL(
+      entry ? "/entrada" : "/health-day/" + e.id,
+      window.location.origin,
+    );
+    if (entry) {
+      url.searchParams.set("organization", activeOrg!.id);
+      url.searchParams.set("health_day", e.id);
+    }
+    try {
+      await navigator.clipboard.writeText(url.href);
+      toast.success(
+        entry
+          ? "Link de acesso ao aplicativo copiado."
+          : "Link de solicitação de participação copiado.",
+      );
+    } catch {
+      toast.error("Não foi possível copiar. Tente novamente.");
+    }
+  };
+  const exportCsv = () => {
+    if (!selected || participants === null || participantError) return;
+    const exported = new Date().toISOString();
+    const url = URL.createObjectURL(
+      new Blob([participantsCsv(selected, participants, exported)], {
+        type: "text/csv;charset=utf-8",
+      }),
+    );
+    const a = document.createElement("a");
+    a.href = url;
+    a.download =
+      "health-day-" + selected.id + "-" + exported.slice(0, 10) + ".csv";
+    a.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+  return (
+    <PersonaLayout title="Eventos">
+      {!activeOrg ? (
+        <PersonaEmptyState />
+      ) : (
+        <div className="mx-auto max-w-4xl space-y-5">
+          <header className="flex flex-wrap items-center justify-between gap-3">
+            <h1 className="text-3xl font-semibold">Eventos e Health Day</h1>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                disabled={mutation.busy || mutation.pending}
+                onClick={() => {
+                  if (dirty && !confirm("Descartar a edição atual?")) return;
+                  allowNavigation();
+                  initialized.current = null;
+                  setParams({ edit: "new" });
+                }}
+              >
+                Novo evento
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setRevision((v) => v + 1)}
+              >
+                Atualizar
+              </Button>
+            </div>
+          </header>
+          {(error || mutation.error) && (
+            <div
+              role="alert"
+              className="space-y-3 rounded-lg border border-destructive p-4"
+            >
+              <p>{error || mutation.error}</p>
+              {mutation.pending && (
+                <Button
+                  disabled={mutation.busy}
+                  onClick={() => void mutation.retry()}
+                >
+                  Repetir pedido pendente
+                </Button>
+              )}
+            </div>
+          )}
+          {edit && (
+            <section className="space-y-4 rounded-xl border p-5">
+              <h2 className="text-xl font-semibold">
+                {review
+                  ? "Conferir evento"
+                  : edit === "new"
+                    ? "Preparar novo evento"
+                    : "Editar evento"}
+              </h2>
+              {initialized.current !== edit ? (
+                <p>
+                  {events === null
+                    ? "Carregando evento…"
+                    : "Evento indisponível para edição."}
+                </p>
+              ) : (
+                <fieldset
+                  disabled={mutation.busy || mutation.pending}
+                  className="space-y-4"
+                >
+                  {!review ? (
+                    <>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        {[
+                          ["Nome", "name", "text"],
+                          ["Data", "date", "date"],
+                          ["Início · Brasília", "start", "time"],
+                          ["Fim · Brasília", "end", "time"],
+                          ["Capacidade real", "capacity", "number"],
+                          ["Local", "location", "text"],
+                        ].map(([label, key, type]) => (
+                          <label key={key} className="block text-sm">
+                            {label}
+                            <Input
+                              type={type}
+                              min={type === "number" ? 1 : undefined}
+                              maxLength={200}
+                              value={(form as any)[key]}
+                              onChange={(e) =>
+                                setForm((old) => ({
+                                  ...old,
+                                  [key]: e.target.value,
+                                }))
+                              }
+                              placeholder={
+                                key === "capacity"
+                                  ? "Confirme espaço e equipe"
+                                  : undefined
+                              }
+                            />
+                          </label>
+                        ))}
+                      </div>
+                      <label className="block text-sm">
+                        Descrição
+                        <Textarea
+                          rows={4}
+                          maxLength={4000}
+                          value={form.description}
+                          onChange={(e) =>
+                            setForm((old) => ({
+                              ...old,
+                              description: e.target.value,
+                            }))
+                          }
+                        />
+                      </label>
+                      <p className="text-sm text-muted-foreground">
+                        Apartamentos não equivalem a participantes. Defina a
+                        capacidade com a equipe; a solicitação pública não
+                        garante vaga.
+                      </p>
+                      <Button
+                        onClick={() => {
+                          const failure = validate();
+                          if (failure) return toast.error(failure);
+                          setReview(true);
+                        }}
+                      >
+                        Conferir antes de salvar
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <h3 className="text-lg font-semibold">{form.name}</h3>
+                      <p>
+                        {residentDate(form.date)} · {form.start}–{form.end} ·
+                        Brasília
+                      </p>
+                      <p>
+                        {form.location} · {form.capacity} vagas
+                      </p>
+                      <p className="whitespace-pre-wrap text-sm">
+                        {form.description}
+                      </p>
+                      <p className="text-sm">
+                        Salvar não publica um evento novo. Ao editar evento
+                        publicado, a atualização passa a valer após a
+                        confirmação.
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <Button onClick={save}>Confirmar e salvar</Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => setReview(false)}
+                        >
+                          Voltar à edição
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </fieldset>
+              )}
+            </section>
+          )}
+          {events === null ? (
+            !error && <p role="status">Carregando eventos…</p>
+          ) : !events.length ? (
+            <p>Nenhum evento registrado.</p>
+          ) : eventId ? (
+            selected ? (
+              <section className="space-y-4">
+                <Button
+                  variant="ghost"
+                  onClick={() => patch({ event: null, panel: null })}
+                >
+                  Voltar aos eventos
+                </Button>
+                <article className="space-y-3 rounded-xl border bg-card p-5">
+                  <h2 className="text-2xl font-semibold">{selected.nome}</h2>
+                  <p>
+                    {residentDate(selected.data_evento)} ·{" "}
+                    {selected.horario_inicio?.slice(0, 5)} ·{" "}
+                    {selected.local || "Local não definido"}
+                  </p>
+                  <p>
+                    {eventStatus[selected.status] || selected.status} ·{" "}
+                    {selected.confirmed}/{selected.vagas_totais} vagas ocupadas
+                    · {selected.waiting} em espera · {selected.present}{" "}
+                    presenças · {selected.unverified} solicitações a verificar
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {["participantes", "recepcao", "resultado"].map((value) => (
+                      <Button
+                        key={value}
+                        variant={panel === value ? "default" : "outline"}
+                        onClick={() => patch({ panel: value })}
+                      >
+                        {value === "recepcao"
+                          ? "Recepção"
+                          : value === "resultado"
+                            ? "Resultado agregado"
+                            : "Participantes"}
+                      </Button>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {["rascunho", "publicado"].includes(selected.status) && (
+                      <Button
+                        variant="outline"
+                        disabled={mutation.busy || mutation.pending}
+                        onClick={() => patch({ edit: selected.id })}
+                      >
+                        Editar
+                      </Button>
+                    )}
+                    {selected.status === "rascunho" && (
+                      <Button
+                        disabled={mutation.busy || mutation.pending}
+                        onClick={() => transition(selected, "publicado")}
+                      >
+                        Publicar evento
+                      </Button>
+                    )}
+                    {selected.status === "publicado" && (
+                      <>
+                        <Button
+                          variant="outline"
+                          onClick={() => void copy(selected, false)}
+                        >
+                          Copiar link de inscrição
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => void copy(selected, true)}
+                        >
+                          Copiar acesso ao app
+                        </Button>
+                        <Button
+                          variant="outline"
+                          disabled={mutation.busy || mutation.pending}
+                          onClick={() => transition(selected, "encerrado")}
+                        >
+                          Encerrar evento
+                        </Button>
+                      </>
+                    )}
+                    {!["encerrado", "cancelado"].includes(selected.status) && (
+                      <Button
+                        variant="ghost"
+                        disabled={mutation.busy || mutation.pending}
+                        onClick={() => transition(selected, "cancelado")}
+                      >
+                        Cancelar evento
+                      </Button>
+                    )}
+                  </div>
+                </article>
+                {panel === "resultado" ? (
+                  <HealthDayImpact
+                    key={selected.id}
+                    eventId={selected.id}
+                    name={selected.nome}
+                  />
+                ) : participantError ? (
+                  <div role="alert">
+                    <p>{participantError}</p>
+                    <Button
+                      variant="outline"
+                      onClick={() => setRevision((v) => v + 1)}
+                    >
+                      Tentar novamente
+                    </Button>
+                  </div>
+                ) : participants === null ? (
+                  <p role="status">Carregando participantes deste evento…</p>
+                ) : panel === "recepcao" ? (
+                  <HealthDayReception
+                    key={selected.id}
+                    eventId={selected.id}
+                    confirmed={participants.filter(
+                      (p) => p.status === "confirmado",
+                    )}
+                    onChange={() => setRevision((v) => v + 1)}
+                  />
+                ) : (
+                  <section className="space-y-3 rounded-xl border p-5">
+                    <h3 className="text-xl font-semibold">Participantes</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Dados de participação autorizados. A exportação não inclui
+                      anamnese, diagnóstico nem medicamentos.
+                    </p>
+                    <Input
+                      aria-label="Buscar participante"
+                      placeholder="Nome ou e-mail"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                    />
+                    <Button variant="outline" onClick={exportCsv}>
+                      Exportar participantes deste evento
+                    </Button>
+                    {participants
+                      .filter((p) =>
+                        (p.nome + " " + p.email)
+                          .toLowerCase()
+                          .includes(search.toLowerCase()),
+                      )
+                      .map((p) => (
+                        <article
+                          key={p.id}
+                          className="flex flex-wrap items-center justify-between gap-3 border-b py-3"
+                        >
+                          <div>
+                            <p className="font-medium">{p.nome}</p>
+                            <p className="text-sm">
+                              {p.email} · {eventStatus[p.status] || p.status}
+                            </p>
+                          </div>
+                          {!["cancelado", "encerrado"].includes(
+                            selected.status,
+                          ) && (
+                            <div className="flex flex-wrap gap-2">
+                              {p.status === "lista_espera" && (
+                                <Button
+                                  variant="outline"
+                                  disabled={busy}
+                                  onClick={() =>
+                                    void updateParticipant(p.id, "confirmado")
+                                  }
+                                >
+                                  Confirmar vaga
+                                </Button>
+                              )}
+                              {["lista_espera", "confirmado"].includes(
+                                p.status,
+                              ) && (
+                                <Button
+                                  variant="ghost"
+                                  disabled={busy}
+                                  onClick={() =>
+                                    void updateParticipant(p.id, "cancelado")
+                                  }
+                                >
+                                  Cancelar inscrição
+                                </Button>
+                              )}
+                            </div>
+                          )}
+                        </article>
+                      ))}
+                    {!participants.length && (
+                      <p>Nenhum participante registrado.</p>
+                    )}
+                  </section>
+                )}
+              </section>
+            ) : (
+              <p role="alert">Evento não disponível neste condomínio.</p>
+            )
+          ) : (
+            <div className="space-y-3">
+              {events.map((e) => (
+                <article key={e.id} className="space-y-3 rounded-xl border p-5">
+                  <h2 className="text-xl font-semibold">{e.nome}</h2>
+                  <p>
+                    {residentDate(e.data_evento)} ·{" "}
+                    {e.horario_inicio?.slice(0, 5)} ·{" "}
+                    {eventStatus[e.status] || e.status}
+                  </p>
+                  <p className="text-sm">
+                    {e.confirmed}/{e.vagas_totais} vagas ocupadas · {e.present}{" "}
+                    presenças
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        patch({
+                          event: e.id,
+                          edit: null,
+                          panel: "participantes",
+                        })
+                      }
+                    >
+                      Abrir evento
+                    </Button>
+                    <Button
+                      onClick={() =>
+                        patch({ event: e.id, edit: null, panel: "recepcao" })
+                      }
+                    >
+                      Abrir recepção
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={() =>
+                        patch({ event: e.id, edit: null, panel: "resultado" })
+                      }
+                    >
+                      Ver resultado
+                    </Button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </PersonaLayout>
+  );
 }

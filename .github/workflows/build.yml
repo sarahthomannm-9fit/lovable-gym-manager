@@ -18,5 +18,9 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Unit tests
+        run: node --test scripts/access.test.mjs scripts/resident.test.mjs scripts/coach.test.mjs scripts/syndic.test.mjs scripts/workout-execution.test.mjs
       - name: Build
         run: npm run build

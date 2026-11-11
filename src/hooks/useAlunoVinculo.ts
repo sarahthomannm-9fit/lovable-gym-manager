@@ -22,6 +22,8 @@ export function useAlunoVinculo() {
   const { activeOrg } = useOperationalContext();
   const [aluno, setAluno] = useState<AlunoVinculo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [revision, setRevision] = useState(0);
 
   useEffect(() => {
     if (!user) {
@@ -32,6 +34,7 @@ export function useAlunoVinculo() {
     let mounted = true;
     setAluno(null);
     setLoading(true);
+    setError('');
 
     (async () => {
       let query = supabase
@@ -50,17 +53,17 @@ export function useAlunoVinculo() {
       const { data, error } = await supabase.functions.invoke('link-aluno-user');
       if (!mounted) return;
       if (error) {
-        console.error('link-aluno-user', error);
+        setError('Não foi possível confirmar seu vínculo. Tente novamente antes de criar outro cadastro.');
         setAluno(null);
       } else {
         const linked = (data as { aluno?: AlunoVinculo })?.aluno;
         setAluno(linked && (!activeOrg || linked.organization_id === activeOrg.id) ? linked : null);
       }
       setLoading(false);
-    })().catch(() => { if (mounted) setLoading(false); });
+    })().catch(() => { if (mounted) { setLoading(false); setError('Não foi possível consultar seu cadastro. Se você participa de mais de um condomínio, selecione o contexto correto.'); } });
 
     return () => { mounted = false; };
-  }, [user?.id, activeOrg?.id]);
+  }, [user?.id, activeOrg?.id, revision]);
 
-  return { aluno, loading };
+  return { aluno, loading, error, retry: () => setRevision(value => value + 1) };
 }

@@ -1,433 +1,418 @@
-import { SupportTickets } from '@/components/SupportTickets';
-import { useEffect, useMemo, useState } from 'react';
-import { PersonaLayout, PersonaEmptyState } from '@/layouts/PersonaLayout';
-import { useOperationalContext } from '@/hooks/useOperationalContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Calendar, Users, UserCheck, Dumbbell, History, ClipboardList, Sparkles, Play, XCircle } from 'lucide-react';
-import { toast } from 'sonner';
-import { CriarTreinoDialog } from '@/components/CriarTreinoDialog';
-
-const checked=<T extends {error?:unknown}>(result:T):T=>{if(result.error)throw result.error;return result;};
-const DAY = 86400000;
-const iso = (d: Date) => d.toISOString().slice(0, 10);
-const aulaStart = (a: any) => new Date(`${a.data_aula}T${(a.horario_inicio || '00:00').slice(0, 5)}:00`);
-const podeIniciar = (a: any) => {
-  const diff = aulaStart(a).getTime() - Date.now();
-  return a.status !== 'cancelada' && diff <= 15 * 60000 && diff > -3 * 3600000;
+import { PageIntro } from "@/components/visual/LivingIdentity";
+import { useEffect, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { PersonaLayout, PersonaEmptyState } from "@/layouts/PersonaLayout";
+import { useOperationalContext } from "@/hooks/useOperationalContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { localDate } from "@/lib/workout";
+import { residentDate } from "@/lib/resident";
+import {
+  activeCoachWorkout,
+  currentCoachWorkout,
+  workoutAttention,
+} from "@/lib/coach";
+import { CoachCase } from "./CoachCase";
+import { CoachAgenda } from "./CoachAgenda";
+import { CoachLibrary } from "./CoachLibrary";
+const labels: Record<string, string> = {
+  todos: "Todos",
+  avaliacao: "Avaliação",
+  prescricao: "Prescrição",
+  sem_plano: "Sem plano vigente",
+  sem_primeira: "Sem primeira conclusão",
+  sem_retorno: "Sem retorno há 14 dias",
+  revisao: "Plano perto do fim",
+  feedback: "Execuções e relatos para acompanhar",
+  recente: "Conclusão recente",
+  vencido: "Plano vencido",
 };
-const Vazio = ({ children }: { children: React.ReactNode }) => (
-  <p className="text-sm text-muted-foreground border border-dashed border-border/40 rounded-sm p-6 text-center">{children}</p>
-);
-
 export default function CoachHome() {
-  const { activeOrg, ensureOrgForPersona, isAdmin } = useOperationalContext();
-  const { user } = useAuth();
-  const [loadError,setLoadError]=useState('');
-  const [loadingData,setLoadingData]=useState(true);
-  const [ready, setReady] = useState(false);
-  const [aulas, setAulas] = useState<any[]>([]);
-  const [alunos, setAlunos] = useState<any[]>([]);
-  const [treinos, setTreinos] = useState<any[]>([]);
-  const [execs, setExecs] = useState<any[]>([]);
-  const [checkins, setCheckins] = useState<any[]>([]);
-  const [anamnesesFila, setAnamnesesFila] = useState<any[]>([]);
-  const [filaIACount, setFilaIACount] = useState(0);
-  const [feedbacks, setFeedbacks] = useState<any[]>([]);
-  const [tab, setTab] = useState('aulas');
-  // Dialogs
-  const [presencaAula, setPresencaAula] = useState<any | null>(null);
-  const [inscritos, setInscritos] = useState<any[]>([]);
-  const [anamneseView, setAnamneseView] = useState<any | null>(null);
-  const [revisao, setRevisao] = useState<any | null>(null);
-  const [motivo, setMotivo] = useState('');
-  // Filtros
-  const [busca, setBusca] = useState('');
-  const [filtroAluno, setFiltroAluno] = useState<'ativos' | 'pendente' | 'revisao'>('ativos');
-  const [filtroTreino, setFiltroTreino] = useState<'ativos' | 'inativos' | 'revisao'>('ativos');
-  const [periodo, setPeriodo] = useState(30);
-
-  useEffect(() => { (activeOrg ? Promise.resolve(activeOrg) : ensureOrgForPersona('condominio')).finally(() => setReady(true)); }, []);
-
-  const carregar = async () => {
-    setLoadingData(true);setLoadError('');
-    try{
-    const orgId = activeOrg?.id;
-    if (!orgId || !user?.id) { setAulas([]); setAlunos([]); setTreinos([]); return; }
-    const { data: staff } = await supabase.from('funcionarios').select('id').eq('organization_id', orgId).eq('user_id', user.id).eq('ativo', true).maybeSingle().then(checked);
-    if (!staff?.id) throw new Error('Esta conta não possui um profissional ativo vinculado a este condomínio. Solicite o vínculo ao administrador.');
-    const hoje = iso(new Date());
-    const seteDias = iso(new Date(Date.now() + 7 * DAY));
-    const inicioHist = iso(new Date(Date.now() - 365 * DAY));
-
-    let qa = supabase.from('aulas').select('id, nome, data_aula, horario_inicio, horario_fim, inscritos_atual, capacidade_maxima, status, professor_id')
-      .gte('data_aula', iso(new Date(Date.now() - 365 * DAY))).lte('data_aula', seteDias).order('data_aula').order('horario_inicio');
-    qa = qa.eq('organization_id', orgId).eq('professor_id', staff.id);
-    const [{ data: au }, { data: assignedWorkouts }, { data: onboarded }] = await Promise.all([
-      qa.then(checked),
-      supabase.from('treinos').select('aluno_id').eq('organization_id', orgId).eq('professor_id', user.id).then(checked),
-      supabase.from('student_safety_onboarding').select('aluno_id').eq('organization_id', orgId).then(checked),
-    ]);
-    const classIds = (au || []).map((a) => a.id);
-    const { data: enrolled } = classIds.length
-      ? await supabase.from('aulas_inscritos').select('aluno_id').in('aula_id', classIds).then(checked)
-      : { data: [] as { aluno_id: string }[] };
-    const portfolioIds = [...new Set([...(assignedWorkouts || []).map((item) => item.aluno_id), ...(enrolled || []).map((item) => item.aluno_id), ...(onboarded || []).map((item) => item.aluno_id)])];
-    const { data: al } = portfolioIds.length
-      ? await (supabase as any).rpc('coach_student_roster',{p_org:orgId}).then(checked)
-      : { data: [] as any[] };
-    setAulas(au || []);
-    const alunosList = ((al || []) as any[]).filter(a=>portfolioIds.includes(a.id));
-    setAlunos(alunosList);
-    const ids = alunosList.map((a) => a.id);
-
-    if (!ids.length) {
-      setTreinos([]); setCheckins([]); setAnamnesesFila([]); setFeedbacks([]); setExecs([]);
-    } else {
-      const [{ data: tr }, { data: ck }, { data: an }, { data: fb }] = await Promise.all([
-        supabase.from('treinos').select('id, nome, descricao, data_inicio, data_fim, aluno_id, plano_treino_id, status, professor_id, created_at, updated_at').in('aluno_id', ids).eq('professor_id', user.id).order('created_at', { ascending: false }).limit(300).then(checked),
-        supabase.from('checkins').select('id, aluno_id, data_checkin, horario_entrada').in('aluno_id', ids).gte('data_checkin', inicioHist).order('horario_entrada', { ascending: false }).limit(1000).then(checked),
-        supabase.from('anamnese_respostas').select('id, aluno_id, tipo, preenchido_em, respostas, status, alunos(nome, email)').in('aluno_id', ids).eq('status', 'preenchido').order('preenchido_em', { ascending: false }).limit(50).then(checked),
-        (supabase as any).from('workout_sessions').select('aluno_id, data, status, feedback').in('aluno_id', ids).not('feedback', 'is', null).order('data', { ascending: false }).limit(10).then(checked),
-      ]);
-      const trList = (tr || []) as any[];
-      setTreinos(trList);
-      setCheckins(ck || []);
-      setFeedbacks(fb || []);
-      const comTreino = new Set(trList.filter((t) => !t.data_fim || t.data_fim >= hoje).map((t) => t.aluno_id));
-      setAnamnesesFila((an || []).filter((a: any) => !comTreino.has(a.aluno_id)));
-      const trIds = trList.map((t) => t.id);
-      if (trIds.length) {
-        const { data: ex } = await supabase.from('treino_execucoes').select('treino_id, data_execucao').in('treino_id', trIds).gte('data_execucao', iso(new Date(Date.now() - 14 * DAY))).then(checked);
-        setExecs(ex || []);
-      } else setExecs([]);
+  const { activeOrg } = useOperationalContext();
+  const [params, setParams] = useSearchParams();
+  const view = params.get("view") || "atendimentos",
+    studentId = params.get("student"),
+    filter = params.get("filter") || "todos",
+    search = params.get("search") || "";
+  const [data, setData] = useState<any>(null),
+    [loading, setLoading] = useState(true),
+    [error, setError] = useState(""),
+    [revision, setRevision] = useState(0);
+  const position = useRef(0);
+  const restorePosition = useRef(false);
+  useEffect(() => {
+    if (!loading && !studentId && restorePosition.current) {
+      restorePosition.current = false;
+      requestAnimationFrame(() => window.scrollTo({ top: position.current }));
     }
-
-    let qf = supabase.from('treinos_ia_fila').select('id', { count: 'exact', head: true }).eq('status', 'pendente');
-    if (orgId) qf = qf.eq('organization_id', orgId);
-    const { count } = await qf.then(checked);
-    setFilaIACount(count || 0);
-    }catch(e){setLoadError((e as Error).message||'Não foi possível carregar os dados do coach.');setAulas([]);setAlunos([]);setTreinos([]);setCheckins([]);setFeedbacks([]);setAnamnesesFila([]);setExecs([]);}
-    finally{setLoadingData(false);}
+  }, [loading, studentId]);
+  useEffect(() => {
+    if (!activeOrg) {
+      setLoading(false);
+      return;
+    }
+    let live = true;
+    setLoading(true);
+    setData(null);
+    setError("");
+    void (async () => {
+      try {
+        const { data, error } = await (supabase as any).rpc(
+          "coach_operation_summary",
+          { p_org: activeOrg.id },
+        );
+        if (error || !Array.isArray(data?.students)) throw error || new Error();
+        if (live) setData(data);
+      } catch {
+        if (live)
+          setError(
+            "Não foi possível carregar a operação deste condomínio. Nenhuma ausência de pendência foi confirmada.",
+          );
+      } finally {
+        if (live) setLoading(false);
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, [activeOrg?.id, revision]);
+  const patch = (values: Record<string, string | null>, replace = false) => {
+    const next = new URLSearchParams(params);
+    Object.entries(values).forEach(([k, v]) =>
+      v === null ? next.delete(k) : next.set(k, v),
+    );
+    setParams(next, { replace });
   };
-  useEffect(() => { carregar(); }, [activeOrg?.id, user?.id]);
-
-  const hoje = iso(new Date());
-  const aulasHoje = aulas.filter((a) => a.data_aula === hoje);
-  const aulasProx = aulas.filter((a) => a.data_aula >= hoje);
-  const treinoAtivoDe = (alunoId: string) => treinos.find((t) => t.aluno_id === alunoId && t.status !== 'revisado' && t.status !== 'inativo' && (!t.data_fim || t.data_fim >= hoje));
-  const ultimaAula = (alunoId: string) => checkins.find((c) => c.aluno_id === alunoId)?.data_checkin;
-  const revisaoVencida = (t: any) => t && t.data_fim && new Date(t.data_fim).getTime() - Date.now() < 7 * DAY;
-  const nomeAluno = (id: string) => alunos.find((a) => a.id === id)?.nome || 'Aluno';
-  const filaTotal = anamnesesFila.length + filaIACount;
-  const revisoesPendentes = alunos.filter((a) => revisaoVencida(treinoAtivoDe(a.id))).length;
-
-  const alunosFiltrados = useMemo(() => alunos.filter((a) => {
-    if (busca && !a.nome?.toLowerCase().includes(busca.toLowerCase())) return false;
-    const t = treinoAtivoDe(a.id);
-    if (filtroAluno === 'ativos') return a.status === 'ativo'&&a.lifecycle_status==='ativo';
-    if (filtroAluno === 'pendente') return !t;
-    return revisaoVencida(t);
-  }), [alunos, treinos, busca, filtroAluno]);
-
-  const treinosFiltrados = treinos.filter((t) => {
-    const ativo = t.status !== 'revisado' && t.status !== 'inativo' && (!t.data_fim || t.data_fim >= hoje);
-    if (filtroTreino === 'ativos') return ativo;
-    if (filtroTreino === 'inativos') return !ativo;
-    return ativo && revisaoVencida(t);
-  });
-  const ativosComExec = new Set(execs.map((e) => e.treino_id));
-  const treinosAtivos = treinos.filter((t) => t.status !== 'revisado' && t.status !== 'inativo' && (!t.data_fim || t.data_fim >= hoje));
-  const adesao = treinosAtivos.length ? Math.round(treinosAtivos.filter((t) => ativosComExec.has(t.id)).length / treinosAtivos.length * 100) : 0;
-
-  const desde = iso(new Date(Date.now() - periodo * DAY));
-  const hist = {
-    aulas: aulas.filter((a) => a.data_aula >= desde && a.data_aula <= hoje && a.status !== 'cancelada').length,
-    alunos: new Set(checkins.filter((c) => c.data_checkin >= desde).map((c) => c.aluno_id)).size,
-    checkins: checkins.filter((c) => c.data_checkin >= desde).length,
-    criados: treinos.filter((t) => (t.created_at || '').slice(0, 10) >= desde).length,
-    revisados: treinos.filter((t) => t.status === 'revisado' && (t.updated_at || '').slice(0, 10) >= desde).length,
+  const selectStudent = (id: string, section?: string) => {
+    position.current = window.scrollY;
+    patch({ student: id, section: section || null });
+    window.scrollTo({ top: 0 });
   };
-  const freqMedia = hist.alunos ? (hist.checkins / hist.alunos).toFixed(1) : '0';
-
-  const notificarAluno = async (alunoId: string, titulo: string, mensagem: string) => {
-    const al = alunos.find((a) => a.id === alunoId);
-    if (!al?.user_id) return;
-    await supabase.from('notificacoes').insert({ tipo: 'treino', titulo, mensagem, destinatario_tipo: 'aluno', destinatario_id: alunoId, prioridade: 'normal', status: 'pendente', canal: ['app'] });
+  const back = () => {
+    restorePosition.current = true;
+    setLoading(true);
+    patch({ student: null, section: null });
+    setRevision((v) => v + 1);
   };
-
-  const abrirPresenca = async (aula: any) => {
-    setPresencaAula(aula);
-    const { data } = await supabase.from('aulas_inscritos').select('id, aluno_id, status').eq('aula_id', aula.id);
-    setInscritos(data || []);
-  };
-  const presentes = new Set(inscritos.filter((i) => i.status === 'presente').map((i) => i.aluno_id));
-  const marcarPresenca = async (alunoId: string) => {
-    const { error } = await (supabase as any).rpc('mark_class_attendance', { p_aluno_id: alunoId, p_aula_id: presencaAula?.id });
-    if (error) return toast.error('Falha ao registrar presença');
-    toast.success(`Presença de ${nomeAluno(alunoId)} registrada`);
-    setInscritos(current=>current.map(item=>item.aluno_id===alunoId?{...item,status:'presente'}:item));
-    carregar();
-  };
-
-  const cancelarAula = async (aula: any) => {
-    if (!confirm(`Cancelar a aula "${aula.nome}"? Os inscritos verão a aula como cancelada.`)) return;
-    const { error } = await (supabase as any).rpc('cancel_coach_class',{p_aula:aula.id});
-    if (error) return toast.error('Não foi possível cancelar a aula');
-    toast.success('Aula cancelada');
-    carregar();
-  };
-
-
-  if(!ready || loadingData)return <PersonaLayout title="Meu dia"><div role="status" className="p-6">Carregando agenda e alunos deste condomínio…</div></PersonaLayout>;
-
-  if (!activeOrg && ready && !isAdmin) {
+  if (!activeOrg)
     return (
-      <PersonaLayout title="Meu dia" accent="hsl(var(--primary))">
-        <PersonaEmptyState message="Você ainda não está vinculado a nenhum condomínio como coach." />
+      <PersonaLayout title="Central do professor">
+        <PersonaEmptyState message="Selecione um condomínio autorizado para iniciar o atendimento." />
       </PersonaLayout>
     );
-  }
-
-  const AulaCard = ({ a, destaque }: { a: any; destaque?: boolean }) => {
-    const cancelada = a.status === 'cancelada';
-    const inscr = a.inscritos_atual ?? 0;
+  if (studentId)
     return (
-      <Card className={`border-border/40 ${destaque ? 'bg-primary/5' : 'bg-card/60'}`}>
-        <CardContent className="p-3 flex items-center justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-sm font-medium truncate">{a.nome}</p>
-            <p className="text-xs text-muted-foreground">
-              {new Date(`${a.data_aula}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })} · {a.horario_inicio?.slice(0, 5)}–{a.horario_fim?.slice(0, 5)} · {inscr}/{a.capacidade_maxima ?? '—'}
-            </p>
+      <PersonaLayout title="Atendimento do morador">
+        <CoachCase
+          key={activeOrg.id + ":" + studentId}
+          studentId={studentId}
+          organizationId={activeOrg.id}
+          onBack={back}
+        />
+      </PersonaLayout>
+    );
+  const students: any[] = data?.students || [],
+    workouts: any[] = data?.workouts || [],
+    activity: any[] = data?.activity || [],
+    queue: any[] = data?.queue || [],
+    feedbacks: any[] = data?.feedbacks || [];
+  const today = localDate();
+  const caseRows = students.map((s) => {
+    const w = currentCoachWorkout(
+      workouts.filter((w) => w.aluno_id === s.id),
+      today,
+    );
+    const q = queue.find((q) => q.aluno_id === s.id);
+    const feedback = feedbacks.filter(
+      (f) => f.aluno_id === s.id && !f.resolved,
+    );
+    const attention =
+      !w &&
+      workouts.some(
+        (w) =>
+          w.aluno_id === s.id &&
+          w.status === "ativo" &&
+          w.published &&
+          w.data_fim &&
+          w.data_fim < today,
+      )
+        ? "vencido"
+        : workoutAttention(
+            w || {},
+            activity.find((a) => a.treino_id === w?.id),
+            today,
+          );
+    const clinical = q && (q.status === "rejeitado" || !q.anamnese_id);
+    return { ...s, workout: w, queue: q, feedback, attention, clinical };
+  });
+  const visible = caseRows
+    .filter(
+      (s) =>
+        s.nome.toLowerCase().includes(search.toLowerCase()) &&
+        (view === "moradores" ||
+          filter === "todos" ||
+          (filter === "avaliacao" && s.clinical) ||
+          (filter === "prescricao" && s.queue && !s.clinical) ||
+          (filter === "feedback" && s.feedback.length) ||
+          s.attention === filter),
+    )
+    .sort(
+      (a, b) =>
+        Number(!!b.clinical) - Number(!!a.clinical) ||
+        Number(!!b.queue) - Number(!!a.queue) ||
+        (a.queue?.created_at || "9999").localeCompare(
+          b.queue?.created_at || "9999",
+        ) ||
+        a.nome.localeCompare(b.nome),
+    );
+  const editor = (s: any) =>
+    "/coach/prescricao?student=" +
+    s.id +
+    (s.queue && !s.clinical ? "&queue=" + s.queue.id : "") +
+    "&return=" +
+    encodeURIComponent("/coach?" + params.toString());
+  return (
+    <PersonaLayout
+      title="Central do professor"
+      subtitle="Avaliar, prescrever e acompanhar"
+    >
+      <div className="mx-auto max-w-6xl space-y-5">
+        <PageIntro
+          eyebrow={"Coach · " + activeOrg.nome}
+          title={
+            view === "moradores"
+              ? "Pessoas no centro."
+              : view === "agenda"
+                ? "Seu tempo, bem organizado."
+                : view === "biblioteca"
+                  ? "Repertório para evoluir."
+                  : "Orientar. Acompanhar. Evoluir."
+          }
+          description={
+            view === "moradores"
+              ? "Cada morador, uma jornada. Acesse avaliações, planos e acompanhamento."
+              : view === "agenda"
+                ? "Sua programação e os próximos encontros em um só lugar."
+                : view === "biblioteca"
+                  ? "Exercícios e protocolos para uma prescrição com intenção."
+                  : "Uma visão clara de quem precisa de atenção e do próximo passo de cada atendimento."
+          }
+          compact={view !== "atendimentos" && view !== "" && Boolean(view)}
+          actions={
+            <Button
+              disabled={loading}
+              onClick={() => setRevision((v) => v + 1)}
+            >
+              Atualizar operação
+            </Button>
+          }
+        />
+        {loading ? (
+          <p role="status">Consultando a operação autorizada…</p>
+        ) : error ? (
+          <div role="alert" className="space-y-3 rounded-xl border p-5">
+            <p>{error}</p>
+            <Button onClick={() => setRevision((v) => v + 1)}>
+              Tentar novamente
+            </Button>
           </div>
-          <div className="flex items-center gap-1 shrink-0">
-            {cancelada ? <Badge variant="destructive">Cancelada</Badge> : (
+        ) : (
+          <>
+            {view === "agenda" ? (
+              <CoachAgenda
+                key={activeOrg.id}
+                organizationId={activeOrg.id}
+                students={students}
+              />
+            ) : view === "biblioteca" ? (
+              <CoachLibrary
+                key={activeOrg.id}
+                organizationId={activeOrg.id}
+                students={students}
+              />
+            ) : (
               <>
-                <Button size="sm" disabled={!podeIniciar(a)} onClick={() => abrirPresenca(a)} title="Liberado 15 min antes">
-                  <Play className="w-3 h-3 mr-1" /> Iniciar aula
-                </Button>
-                <Button size="icon" variant="ghost" onClick={() => cancelarAula(a)} title="Cancelar aula"><XCircle className="w-4 h-4" /></Button>
+                {view === "atendimentos" && (
+                  <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                    {[
+                      [
+                        "avaliacao",
+                        "Avaliações",
+                        caseRows.filter((s) => s.clinical).length,
+                      ],
+                      [
+                        "prescricao",
+                        "Prescrições",
+                        caseRows.filter((s) => s.queue && !s.clinical).length,
+                      ],
+                      [
+                        "feedback",
+                        "Feedbacks",
+                        caseRows.reduce((n, s) => n + s.feedback.length, 0),
+                      ],
+                      [
+                        "revisao",
+                        "Planos perto do fim",
+                        caseRows.filter((s) => s.attention === "revisao")
+                          .length,
+                      ],
+                    ].map(([value, label, count]) => (
+                      <button
+                        key={String(value)}
+                        className="rounded-xl border bg-card p-4 text-left focus-visible:ring-2 focus-visible:ring-ring"
+                        onClick={() => patch({ filter: String(value) })}
+                      >
+                        <span className="block text-sm text-muted-foreground">
+                          {label}
+                        </span>
+                        <strong className="mt-1 block text-2xl">{count}</strong>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <Input
+                  aria-label="Buscar morador"
+                  placeholder="Buscar morador pelo nome"
+                  value={search}
+                  onChange={(e) => patch({ search: e.target.value }, true)}
+                />
+                {view === "atendimentos" && (
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(labels).map(([value, label]) => (
+                      <Button
+                        key={value}
+                        size="sm"
+                        variant={filter === value ? "default" : "outline"}
+                        onClick={() => patch({ filter: value })}
+                      >
+                        {label}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  Carteira definida pelas permissões do servidor. Pendências de
+                  triagem mais antigas aparecem primeiro. Presença no condomínio
+                  não equivale a sessão concluída. Feedbacks: até 100 registros
+                  recentes.
+                </p>
+                {!visible.length ? (
+                  <div className="rounded-xl border border-dashed p-8">
+                    <p>Nenhum morador neste filtro.</p>
+                    <Button
+                      className="mt-3"
+                      variant="outline"
+                      onClick={() => patch({ filter: "todos", search: null })}
+                    >
+                      Limpar filtros
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    {visible.map((s) => (
+                      <article
+                        key={s.id}
+                        className="space-y-3 rounded-xl border bg-card p-5"
+                      >
+                        <header>
+                          <h2 className="text-xl font-semibold">{s.nome}</h2>
+                          <p className="text-sm text-muted-foreground">
+                            {s.status} · {s.lifecycle_status}
+                          </p>
+                        </header>
+                        {s.queue ? (
+                          <div>
+                            <p className="font-medium">
+                              {s.clinical
+                                ? "Avaliação profissional necessária"
+                                : "Prescrição para conferir"}
+                            </p>
+                            <p className="text-sm">
+                              Recebido em{" "}
+                              {residentDate(s.queue.created_at, true)} ·{" "}
+                              {s.queue.objetivo || "Objetivo a consultar"}
+                            </p>
+                          </div>
+                        ) : (
+                          <p>{labels[s.attention]}</p>
+                        )}
+                        {s.workout && (
+                          <p className="text-sm">
+                            Plano: {s.workout.nome} · término{" "}
+                            {residentDate(s.workout.data_fim)}
+                          </p>
+                        )}
+                        {s.feedback.length > 0 && (
+                          <p className="text-sm">
+                            {s.feedback.length} registro(s) com atendimento
+                            ainda não concluído.
+                          </p>
+                        )}
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            onClick={() =>
+                              selectStudent(
+                                s.id,
+                                s.clinical
+                                  ? "avaliacao"
+                                  : s.feedback.length
+                                    ? "feedback"
+                                    : undefined,
+                              )
+                            }
+                          >
+                            {s.clinical
+                              ? "Avaliar triagem"
+                              : s.feedback.length
+                                ? "Acompanhar sessão"
+                                : "Abrir atendimento"}
+                          </Button>
+                          {!s.clinical && (
+                            <Button asChild variant="outline">
+                              <Link to={editor(s)}>Montar treino</Link>
+                            </Button>
+                          )}
+                          {s.workout && (
+                            <Button asChild variant="outline">
+                              <Link
+                                to={
+                                  "/coach/prescricao?student=" +
+                                  s.id +
+                                  "&workout=" +
+                                  s.workout.id +
+                                  "&return=" +
+                                  encodeURIComponent(
+                                    "/coach?" + params.toString(),
+                                  )
+                                }
+                              >
+                                Revisar plano
+                              </Link>
+                            </Button>
+                          )}
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+                <section className="rounded-xl border p-5">
+                  <h2 className="font-semibold">Agenda de hoje</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Abra suas aulas para consultar inscritos e registrar
+                    presença.
+                  </p>
+                  <Button asChild variant="outline" className="mt-3">
+                    <Link to="/coach?view=agenda&period=hoje">
+                      Abrir agenda de hoje
+                    </Link>
+                  </Button>
+                </section>
               </>
             )}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
-
-  const Chip = ({ on, onClick, children }: any) => (
-    <Button size="sm" variant={on ? 'default' : 'outline'} className="shrink-0" onClick={onClick}>{children}</Button>
-  );
-  const Count = ({ n }: { n: number }) => n > 0 ? <span className="ml-1.5 min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold inline-flex items-center justify-center px-1.5">{n}</span> : null;
-
-  return (
-    <PersonaLayout title="Meu dia">
-      {/* Resumo do dia */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <Card className="bg-card/60 border-border/40"><CardContent className="p-4">
-          <p className="text-xs text-muted-foreground">Aulas hoje</p>
-          <p className="text-2xl font-display">{aulasHoje.filter((a) => a.status !== 'cancelada').length}</p>
-        </CardContent></Card>
-        <Card className="bg-card/60 border-border/40 cursor-pointer" onClick={() => setTab('fila')}><CardContent className="p-4">
-          <p className="text-xs text-muted-foreground">Na fila</p>
-          <p className="text-2xl font-display">{filaTotal}</p>
-        </CardContent></Card>
+          </>
+        )}
       </div>
-
-      {loadError&&<div role="alert" className="mb-4 rounded border border-destructive p-4"><p>{loadError}</p><Button variant="outline" onClick={carregar}>Carregar novamente</Button></div>}
-      {activeOrg&&<details className="mb-4"><summary className="cursor-pointer text-sm">Atendimento de treino e saúde</summary><SupportTickets orgId={activeOrg.id} manage/></details>}
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="mb-4">
-          <TabsTrigger value="aulas"><Calendar className="w-3.5 h-3.5 mr-1.5" />Aulas</TabsTrigger>
-          <TabsTrigger value="fila"><Sparkles className="w-3.5 h-3.5 mr-1.5" />Fila<Count n={filaTotal} /></TabsTrigger>
-          <TabsTrigger value="alunos"><Users className="w-3.5 h-3.5 mr-1.5" />Alunos<Count n={revisoesPendentes} /></TabsTrigger>
-          <TabsTrigger value="treinos"><Dumbbell className="w-3.5 h-3.5 mr-1.5" />Treinos</TabsTrigger>
-          <TabsTrigger value="historico"><History className="w-3.5 h-3.5 mr-1.5" />Histórico</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="aulas" className="space-y-4">
-          <section>
-            <h2 className="text-sm uppercase tracking-wider text-muted-foreground mb-2">Hoje</h2>
-            {aulasHoje.length === 0 ? <Vazio>Sem aulas hoje.</Vazio> : <div className="space-y-2">{aulasHoje.map((a) => <AulaCard key={a.id} a={a} destaque />)}</div>}
-          </section>
-          <section>
-            <h2 className="text-sm uppercase tracking-wider text-muted-foreground mb-2">Próximos 7 dias</h2>
-            {aulasProx.filter((a) => a.data_aula > hoje).length === 0 ? <Vazio>Nenhuma aula publicada para os próximos 7 dias.</Vazio> : (
-              <div className="space-y-2">{aulasProx.filter((a) => a.data_aula > hoje).map((a) => <AulaCard key={a.id} a={a} />)}</div>
-            )}
-          </section>
-        </TabsContent>
-
-        <TabsContent value="fila" className="space-y-4">
-          {filaIACount > 0 && (
-            <Card className="bg-primary/5 border-primary/30">
-              <CardContent className="p-4 flex items-center gap-3">
-                <Sparkles className="w-5 h-5 text-primary shrink-0" />
-                <p className="flex-1 text-sm font-semibold">{filaIACount} sugestão(ões) de treino da IA aguardando aprovação</p>
-                <Button size="sm" onClick={() => (window.location.href = '/treinos')}>Ver fila IA</Button>
-              </CardContent>
-            </Card>
-          )}
-          <h2 className="text-sm uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-            <ClipboardList className="w-4 h-4" /> Anamneses pendentes ({anamnesesFila.length})
-          </h2>
-          {anamnesesFila.length === 0 ? <Vazio>Nenhuma anamnese pendente.</Vazio> : (
-            <div className="space-y-2">
-              {anamnesesFila.map((a: any) => {
-                const r = (a.respostas || {}) as any;
-                const objetivo = r.objetivo || r.objetivos || r.goal || '—';
-                return (
-                  <Card key={a.id} className="bg-card/60 border-border/40">
-                    <CardContent className="p-4 space-y-2">
-                      <div>
-                        <p className="font-medium">{nomeAluno(a.aluno_id)}</p>
-                        <p className="text-xs text-muted-foreground">{a.preenchido_em ? new Date(a.preenchido_em).toLocaleDateString('pt-BR') : '—'} · Objetivo: {String(objetivo)}</p>
-                        {(r.limitacoes || r.historico) && <p className="text-xs text-muted-foreground line-clamp-2">{String(r.limitacoes || r.historico)}</p>}
-                      </div>
-                      <div className="flex gap-2 overflow-x-auto">
-                        <Button size="sm" variant="outline" className="shrink-0" onClick={() => setAnamneseView(a)}>Revisar anamnese</Button>
-                        <CriarTreinoDialog alunos={[{ id: a.aluno_id, nome: nomeAluno(a.aluno_id) }]} organizationId={activeOrg?.id} initialAlunoId={a.aluno_id}
-                          onCriado={async () => { await supabase.from('anamnese_respostas').update({ status: 'aprovado' }).eq('id', a.id); await notificarAluno(a.aluno_id, 'Seu treino está pronto', 'Veja em "Meus treinos".'); carregar(); }}
-                          trigger={<Button size="sm" className="shrink-0">Criar treino</Button>} />
-
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="alunos" className="space-y-3">
-          <Input placeholder="Buscar aluno" value={busca} onChange={(e) => setBusca(e.target.value)} />
-          <div className="flex gap-2 overflow-x-auto">
-            <Chip on={filtroAluno === 'ativos'} onClick={() => setFiltroAluno('ativos')}>Ativos</Chip>
-            <Chip on={filtroAluno === 'pendente'} onClick={() => setFiltroAluno('pendente')}>Treino pendente</Chip>
-            <Chip on={filtroAluno === 'revisao'} onClick={() => setFiltroAluno('revisao')}>Revisão vencida<Count n={revisoesPendentes} /></Chip>
-          </div>
-          {alunosFiltrados.length === 0 ? <Vazio>{alunos.length === 0 ? 'Nenhum aluno vinculado a este condomínio ainda.' : 'Nenhum aluno neste filtro.'}</Vazio> : (
-            <div className="grid sm:grid-cols-2 gap-2">
-              {alunosFiltrados.map((al) => {
-                const t = treinoAtivoDe(al.id);
-                return (
-                  <Card key={al.id} className="bg-card/60 border-border/40">
-                    <CardContent className="p-3 space-y-1">
-                      <div className="flex justify-between gap-2">
-                        <p className="text-sm font-medium truncate">{al.nome}</p>
-                        <Badge variant="outline" className="shrink-0 text-[10px]">{al.status}</Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground">Plano: {al.planos?.nome || '—'} · Treino: {t ? t.nome || 'ativo' : 'pendente'}</p>
-                      <p className="text-xs text-muted-foreground">Última revisão: {t?.data_inicio ? new Date(t.data_inicio + 'T12:00').toLocaleDateString('pt-BR') : '—'} · Última aula: {ultimaAula(al.id) ? new Date(ultimaAula(al.id) + 'T12:00').toLocaleDateString('pt-BR') : '—'}</p>
-                      {t && revisaoVencida(t) && <Button size="sm" variant="outline" onClick={() => setRevisao(t)}>Revisar treino</Button>}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="treinos" className="space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-sm text-muted-foreground">Adesão (últimos 14 dias): <strong className="text-foreground">{adesao}%</strong></p>
-            <CriarTreinoDialog alunos={alunos.map((a) => ({ id: a.id, nome: a.nome }))} organizationId={activeOrg?.id} onCriado={carregar} />
-          </div>
-          <div className="flex gap-2 overflow-x-auto">
-            <Chip on={filtroTreino === 'ativos'} onClick={() => setFiltroTreino('ativos')}>Ativos</Chip>
-            <Chip on={filtroTreino === 'inativos'} onClick={() => setFiltroTreino('inativos')}>Inativos</Chip>
-            <Chip on={filtroTreino === 'revisao'} onClick={() => setFiltroTreino('revisao')}>Revisões<Count n={revisoesPendentes} /></Chip>
-          </div>
-          {treinosFiltrados.length === 0 ? <Vazio>Nenhum treino neste filtro.</Vazio> : (
-            <div className="space-y-2">
-              {treinosFiltrados.map((t) => (
-                <Card key={t.id} className="bg-card/60 border-border/40">
-                  <CardContent className="p-3 flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{t.nome || 'Treino'} · {nomeAluno(t.aluno_id)}</p>
-                      <p className="text-xs text-muted-foreground">{t.data_inicio} → {t.data_fim || '—'} · {ativosComExec.has(t.id) ? 'aderindo' : 'sem execução recente'}</p>
-                    </div>
-                    {filtroTreino !== 'inativos' && <Button size="sm" variant="outline" className="shrink-0" onClick={() => setRevisao(t)}>Revisar</Button>}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="historico" className="space-y-3">
-          <div className="flex gap-2">
-            {[30, 90, 365].map((d) => <Chip key={d} on={periodo === d} onClick={() => setPeriodo(d)}>{d} dias</Chip>)}
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-            {[
-              ['Aulas', hist.aulas], ['Alunos atendidos', hist.alunos], ['Frequência média', freqMedia],
-              ['Treinos criados', hist.criados], ['Treinos revisados', hist.revisados],
-            ].map(([l, v]) => (
-              <Card key={l as string} className="bg-card/60 border-border/40"><CardContent className="p-3">
-                <p className="text-[11px] text-muted-foreground">{l}</p><p className="text-xl font-display">{v}</p>
-              </CardContent></Card>
-            ))}
-          </div>
-          {feedbacks.length > 0 && (
-            <Card className="bg-card/60 border-border/40"><CardContent className="p-4 space-y-2">
-              <h3 className="text-sm font-semibold">Feedbacks recentes</h3>
-              {feedbacks.slice(0, 5).map((f: any) => (
-                <p key={f.aluno_id + f.data} className="text-sm"><span className="font-medium">{nomeAluno(f.aluno_id)}</span> <span className="text-muted-foreground">· {f.feedback}</span></p>
-              ))}
-            </CardContent></Card>
-          )}
-        </TabsContent>
-      </Tabs>
-
-      {/* Lista de presença */}
-      <Dialog open={!!presencaAula} onOpenChange={(o) => !o && setPresencaAula(null)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Presença — {presencaAula?.nome}</DialogTitle></DialogHeader>
-          {inscritos.length === 0 ? <Vazio>Nenhum inscrito nesta aula.</Vazio> : (
-            <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-              {inscritos.map((i) => (
-                <div key={i.id} className="flex items-center justify-between border-b border-border/30 pb-2">
-                  <span className="text-sm">{nomeAluno(i.aluno_id)}</span>
-                  {presentes.has(i.aluno_id) ? <Badge>Presente</Badge> : (
-                    <Button size="sm" variant="outline" onClick={() => marcarPresenca(i.aluno_id)}><UserCheck className="w-3 h-3 mr-1" />Marcar</Button>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Anamnese somente leitura */}
-      <Dialog open={!!anamneseView} onOpenChange={(o) => !o && setAnamneseView(null)}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Anamnese — {anamneseView?.alunos?.nome}</DialogTitle></DialogHeader>
-          <dl className="space-y-2 text-sm">
-            {Object.entries((anamneseView?.respostas || {}) as Record<string, any>).map(([k, v]) => (
-              <div key={k}><dt className="text-xs text-muted-foreground capitalize">{k.replace(/_/g, ' ')}</dt><dd>{typeof v === 'object' ? JSON.stringify(v) : String(v)}</dd></div>
-            ))}
-            {!anamneseView?.respostas && <Vazio>Sem respostas registradas.</Vazio>}
-          </dl>
-        </DialogContent>
-      </Dialog>
-
-      {/* Revisão */}
-      <Dialog open={!!revisao} onOpenChange={(o) => { if (!o) { setRevisao(null); setMotivo(''); } }}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Revisar treino de {revisao && nomeAluno(revisao.aluno_id)}</DialogTitle></DialogHeader>
-          <p className="text-xs text-muted-foreground">Uma nova versão será criada. A versão atual fica no histórico.</p>
-          {revisao && <CriarTreinoDialog alunos={[{id:revisao.aluno_id,nome:nomeAluno(revisao.aluno_id)}]} organizationId={activeOrg?.id} initialAlunoId={revisao.aluno_id} initialWorkoutId={revisao.id} trigger={<Button>Abrir editor de revisão</Button>} onCriado={()=>{setRevisao(null);void carregar();}}/>}
-        </DialogContent>
-      </Dialog>
     </PersonaLayout>
   );
 }
