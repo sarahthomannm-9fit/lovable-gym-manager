@@ -577,13 +577,13 @@ export default function MoradorHome() {
             }
             title={
               tab === "treino"
-                ? "Um movimento de cada vez."
+                ? "Meu treino"
                 : tab === "mais"
-                  ? "Viver bem, por perto."
+                  ? "Meu espaço"
                   : tab === "aulas"
-                    ? "Encontre seu próximo encontro."
+                    ? "Aulas"
                     : tab === "suporte"
-                      ? "Conte com a sua equipe."
+                      ? "Ajuda"
                       : "Seu próximo movimento."
             }
             description={
@@ -598,7 +598,14 @@ export default function MoradorHome() {
             actions={
               tab === "hoje" && workout?.treino && exercises.length > 0 ? (
                 <Button onClick={openTraining} disabled={busy}>
-                  Abrir meu treino <ArrowUpRight />
+                  {session?.status === "concluido"
+                    ? "Ver sessão registrada"
+                    : session?.status === "pausado"
+                      ? "Retomar treino"
+                      : session?.status === "em_andamento"
+                        ? "Continuar treino"
+                        : "Iniciar treino"}{" "}
+                  <ArrowUpRight />
                 </Button>
               ) : undefined
             }
@@ -638,8 +645,11 @@ export default function MoradorHome() {
 
           {workout?.data && workout.data !== today && (
             <p role="alert" className="rounded border p-4">
-              O dia mudou. Atualize para consultar a sessão de hoje. Salve ou
-              confira as alterações antes de sair.
+              {workout.pinned
+                ? "Você está retomando uma sessão iniciada em " +
+                  residentDate(workout.data) +
+                  "."
+                : "O dia mudou. Atualize para consultar a programação de hoje."}
             </p>
           )}
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -653,10 +663,7 @@ export default function MoradorHome() {
           {tab === "hoje" && (
             <div className="grid items-stretch gap-5 lg:grid-cols-[1.35fr_1fr]">
               <div className="lg:col-span-2">
-                <SectionHeading
-                  eyebrow="Sua rotina, com intenção"
-                  title="Seu próximo passo"
-                />
+                <SectionHeading title="Seu próximo passo" />
               </div>
               <Panel
                 className="nl-resident-feature lg:row-span-2"
@@ -688,15 +695,11 @@ export default function MoradorHome() {
                                 ? "Sua sessão está em andamento."
                                 : "Seu plano está disponível para começar."}
                       </p>
-                      <Button onClick={openTraining} disabled={busy}>
-                        {session?.status === "concluido"
-                          ? "Ver sessão registrada"
-                          : !exercises.length
-                            ? "Consultar meu plano"
-                            : session?.status
-                              ? "Continuar treino"
-                              : "Iniciar treino"}
-                      </Button>
+                      {!exercises.length && (
+                        <Button onClick={openTraining} disabled={busy}>
+                          Consultar meu plano
+                        </Button>
+                      )}
                     </>
                   ) : (
                     <ResidentFitnessStatus

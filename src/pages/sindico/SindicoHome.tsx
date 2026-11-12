@@ -65,7 +65,7 @@ export default function SindicoHome() {
         <PageIntro
           eyebrow="Seu condomínio · visão geral"
           title={activeOrg.nome}
-          description="Uma comunidade em movimento. Acompanhe a rotina, organize os encontros e cuide do que precisa de atenção."
+          description="Acompanhe o uso da academia, os eventos e as solicitações do condomínio."
           actions={
             <Button
               disabled={loading}

@@ -739,6 +739,10 @@
     min-height: 56px;
     padding: 7px 4px;
     font-size: 10px;
+    line-height: 1.2;
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: anywhere;
     border-radius: 13px;
   }
   .nl-nav-link svg {

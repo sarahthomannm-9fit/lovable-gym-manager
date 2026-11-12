@@ -57,7 +57,16 @@ export function ContextSwitcher() {
   if (activeOrg && !orgs.find((o) => o.id === activeOrg.id))
     orgs.unshift(activeOrg as any);
 
-  const roleLabels:Record<string,string>={admin:"Administração",manager:"Gestão",professor:"Coach",sindico:"Síndico",user:"Morador",corporate:"Corporativo",nutricionista:"Nutrição",fisioterapeuta:"Fisioterapia"};
+  const roleLabels: Record<string, string> = {
+    admin: "Administração",
+    manager: "Gestão",
+    professor: "Coach",
+    sindico: "Síndico",
+    user: "Morador",
+    corporate: "Corporativo",
+    nutricionista: "Nutrição",
+    fisioterapeuta: "Fisioterapia",
+  };
   const nome =
     (user?.user_metadata as any)?.nome ||
     user?.email?.split("@")[0] ||
@@ -74,14 +83,23 @@ export function ContextSwitcher() {
       <SidebarTrigger />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="h-8 text-xs gap-1.5">
-            <span className="font-medium">{nome}</span>
-            <span className="text-muted-foreground">/</span>
-            <span className="text-muted-foreground truncate max-w-[160px]">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="min-w-0 justify-start gap-1.5 text-xs"
+            aria-label={`Trocar contexto. ${activeOrg?.nome || "Todos os contextos"}`}
+          >
+            <span className="hidden max-w-32 truncate font-medium md:inline">
+              {nome}
+            </span>
+            <span className="hidden text-muted-foreground md:inline">/</span>
+            <span className="text-muted-foreground min-w-0 truncate sm:max-w-[160px]">
               {activeOrg?.nome || "Todos os contextos"}
             </span>
             {activeRole && (
-              <span className="text-muted-foreground">/ {roleLabels[activeRole]||activeRole}</span>
+              <span className="hidden text-muted-foreground sm:inline">
+                / {roleLabels[activeRole] || activeRole}
+              </span>
             )}
             <ChevronDown className="w-3.5 h-3.5 opacity-60" />
           </Button>
@@ -107,7 +125,7 @@ export function ContextSwitcher() {
           ))}
           <DropdownMenuSeparator />
           <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            Persona
+            Perfil
           </DropdownMenuLabel>
           {PERSONAS.filter((p) => canSeePersona((p as any).roles)).map((p) => (
             <DropdownMenuItem

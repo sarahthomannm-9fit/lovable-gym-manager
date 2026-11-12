@@ -182,21 +182,21 @@ export default function CoachHome() {
           eyebrow={"Coach · " + activeOrg.nome}
           title={
             view === "moradores"
-              ? "Pessoas no centro."
+              ? "Moradores"
               : view === "agenda"
-                ? "Seu tempo, bem organizado."
+                ? "Agenda do coach"
                 : view === "biblioteca"
-                  ? "Repertório para evoluir."
-                  : "Orientar. Acompanhar. Evoluir."
+                  ? "Biblioteca de exercícios e protocolos"
+                  : "Atendimentos"
           }
           description={
             view === "moradores"
-              ? "Cada morador, uma jornada. Acesse avaliações, planos e acompanhamento."
+              ? "Acesse avaliações, planos e o histórico de treino de cada morador."
               : view === "agenda"
                 ? "Sua programação e os próximos encontros em um só lugar."
                 : view === "biblioteca"
-                  ? "Exercícios e protocolos para uma prescrição com intenção."
-                  : "Uma visão clara de quem precisa de atenção e do próximo passo de cada atendimento."
+                  ? "Consulte exercícios e protocolos para montar um treino."
+                  : "Veja triagens pendentes, treinos a preparar e relatos dos moradores."
           }
           compact={view !== "atendimentos" && view !== "" && Boolean(view)}
           actions={

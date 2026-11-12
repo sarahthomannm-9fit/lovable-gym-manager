@@ -19,8 +19,6 @@ export function LivingArtwork() {
       <div className="nl-artwork-disc">
         <MoveUpRight strokeWidth={1} />
       </div>
-      <span className="nl-artwork-caption">A VIDA EM MOVIMENTO</span>
-      <span className="nl-artwork-number">09</span>
     </div>
   );
 }
